@@ -23,6 +23,7 @@ model articles {
   id            BigInt          @id @default(autoincrement()) @db.UnsignedBigInt
   user_id       BigInt          @db.UnsignedBigInt
   content       String          @db.Text
+  location      String?         @db.VarChar(50)
   status        Int             @default(0) @db.UnsignedTinyInt
   like_count    Int             @default(0) @db.UnsignedInt
   comment_count Int             @default(0) @db.UnsignedInt

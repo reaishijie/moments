@@ -9,8 +9,7 @@ const prisma = new PrismaClient();
 router.post('/', authMiddleware, async (req: Request, res: Response) => {
     try {
         const userId = req.user?.userId;
-        const { content, status } = req.body;
-
+        const { content, status, location } = req.body;
         if (!content) {
             return res.status(400).json({ error: '内容不能为空' });
         }
@@ -18,6 +17,7 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
             data: {
                 content,
                 status,
+                location,
                 user: {
                     connect: {
                         id: BigInt(userId!),
@@ -142,9 +142,7 @@ router.patch('/:articleId', authMiddleware, async (req: Request, res: Response) 
     try {
         const userId = req.user?.userId
         const { articleId } = req.params
-        const { content, status } = req.body
-        console.log('请求体', req.body, content, status);
-
+        const { content, status, location } = req.body
         // 验证文章是否存在
         const article = await prisma.articles.findUnique({
             where: {
@@ -159,11 +157,10 @@ router.patch('/:articleId', authMiddleware, async (req: Request, res: Response) 
             return res.status(403).json({ error: '无权修改此文章' })
         }
         // 构建更新数据
-        const updateData: { content?: string, status?: number } = {}
+        const updateData: { content?: string, status?: number, location?: string } = {}
         if (content) updateData.content = content
         if (status != undefined) updateData.status = status
-        console.log('updateData@', updateData);
-
+        if (location) updateData.location = location
         const updateArticle = await prisma.articles.update({
             where: {
                 id: BigInt(articleId)
