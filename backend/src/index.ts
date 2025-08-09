@@ -5,6 +5,7 @@ import dotenv from "dotenv";
 import authRouter from './routes/auth'
 import userRouter from './routes/user'
 import articlesRouter from './routes/articles'
+import commentsRouter from './routes/comments'
 // 载入env配置
 dotenv.config()
 
@@ -26,6 +27,7 @@ app.use('/api', location)
 app.use('/api/auth', authRouter)
 app.use('/api', userRouter);
 app.use('/api/articles', articlesRouter)
+app.use('/api/comments', commentsRouter)
 
 app.listen(port, () => {
     console.log(`【${date}】🚀 后端启动成功：http://localhost:${port}`);
