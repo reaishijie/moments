@@ -3,6 +3,8 @@ import location from "./routes/location";
 import cors from 'cors'
 import dotenv from "dotenv";
 import authRouter from './routes/auth'
+import userRouter from './routes/user'
+import articlesRouter from './routes/articles'
 // 载入env配置
 dotenv.config()
 
@@ -14,7 +16,6 @@ const app = express()
 app.use(cors())
 app.use(express.json())
 // 测试路由
-
 app.get('/', (req, res) => {
     res.status(200).json({
         "status": "success!!!"
@@ -23,6 +24,8 @@ app.get('/', (req, res) => {
 
 app.use('/api', location)
 app.use('/api/auth', authRouter)
+app.use('/api', userRouter);
+app.use('/api/articles', articlesRouter)
 
 app.listen(port, () => {
     console.log(`【${date}】🚀 后端启动成功：http://localhost:${port}`);

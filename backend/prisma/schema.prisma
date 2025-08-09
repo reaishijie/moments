@@ -8,19 +8,17 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model article_likes {
   user_id    BigInt   @db.UnsignedBigInt
   article_id BigInt   @db.UnsignedBigInt
   created_at DateTime @default(now()) @db.Timestamp(0)
-  articles   articles @relation(fields: [article_id], references: [id], onDelete: Cascade, map: "fk_likes_article")
-  users      users    @relation(fields: [user_id], references: [id], onDelete: Cascade, map: "fk_likes_user")
+  article   articles @relation(fields: [article_id], references: [id], onDelete: Cascade, map: "fk_likes_article")
+  user      users    @relation(fields: [user_id], references: [id], onDelete: Cascade, map: "fk_likes_user")
 
   @@id([user_id, article_id])
   @@index([article_id], map: "fk_likes_article")
 }
 
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model articles {
   id            BigInt          @id @default(autoincrement()) @db.UnsignedBigInt
   user_id       BigInt          @db.UnsignedBigInt
@@ -30,17 +28,17 @@ model articles {
   comment_count Int             @default(0) @db.UnsignedInt
   published_at  DateTime?       @db.Timestamp(0)
   created_at    DateTime        @default(now()) @db.Timestamp(0)
-  updated_at    DateTime        @default(now()) @db.Timestamp(0)
+  updated_at    DateTime        @default(now()) @updatedAt @db.Timestamp(0)
   deleted_at    DateTime?       @db.Timestamp(0)
-  article_likes article_likes[]
-  users         users           @relation(fields: [user_id], references: [id], onDelete: Cascade, map: "fk_articles_user")
+  // 关系字段（一篇文章属于一个用户），指向users的关系
+  user         users           @relation(fields: [user_id], references: [id], onDelete: Cascade, map: "fk_articles_user")
+  // 反向关系字段（一篇文章可以有多个评论、喜欢）
   comments      comments[]
-
+  article_likes article_likes[]
   @@index([status, published_at], map: "idx_status_published")
   @@index([user_id], map: "idx_user_id")
 }
 
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model comments {
   id             BigInt     @id @default(autoincrement()) @db.UnsignedBigInt
   article_id     BigInt     @db.UnsignedBigInt
@@ -48,19 +46,19 @@ model comments {
   parent_id      BigInt?    @db.UnsignedBigInt
   content        String     @db.Text
   created_at     DateTime   @default(now()) @db.Timestamp(0)
-  updated_at     DateTime   @default(now()) @db.Timestamp(0)
+  updated_at     DateTime   @default(now()) @updatedAt @db.Timestamp(0)
   deleted_at     DateTime?  @db.Timestamp(0)
-  articles       articles   @relation(fields: [article_id], references: [id], onDelete: Cascade, map: "fk_comments_article")
-  comments       comments?  @relation("commentsTocomments", fields: [parent_id], references: [id], onDelete: Cascade, map: "fk_comments_parent")
-  other_comments comments[] @relation("commentsTocomments")
-  users          users      @relation(fields: [user_id], references: [id], onDelete: Cascade, map: "fk_comments_user")
+  // 关系字段
+  article       articles   @relation(fields: [article_id], references: [id], onDelete: Cascade, map: "fk_comments_article")
+  parent        comments?  @relation("commentsTocomments", fields: [parent_id], references: [id], onDelete: Cascade, map: "fk_comments_parent")
+  reply         comments[] @relation("commentsTocomments")
+  user          users      @relation(fields: [user_id], references: [id], onDelete: Cascade, map: "fk_comments_user")
 
   @@index([article_id], map: "idx_article_id")
   @@index([parent_id], map: "idx_parent_id")
   @@index([user_id], map: "idx_user_id")
 }
 
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model logs {
   id          BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
   user_id     BigInt?  @db.UnsignedBigInt
@@ -72,7 +70,7 @@ model logs {
   user_agent  String?  @db.Text
   status      String   @default("SUCCESS") @db.VarChar(20)
   created_at  DateTime @default(now()) @db.Timestamp(0)
-  users       users?   @relation(fields: [user_id], references: [id], onDelete: NoAction, map: "fk_logs_user")
+  user        users?   @relation(fields: [user_id], references: [id], onDelete: NoAction, map: "fk_logs_user")
 
   @@index([action], map: "idx_action")
   @@index([created_at], map: "idx_created_at")
@@ -80,7 +78,7 @@ model logs {
   @@index([user_id], map: "idx_user_id")
 }
 
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+// 用户表
 model users {
   id                BigInt          @id @default(autoincrement()) @db.UnsignedBigInt
   username          String          @unique(map: "uk_username") @db.VarChar(30)
@@ -93,8 +91,9 @@ model users {
   header_background String?         @db.VarChar(255)
   avatar            String?         @db.VarChar(255)
   created_at        DateTime        @default(now()) @db.Timestamp(0)
-  updated_at        DateTime        @default(now()) @db.Timestamp(0)
+  updated_at        DateTime        @default(now()) @updatedAt @db.Timestamp(0)
   deleted_at        DateTime?       @db.Timestamp(0)
+  // 反向关系
   article_likes     article_likes[]
   articles          articles[]
   comments          comments[]

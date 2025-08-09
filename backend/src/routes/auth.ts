@@ -58,7 +58,6 @@ router.post('/register', async (req: Request, res: Response) => {
 router.post('/login', async (req: Request, res: Response) => {
     try {
         const { identifier, password } = req.body
-        console.log('@@@', req.body)
         // 验证输入
         if (!identifier || !password) {
             return res.status(400).json({ error: '请输入信息' })
