@@ -211,4 +211,98 @@ router.delete('/:articleId', authMiddleware, async (req: Request, res: Response)
         res.status(500).json({ error: '服务器内部错误' });
     }
 })
+
+// 获取一篇文章的评论
+router.get('/:articleId/comments', async (req: Request, res: Response) => {
+    try {
+        const { articleId } = req.params
+        // 分页查询
+        const page = parseInt(req.query.page as string) || 1
+        const pageSize = parseInt(req.query.pageSize as string) || 5
+        const skip = (page - 1) * pageSize
+
+        // 查询文章的一级评论
+        const comments = await prisma.comments.findMany({
+            where: {
+                article_id: BigInt(articleId),
+                parent_id: null,
+                deleted_at: null
+            },
+            skip: skip,
+            take: pageSize,
+            orderBy: {
+                created_at: 'asc'
+            },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        username: true,
+                        nickname: true,
+                        avatar: true
+                    }
+                },
+                // 自关联查询，这条评论的所有回复
+                replies: {
+                    where: {
+                        deleted_at: null
+                    },
+                    orderBy: { created_at: 'asc' },
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                username: true,
+                                nickname: true,
+                                avatar: true
+                            }
+                        }
+                    }
+                }
+            }
+        })
+
+        // 获取评论总数
+        const totalComments = await prisma.comments.count({
+            where: {
+                article_id: BigInt(articleId),
+                //解开这行注释表示只统计根评论数
+                // parent_id: null,
+                deleted_at: null
+            }
+        })
+        // 构造数据
+        const responseData = comments.map(comment => ({
+            ...comment,
+            id: comment.id.toString(),
+            article_id: comment.article_id.toString(),
+            user_id: comment.user_id.toString(),
+            user: {
+                ...comment.user,
+                id: comment.user.id.toString()
+            },
+            replies: comment.replies.map( reply => ({
+                ...reply,
+                id: reply.id.toString(),
+                article_id: reply.article_id.toString(),
+                user_id: reply.user_id.toString(),
+                parent_id: reply.parent_id?.toString(),
+                user: {
+                    ...reply.user,
+                    id: reply.user.id.toString()
+                }
+            }))
+        }
+        ))
+        res.status(200).json({
+            data: responseData,
+            total: totalComments,
+            page,
+            pageSize
+        })
+    } catch (error) {
+        console.error('获取文章的评论列表失败:', error);
+        res.status(500).json({ error: '服务器内部错误' });
+    }
+})
 export default router

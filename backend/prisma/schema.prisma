@@ -52,7 +52,7 @@ model comments {
   // 关系字段
   article       articles   @relation(fields: [article_id], references: [id], onDelete: Cascade, map: "fk_comments_article")
   parent        comments?  @relation("commentsTocomments", fields: [parent_id], references: [id], onDelete: Cascade, map: "fk_comments_parent")
-  reply         comments[] @relation("commentsTocomments")
+  replies         comments[] @relation("commentsTocomments")
   user          users      @relation(fields: [user_id], references: [id], onDelete: Cascade, map: "fk_comments_user")
 
   @@index([article_id], map: "idx_article_id")
