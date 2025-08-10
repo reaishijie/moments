@@ -144,6 +144,7 @@ router.delete('/:commentId', authMiddleware, async (req: Request, res: Response)
                 }
             })
         ])
+        res.status(204).send()
     } catch (error) {
         console.error('删除评论失败:', error);
         res.status(500).json({ error: '服务器内部错误' });
