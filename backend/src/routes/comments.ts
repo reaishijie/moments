@@ -85,57 +85,65 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
     }
 })
 
-// 删除自己的评论
+// 删除自己的评论同时删除该评论的所有子评论
 router.delete('/:commentId', authMiddleware, async (req: Request, res: Response) => {
     try {
         const userId = req.user?.userId
         const { commentId } = req.params
-
-        // 查找评论是否存在
+        // 查找需要删除的评论是否存在
         const comment = await prisma.comments.findUnique({
             where: { id: BigInt(commentId) }
-        });
-
-        if (!comment) {
-            return res.status(404).json({ error: '评论未找到' })
+        })
+        // 检验是否存在
+        if (!comment || comment.deleted_at !== null) {
+            return res.status(404).json({ error: '评论不存在或已被删除' });
         }
-
-        // 验证当前登录用户是否是评论的作者 （需登录）
-        if (comment.user_id.toString() !== userId) {
-            return res.status(403).json({ error: '无权删除此评论' })
+        // 检验是否是本人
+        if (comment?.user_id.toString() !== userId?.toString()) {
+            res.status(403).json({ error: '权限不足，禁止操作' })
         }
-
-        const repliesCount = await prisma.comments.count({
-            where: { parent_id: BigInt(commentId), deleted_at: null }
-        });
-        // 总评论数 （一条父评论及其子评论）
-        const totalCountToDecrement = 1 + repliesCount;
-
-        //  使用事务执行软删除和更新文章评论计数
+        // 查找所有评论id
+        const list: bigint[] = []
+        // 查找的起始id
+        let item: bigint[] = [BigInt(commentId)]
+        while (item.length > 0) {
+            // 将所有评论id放入list数组中
+            list.push(...item)
+            // 查找所有的子评论id
+            const replies = await prisma.comments.findMany({
+                where: {
+                    parent_id: { in: item },
+                    deleted_at: null
+                },
+                select: {
+                    // 只返回id
+                    id: true
+                }
+            })
+            item = replies.map(i => i.id)
+            console.log('replies@item@list', '\n', replies, '\n', item, '\n', list)
+        }
+        // 事务处理
         await prisma.$transaction([
-            // 软删除其子评论
+            //删除所有评论
             prisma.comments.updateMany({
-                where: { parent_id: BigInt(commentId), deleted_at:null },
-                data: { deleted_at: new Date() }
+                where: { id: { in: list } },
+                data: {
+                    deleted_at: new Date(),
+                },
             }),
-            // 软删除父评论
-            prisma.comments.update({
-                where: { id: BigInt(commentId) },
-                data: { deleted_at: new Date() }
-            }),
-            // 更新文章的评论计数
+            // 更新文章的评论数
             prisma.articles.update({
-                where: { id: comment.article_id },
+                where: {
+                    id: comment?.article_id
+                },
                 data: {
                     comment_count: {
-                        decrement: totalCountToDecrement
+                        decrement: list.length
                     }
                 }
             })
-        ]);
-
-        res.status(204).send()
-
+        ])
     } catch (error) {
         console.error('删除评论失败:', error);
         res.status(500).json({ error: '服务器内部错误' });
