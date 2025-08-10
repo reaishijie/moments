@@ -8,6 +8,18 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model article_guest_likes {
+  guest_id   String    @db.VarChar(255) /// 游客的唯一标识符 (例如 UUID)
+  article_id BigInt    @db.UnsignedBigInt /// 被点赞的文章ID
+  ip_address String    @db.VarChar(45) /// 点赞时用户的IP地址
+  created_at DateTime  @default(now()) /// 点赞时间
+
+  article    articles  @relation(fields: [article_id], references: [id], onDelete: Cascade)
+
+  @@id([guest_id, article_id]) // 联合主键，防止同一游客重复点赞
+  @@index([article_id])
+}
+
 model article_likes {
   user_id    BigInt   @db.UnsignedBigInt
   article_id BigInt   @db.UnsignedBigInt
@@ -36,6 +48,7 @@ model articles {
   // 反向关系字段（一篇文章可以有多个评论、喜欢）
   comments      comments[]
   article_likes article_likes[]
+  article_guest_likes article_guest_likes[]
   @@index([status, published_at], map: "idx_status_published")
   @@index([user_id], map: "idx_user_id")
 }
