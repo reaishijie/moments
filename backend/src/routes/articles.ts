@@ -1,6 +1,8 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authMiddleware } from '../middleware/authMiddleware';
+import { optionalAuthMiddleware } from '../middleware/optionalAuthMiddleware';
+import { error } from 'console';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -281,7 +283,7 @@ router.get('/:articleId/comments', async (req: Request, res: Response) => {
                 ...comment.user,
                 id: comment.user.id.toString()
             },
-            replies: comment.replies.map( reply => ({
+            replies: comment.replies.map(reply => ({
                 ...reply,
                 id: reply.id.toString(),
                 article_id: reply.article_id.toString(),
@@ -305,4 +307,136 @@ router.get('/:articleId/comments', async (req: Request, res: Response) => {
         res.status(500).json({ error: '服务器内部错误' });
     }
 })
+
+// 文章点赞
+router.post('/:articleId/like', optionalAuthMiddleware, async (req: Request, res: Response) => {
+    try {
+        const { articleId } = req.params
+
+        // 检查文章是否存在
+        const article = await prisma.articles.findFirst({
+            where: {
+                id: BigInt(articleId),
+                status: 1,
+                deleted_at: null
+            }
+        })
+        if (!article) {
+            return res.status(404).json({ error: '文章不存在或未发布' })
+        }
+        // 根据登录状态执行不同的点赞逻辑
+        if (req.user) {
+            const userId = req.user.userId
+            await prisma.$transaction([
+                // 创建喜欢数据
+                prisma.article_likes.create({
+                    data: {
+                        user_id: BigInt(userId),
+                        article_id: BigInt(articleId)
+                    }
+                }),
+                // 更新文章喜欢数
+                prisma.articles.update({
+                    where: {
+                        id: BigInt(articleId)
+                    },
+                    data: {
+                        like_count: {
+                            increment: 1
+                        }
+                    }
+                })
+            ])
+            return res.status(200).json({ message: '点赞成功' })
+        } else {
+            // 游客操作逻辑
+            const guestId = req.headers['x-guest-id'] as string
+            const ipAddress = req.ip
+            if (!guestId) {
+                return res.status(400).json({ error: '未提供游客id' })
+            }
+            // 简单ip验证
+            const existingIp = await prisma.article_guest_likes.findFirst({
+                where: {
+                    article_id: BigInt(articleId),
+                    ip_address: ipAddress
+                }
+            })
+            if (existingIp) {
+                return res.status(429).json({ error: '操作过于频繁，请稍后再试' })
+            }
+            // 进行点赞操作处理
+            await prisma.$transaction([
+                // 创建游客喜欢表的记录
+                prisma.article_guest_likes.create({
+                    data: {
+                        guest_id: guestId,
+                        article_id: BigInt(articleId),
+                        ip_address: ipAddress!
+                    }
+                }),
+                // 更新文章点赞数
+                prisma.articles.update({
+                    where: { id: BigInt(articleId) },
+                    data: { like_count: { increment: 1 } }
+                })
+            ])
+            res.status(200).json({ message: '游客点赞成功' })
+        }
+
+    } catch (error: any) {
+        if (error.code === 'P2002') {
+            return res.status(409).json({ error: '已经点过赞了' })
+        }
+        console.error('点赞失败', error)
+        res.status(500).json({ error: '服务器内部错误' })
+    }
+})
+
+// 取消文章喜欢
+router.delete('/:articleId/like', optionalAuthMiddleware, async (req: Request, res: Response) => {
+    try {
+        const { articleId } = req.params;
+
+        if (req.user) {
+            // 已登录用户的逻辑
+            const userId = req.user.userId;
+            await prisma.$transaction([
+                prisma.article_likes.delete({
+                    where: { user_id_article_id: { user_id: BigInt(userId), article_id: BigInt(articleId) } },
+                }),
+                prisma.articles.update({
+                    where: { id: BigInt(articleId) },
+                    data: { like_count: { decrement: 1 } },
+                }),
+            ]);
+            return res.status(200).json({ message: '取消点赞成功' });
+
+        } else {
+            // 游客的逻辑
+            const guestId = req.headers['x-guest-id'] as string;
+            if (!guestId) {
+                return res.status(400).json({ error: '游客ID未提供' });
+            }
+
+            await prisma.$transaction([
+                prisma.article_guest_likes.delete({
+                    // user_id_article_id 不是一个数据库字段，它是 Prisma 自动生成的 “复合主键 (Composite Primary Key)”
+                    where: { guest_id_article_id: { guest_id: guestId, article_id: BigInt(articleId) } }
+                }),
+                prisma.articles.update({
+                    where: { id: BigInt(articleId) },
+                    data: { like_count: { decrement: 1 } },
+                }),
+            ]);
+            return res.status(200).json({ message: '游客取消点赞成功' });
+        }
+    } catch (error: any) {
+        if (error.code === 'P2025') {
+            return res.status(404).json({ error: '您尚未点赞，无法取消' });
+        }
+        console.error('取消点赞失败:', error);
+        res.status(500).json({ error: '服务器内部错误' });
+    }
+});
 export default router
