@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express"
 import { PrismaClient } from "@prisma/client"
 import { authMiddleware } from "../middleware/authMiddleware"
-import { log } from "console"
+import { logAction, logger } from "../services/log.service"
 
 const router = Router()
 const prisma = new PrismaClient()
@@ -41,7 +41,6 @@ router.get('/user', authMiddleware, async (req: Request, res: Response) => {
             ...user,
             id: user.id.toString(),
         };
-
         res.status(200).json(responseUser);
 
     } catch(error) {
@@ -53,6 +52,7 @@ router.get('/user', authMiddleware, async (req: Request, res: Response) => {
 
 // 修改普通信息
 router.patch('/user', authMiddleware, async(req: Request, res: Response) => {
+    // let userId: string | undefined 
     try {
         // 获取登录的用户id
         const userId = req.user?.userId
@@ -61,15 +61,13 @@ router.patch('/user', authMiddleware, async(req: Request, res: Response) => {
         }
         // 从请求体获取修改的内容
         const { nickname, brief, avatar, header_background } = req.body
-        console.log('!!!',req.body);
-        
         const updateData: {
             nickname? :string,
             brief?: string,
             avatar?: string,
             header_background?: string;
         } = {}
-        // 根据解构出的内容给 updateData对象 进行复制
+        // 根据解构出的内容给 updateData对象 进行赋值
         if (nickname !== undefined) updateData.nickname = nickname;
         if (brief !== undefined) updateData.brief = brief;
         if (avatar !== undefined) updateData.avatar = avatar;
@@ -93,9 +91,31 @@ router.patch('/user', authMiddleware, async(req: Request, res: Response) => {
             // id: newUserInfo.id.toString()
             id: Number(newUserInfo.id)
         }
+        
+        // 增加日志记录
+        logger.add({
+            userId: BigInt(userId),
+            action: logAction.USER_UPDATE_PROFILE,
+            targetType: 'users',
+            targetId: BigInt(userId),
+            details: data,
+            ipAddress: req.ip,
+            userAgent: req.headers['user-agent'] || '',
+        })
         res.status(200).json({data: data })
     } catch (error) {
         console.error('更新个人信息失败:', error);
+        // 好像没必要记录
+        // logger.add({
+        //     userId: userId ? BigInt(userId): null,
+        //     action: logAction.USER_UPDATE_PROFILE,
+        //     targetType: 'users',
+        //     targetId: userId ? BigInt(userId): null,
+        //     status: 'FAILED',
+        //     details: { error},
+        //     ipAddress: req.ip,
+        //     userAgent: req.headers['user-agent'] || '',
+        // })
         res.status(500).json({ error: '服务器内部错误' });
     }
 })

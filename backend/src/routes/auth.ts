@@ -2,6 +2,8 @@ import { Router, Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
+import { logAction, logger } from "../services/log.service"
+
 
 const router = Router()
 const prisma = new PrismaClient()
@@ -46,7 +48,15 @@ router.post('/register', async (req: Request, res: Response) => {
             // id: userInfo.id.toString()
             id: Number(userInfo.id)
         }
-        console.log('@', responseUser)
+        logger.add({
+            userId: BigInt(responseUser.id),
+            action: logAction.USER_REGISTER_SUCCESS,
+            targetType: 'users',
+            targetId: BigInt(responseUser.id),
+            details: responseUser,
+            ipAddress: req.ip,
+            userAgent: req.headers['user-agent'] || '',
+        })
         return res.status(201).json(responseUser)
     } catch (error) {
         console.log('注册失败', error)
@@ -66,21 +76,51 @@ router.post('/login', async (req: Request, res: Response) => {
         const user = await prisma.users.findFirst({
             where: {
                 OR: [
-                    {username: identifier},
-                    {email: identifier}
+                    { username: identifier },
+                    { email: identifier }
                 ]
             }
         })
         if (!user) {
+            logger.add({
+                userId: null,
+                action: logAction.USER_LOGIN_FAILD,
+                targetType: 'users',
+                targetId: null,
+                status: 'FAILED',
+                details: { error: '账号或密码错误' },
+                ipAddress: req.ip,
+                userAgent: req.headers['user-agent'] || '',
+            })
             return res.status(401).json({ error: '账号或密码错误' })
         }
         // 验证密码
         const isPasswordValid = await bcrypt.compare(password, user.password)
         if (!isPasswordValid) {
+            logger.add({
+                userId: BigInt(user.id),
+                action: logAction.USER_LOGIN_FAILD,
+                targetType: 'users',
+                targetId: BigInt(user.id),
+                status: 'FAILED',
+                details: { error: '邮箱或密码错误' },
+                ipAddress: req.ip,
+                userAgent: req.headers['user-agent'] || '',
+            })
             return res.status(401).json({ error: '邮箱或密码错误' });
         }
         // 检查用户状态是否正常 0未激活， 1正常， 2封禁
         if (user.status !== 1) {
+            logger.add({
+                userId: BigInt(user.id),
+                action: logAction.USER_LOGIN_FAILD,
+                targetType: 'users',
+                targetId: BigInt(user.id),
+                status: 'FAILED',
+                details: { error: '用户状态异常，无法登录' },
+                ipAddress: req.ip,
+                userAgent: req.headers['user-agent'] || '',
+            })
             return res.status(403).json({ error: '用户状态异常，无法登录' }); // 403 Forbidden
         }
         // 生成令牌
@@ -98,12 +138,22 @@ router.post('/login', async (req: Request, res: Response) => {
             jwtSecret,
             { expiresIn: '7d' }
         )
+
+        logger.add({
+            userId: BigInt(user.id),
+            action: logAction.USER_LOGIN_SUCCESS,
+            targetType: 'users',
+            targetId: BigInt(user.id),
+            details: { token: token, userinfo: user },
+            ipAddress: req.ip,
+            userAgent: req.headers['user-agent'] || '',
+        })
         // 返回token令牌
         res.status(200).json({ token })
 
     } catch (error) {
-        console.error('登录失败:', error);
-        res.status(500).json({ error: '服务器内部错误' });
+        console.error('登录失败:', error)
+        res.status(500).json({ error: '服务器内部错误' })
     }
 })
 

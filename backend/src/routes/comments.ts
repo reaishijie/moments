@@ -1,8 +1,8 @@
 import { Router, Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
 import { authMiddleware } from "../middleware/authMiddleware";
-import { error } from "console";
-import { connect } from "http2";
+import { logAction, logger } from "../services/log.service"
+
 
 const router = Router()
 const prisma = new PrismaClient()
@@ -78,6 +78,15 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
             user_id: newComment.user_id.toString(),
             parent_id: newComment.parent_id?.toString()
         }
+        logger.add({
+                userId: null,
+                action: logAction.COMMENT_CREATE,
+                targetType: 'comments',
+                targetId: BigInt(articleId),
+                details: responseData,
+                ipAddress: req.ip,
+                userAgent: req.headers['user-agent'] || '',
+            })
         res.status(201).json(responseData)
     } catch (error) {
         console.error('创建评论失败:', error);
@@ -144,6 +153,15 @@ router.delete('/:commentId', authMiddleware, async (req: Request, res: Response)
                 }
             })
         ])
+        logger.add({
+                userId: null,
+                action: logAction.COMMENT_DELETE,
+                targetType: 'comments',
+                targetId: BigInt(commentId),
+                details: {comment:comment, deleteCommentList: list},
+                ipAddress: req.ip,
+                userAgent: req.headers['user-agent'] || '',
+            })
         res.status(204).send()
     } catch (error) {
         console.error('删除评论失败:', error);

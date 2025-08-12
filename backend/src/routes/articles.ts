@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { optionalAuthMiddleware } from '../middleware/optionalAuthMiddleware';
-import { error } from 'console';
+import { logAction, logger } from "../services/log.service"
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -26,6 +26,15 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
                     }
                 }
             }
+        })
+        logger.add({
+            userId: BigInt(userId!),
+            action: logAction.ARTICLE_CREATE,
+            targetType: 'articles',
+            targetId: BigInt(userId!),
+            details: newArticle,
+            ipAddress: req.ip,
+            userAgent: req.headers['user-agent'] || '',
         })
         res.status(201).json({
             ...newArticle,
@@ -156,6 +165,16 @@ router.patch('/:articleId', authMiddleware, async (req: Request, res: Response) 
         }
         // 验证文章所属权
         if (article.user_id.toString() !== userId) {
+            logger.add({
+                userId: BigInt(userId!),
+                action: logAction.ARTICLE_UPDATE,
+                targetType: 'articles',
+                targetId: BigInt(userId!),
+                status: 'FAILED',
+                details: { error: '无权修改此文章' },
+                ipAddress: req.ip,
+                userAgent: req.headers['user-agent'] || '',
+            })
             return res.status(403).json({ error: '无权修改此文章' })
         }
         // 构建更新数据
@@ -175,6 +194,15 @@ router.patch('/:articleId', authMiddleware, async (req: Request, res: Response) 
             id: updateArticle.id.toString(),
             user_id: updateArticle.user_id.toString()
         }
+        logger.add({
+            userId: BigInt(userId),
+            action: logAction.ARTICLE_UPDATE,
+            targetType: 'articles',
+            targetId: BigInt(userId),
+            details: responseData,
+            ipAddress: req.ip,
+            userAgent: req.headers['user-agent'] || '',
+        })
         res.status(200).json(responseData)
     } catch (error) {
         console.error('更新文章失败:', error);
@@ -197,6 +225,16 @@ router.delete('/:articleId', authMiddleware, async (req: Request, res: Response)
         }
 
         if (article.user_id.toString() !== userId) {
+            logger.add({
+                userId: BigInt(userId!),
+                action: logAction.ARTICLE_DELETE,
+                targetType: 'articles',
+                targetId: BigInt(userId!),
+                status: 'FAILED',
+                details: { error: '无权删除此文章' },
+                ipAddress: req.ip,
+                userAgent: req.headers['user-agent'] || '',
+            })
             return res.status(403).json({ error: '无权删除此文章' });
         }
         // 执行软删除
@@ -206,7 +244,15 @@ router.delete('/:articleId', authMiddleware, async (req: Request, res: Response)
                 deleted_at: new Date()
             }
         });
-
+        logger.add({
+            userId: BigInt(userId),
+            action: logAction.ARTICLE_DELETE,
+            targetType: 'articles',
+            targetId: BigInt(userId),
+            details: article,
+            ipAddress: req.ip,
+            userAgent: req.headers['user-agent'] || '',
+        })
         res.status(204).send();
     } catch (error) {
         console.error('删除文章失败:', error);
@@ -322,7 +368,17 @@ router.post('/:articleId/like', optionalAuthMiddleware, async (req: Request, res
             }
         })
         if (!article) {
-            return res.status(404).json({ error: '文章不存在或未发布' })
+            logger.add({
+                userId: null,
+                action: logAction.LIKE_CREATE,
+                targetType: 'likes',
+                targetId: BigInt(articleId),
+                status: 'FAILED',
+                details: { error: '文章不存在或未发布' },
+                ipAddress: req.ip,
+                userAgent: req.headers['user-agent'] || '',
+            })
+            return res.status(404).json({ error: '文章不存在或未发布，点赞失败' })
         }
         // 根据登录状态执行不同的点赞逻辑
         if (req.user) {
@@ -347,6 +403,15 @@ router.post('/:articleId/like', optionalAuthMiddleware, async (req: Request, res
                     }
                 })
             ])
+            logger.add({
+                userId: null,
+                action: logAction.LIKE_CREATE,
+                targetType: 'likes',
+                targetId: BigInt(articleId),
+                details: { message: '点赞成功' },
+                ipAddress: req.ip,
+                userAgent: req.headers['user-agent'] || '',
+            })
             return res.status(200).json({ message: '点赞成功' })
         } else {
             // 游客操作逻辑
@@ -363,6 +428,16 @@ router.post('/:articleId/like', optionalAuthMiddleware, async (req: Request, res
                 }
             })
             if (existingIp) {
+                logger.add({
+                    userId: null,
+                    action: logAction.LIKE_CREATE,
+                    targetType: 'likes',
+                    targetId: BigInt(articleId),
+                    status: 'FAILED',
+                    details: { message: '点赞失败，操作过于频繁，请稍后再试' },
+                    ipAddress: req.ip,
+                    userAgent: req.headers['user-agent'] || '',
+                })
                 return res.status(429).json({ error: '操作过于频繁，请稍后再试' })
             }
             // 进行点赞操作处理
@@ -381,6 +456,15 @@ router.post('/:articleId/like', optionalAuthMiddleware, async (req: Request, res
                     data: { like_count: { increment: 1 } }
                 })
             ])
+            logger.add({
+                userId: null,
+                action: logAction.LIKE_CREATE,
+                targetType: 'likes',
+                targetId: BigInt(articleId),
+                details: { message: '点赞成功' },
+                ipAddress: req.ip,
+                userAgent: req.headers['user-agent'] || '',
+            })
             res.status(200).json({ message: '游客点赞成功' })
         }
 
@@ -410,8 +494,16 @@ router.delete('/:articleId/like', optionalAuthMiddleware, async (req: Request, r
                     data: { like_count: { decrement: 1 } },
                 }),
             ]);
+            logger.add({
+                userId: null,
+                action: logAction.LIKE_DELETE,
+                targetType: 'likes',
+                targetId: BigInt(articleId),
+                details: { message: '取消点赞成功' },
+                ipAddress: req.ip,
+                userAgent: req.headers['user-agent'] || '',
+            })
             return res.status(200).json({ message: '取消点赞成功' });
-
         } else {
             // 游客的逻辑
             const guestId = req.headers['x-guest-id'] as string;
@@ -428,7 +520,16 @@ router.delete('/:articleId/like', optionalAuthMiddleware, async (req: Request, r
                     where: { id: BigInt(articleId) },
                     data: { like_count: { decrement: 1 } },
                 }),
-            ]);
+            ])
+            logger.add({
+                userId: null,
+                action: logAction.LIKE_DELETE,
+                targetType: 'likes',
+                targetId: BigInt(articleId),
+                details: { message: '游客取消点赞成功' },
+                ipAddress: req.ip,
+                userAgent: req.headers['user-agent'] || '',
+            })
             return res.status(200).json({ message: '游客取消点赞成功' });
         }
     } catch (error: any) {
