@@ -24,7 +24,7 @@ app.get('/api', (req, res) => {
     })
 })
 
-app.use('/api/getLocation', location)
+app.use('/api/location', location)
 app.use('/api/auth', authRouter)
 app.use('/api/user', userRouter);
 app.use('/api/articles', articlesRouter)
