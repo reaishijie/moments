@@ -3,10 +3,14 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc",
     "dev": "nodemon src/index.ts",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "db:setup": "npx prisma migrate deploy && npx prisma db seed",
+    "install": "tsc && npm run db:setup && npm run start"
+  },
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
   },
   "keywords": [],
   "author": "",
