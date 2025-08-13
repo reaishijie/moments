@@ -6,7 +6,7 @@
     "build": "tsc",
     "dev": "nodemon src/index.ts",
     "start": "node dist/index.js",
-    "db:setup": "npx prisma migrate deploy && node dist/src/prisma/seed.ts",
+    "db:setup": "npx prisma migrate deploy && ts-node prisma/seed.ts",
     "install": "npm run build && npm run db:setup && npm run start"
   },
   "keywords": [],
