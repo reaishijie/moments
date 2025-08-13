@@ -19,7 +19,8 @@ app.use(express.json())
 // 测试路由
 app.get('/api', (req, res) => {
     res.status(200).json({
-        "status": "success!!!"
+        status: 'success!',
+        message: '后端接口已正常运行！'
     })
 })
 
