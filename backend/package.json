@@ -7,7 +7,7 @@
     "dev": "nodemon src/index.ts",
     "start": "node dist/index.js",
     "db:setup": "npx prisma migrate deploy && npx prisma db seed",
-    "install": "npm run tsc && npm run db:setup && npm run start"
+    "install": "npm run build && npm run db:setup && npm run start"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
