@@ -10,7 +10,7 @@
     "install": "npm run build && npm run db:setup && npm run start"
   },
   "prisma": {
-    "seed": "ts-node prisma/seed.ts"
+    "seed": "ts-node src/prisma/seed.ts"
   },
   "keywords": [],
   "author": "",
