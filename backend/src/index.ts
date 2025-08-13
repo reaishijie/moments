@@ -12,6 +12,7 @@ dotenv.config()
 // 配置变量
 const date = new Date().toLocaleString()
 const port = process.env.PORT || 9889
+const host = '0.0.0.0';
 const app = express()
 //配置请求及路由
 app.use(cors())
@@ -31,6 +32,6 @@ app.use('/api/articles', articlesRouter)
 app.use('/api/comments', commentsRouter)
 
 app.listen(port, () => {
-    console.log(`【${date}】🚀 后端启动成功：http://localhost:${port}`);
+    console.log(`【${date}】🚀 后端启动成功：http://${host}:${port}`);
     
 })

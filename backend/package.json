@@ -9,9 +9,6 @@
     "db:setup": "npx prisma migrate deploy && npx prisma db seed",
     "install": "npm run build && npm run db:setup && npm run start"
   },
-  "prisma": {
-    "seed": "ts-node src/prisma/seed.ts"
-  },
   "keywords": [],
   "author": "",
   "license": "ISC",
