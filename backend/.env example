@@ -1,3 +1,16 @@
-DATABASE_URL="mysql://pyq:password@127.0.0.1:3306/pyq"
+# 程序运行端口
 PORT=9889
+
+# 密钥（越复杂越好）
 JWT_SECRET=demo_jwt_secret
+
+# MySQL数据库配置
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_USERNAME=demo
+DB_PASSWORD=123456
+DB_DATABASE=demo
+
+
+# 无需更改
+DATABASE_URL="mysql://${DB_USERNAME}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_DATABASE}"

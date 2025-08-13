@@ -12,7 +12,7 @@ dotenv.config()
 // 配置变量
 const date = new Date().toLocaleString()
 const port = process.env.PORT || 9889
-const host = '0.0.0.0';
+const host = process.env.DB_HOST || '127.0.0.1'
 const app = express()
 //配置请求及路由
 app.use(cors())
