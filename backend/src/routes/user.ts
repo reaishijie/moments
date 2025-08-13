@@ -7,7 +7,7 @@ const router = Router()
 const prisma = new PrismaClient()
 
 // 获取用户信息
-router.get('/user', authMiddleware, async (req: Request, res: Response) => {
+router.get('/', authMiddleware, async (req: Request, res: Response) => {
     try {
         const userId = req.user?.userId
         if (!userId) {
@@ -51,7 +51,7 @@ router.get('/user', authMiddleware, async (req: Request, res: Response) => {
 
 
 // 修改普通信息
-router.patch('/user', authMiddleware, async(req: Request, res: Response) => {
+router.patch('/', authMiddleware, async(req: Request, res: Response) => {
     // let userId: string | undefined 
     try {
         // 获取登录的用户id

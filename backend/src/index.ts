@@ -17,15 +17,15 @@ const app = express()
 app.use(cors())
 app.use(express.json())
 // 测试路由
-app.get('/', (req, res) => {
+app.get('/api', (req, res) => {
     res.status(200).json({
         "status": "success!!!"
     })
 })
 
-app.use('/api', location)
+app.use('/api/getLocation', location)
 app.use('/api/auth', authRouter)
-app.use('/api', userRouter);
+app.use('/api/user', userRouter);
 app.use('/api/articles', articlesRouter)
 app.use('/api/comments', commentsRouter)
 

@@ -1,10 +1,10 @@
 import { Router } from "express";
-import { getLocation } from '../services/location.service'
+import { location } from '../services/location.service'
 
 const router = Router()
-router.use('/getLocation', async(req, res) => {
+router.get('/', async(req, res) => {
     try {
-        const data = await getLocation()
+        const data = await location()
         console.log(data);
         res.status(200).json({data})
     } catch(error){
