@@ -6,14 +6,8 @@ const routes = [
         name: 'index',
         alias: '/index',
         component: () => import ('@/views/Index.vue')
-    },
-    {
-        path: '/demo',
-        name: 'demo',
-        component: () => import ('@/Demo.vue')
-    },
+    }
 ]
-
 
 const router = createRouter({
     history: createWebHistory(),

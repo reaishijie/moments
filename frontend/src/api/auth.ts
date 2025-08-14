@@ -16,7 +16,3 @@ export const login = (data: loginData) => {
         data,
     })
 }
-register({
-    username: '123',
-    password: '123456'
-})

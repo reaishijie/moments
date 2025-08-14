@@ -19,7 +19,7 @@ export const deleteComment = (commnetId: string | number) => {
 }
 
 // 获取一篇文章的评论
-export const getCommentsByArticleId = (articleId: number, params: {size: number, pageSize: number}) => {
+export const getCommentsByArticleId = (articleId: string | number, params?: {size?: number, pageSize?: number}) => {
     return service({
         url: `/articles/${articleId}/comments`,
         method: 'get',

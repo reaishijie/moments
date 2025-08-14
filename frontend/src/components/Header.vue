@@ -1,33 +1,50 @@
 <script setup lang="ts" name="Header">
+import {  computed } from 'vue'
 import { useUserStore } from '@/store/user'
-const {user} = useUserStore() /* 将user从useUserStore中解构出来 */
 
-// 文件后缀判断
-const imageExtension = ['jpg', 'png', 'webp', 'svg', 'gif']
-const videoExtension = ['mp4', 'webm', 'ogg', 'mov']
-const  iE = user.headerBackground.split('.')[1].toLowerCase()
-const  vE = user.headerBackground.split('.')[1].toLowerCase()
-const isImage = imageExtension.includes(iE)
-const isVideo = videoExtension.includes(vE)
+const userStore = useUserStore()
+
+// 默认背景图
+const defaultBackground = '../../public/img/background.mp4'
+
+// 获取背景路径（优先使用用户配置）
+const backgroundPath = computed(() => {
+  return userStore.profile?.headerBackground || defaultBackground
+})
+
+// 判断文件类型
+const isImage = computed(() => {
+  const imageExtension = ['jpg', 'png', 'webp', 'svg', 'gif']
+  const ext = backgroundPath.value.split('.').pop()?.toLowerCase()
+  return ext ? imageExtension.includes(ext) : false
+})
+
+const isVideo = computed(() => {
+  const videoExtension = ['mp4', 'webm', 'ogg', 'mov']
+  const ext = backgroundPath.value.split('.').pop()?.toLowerCase()
+  return ext ? videoExtension.includes(ext) : false
+})
 </script>
 
 <template>
-    <!-- 顶部图片/视频 -->
-    <div class="header">
-        <img :src='user.headerBackground' v-if="isImage" alt="顶部图片">
-        <video :src="user.headerBackground" v-if="isVideo" autoplay muted loop playsinline></video>
-    </div>
+  <div class="header">
+    <img v-if="isImage" :src="backgroundPath" alt="顶部图片" />
+    <video v-else-if="isVideo" :src="backgroundPath" autoplay muted loop playsinline />
+    <video v-else :src="defaultBackground" autoplay muted loop playsinline />
+  </div>
 </template>
 
 <style scoped>
 /* 顶部容器 */
-.header{
+.header {
     width: 100%;
     height: 40vh;
     overflow: hidden;
 }
+
 /* 顶部图片 */
-.header img, video {
+.header img,
+video {
     width: 100%;
     height: 100%;
     object-fit: cover;

@@ -1,13 +1,22 @@
 <script setup lang="ts" name="Brief">
+import { computed } from 'vue';
 import { useUserStore } from '@/store/user'
 const userStore = useUserStore()
+const defaultAvatar = '../../public/img/avatar.jpg'
+const defaultBrief = '更简洁、更现代化的内容发布平台'
+const avatar = computed(() => {
+    return userStore.profile?.avatar || defaultAvatar
+})
+const brief = computed(() => {
+    return userStore.profile?.brief || defaultBrief
+})
 </script>
 
 <template>
     <!-- 用户信息 -->
     <div class="brief">
-        <img :src="userStore.user.avatar" alt="avatar">
-        <p>{{ userStore.user.brief }}</p>
+        <img :src="avatar" alt="avatar">
+        <p>{{ brief }}</p>
     </div>
 </template>
 

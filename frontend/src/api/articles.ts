@@ -13,7 +13,7 @@ export const createArticle = (data: createArticleData) => {
 export const getArticle = (params?: { page?: number, pageSize?: number, skip?: number}) => {
     return service({
         url: '/articles',
-        method: 'post',
+        method: 'get',
         params
     })
 }

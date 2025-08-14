@@ -28,12 +28,12 @@ service.interceptors.request.use(
 // 响应拦截器
 service.interceptors.response.use(
     (response) => {
-        // 直接返回response下的data数据
-        return response.data
+        // 直接返回response下的data数据(TS层面有点问题，先不这样写)
+        return response
     },
     async (error) => {
         const { useUserStore } = await import('@/store/user');
-        const { default: router } = await import('@/router');
+        // const { default: router } = await import('@/router');
         const userStore = useUserStore();
         if (error.response) {
             switch (error.response.status) {
@@ -42,7 +42,7 @@ service.interceptors.response.use(
                     // 执行退出
                     userStore.handleLogout()
                     // 跳转路由
-                    router.replace('/login')
+                    // router.replace('/login')
                     break
                 case 403:
                     console.error('权限不足，无法访问资源。')

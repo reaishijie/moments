@@ -1,8 +1,7 @@
 <script setup lang="ts" name="ArticleItem">
 import ArticleActions from './ArticleActions.vue';
-import Review from '@/components/article/Review.vue';
+import Review from './Review.vue';
 import { getLocation } from '@/utils/location'
-// import Review from './Review.vue';
 
 defineProps({
     article: {
@@ -27,17 +26,17 @@ async function showLocation() {
     <div class="article-item">
         <!-- 左侧头像 -->
         <div class="article-avatar">
-            <img :src="article.avatar" alt="avatar">
+            <img :src="article.user.avatar" alt="avatar">
         </div>
         <!-- 内容 -->
         <div class="article-context">
             <!-- 用户昵称 -->
             <div class="nickname">
-                <p>{{ article.nickname }}</p>
+                <p>{{ article.user.nickname || article.user.username }}</p>
             </div>
             <!-- 文章内容 -->
             <div class="main-context">
-                <p>{{ article.context }}</p>
+                <p>{{ article.content }}</p>
             </div>
             <div class="location" @click="showLocation">
                 <p>{{ article.location }}</p>
