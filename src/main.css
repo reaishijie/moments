@@ -1,0 +1,22 @@
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #f0f0f0;
+  background-image: url('/img/background.png');
+  background-size: cover; /* 覆盖整个容器 */
+  background-position: center;    /* 图像居中显示 */
+  background-repeat: no-repeat;   /* 不重复 */
+  background-attachment: fixed;   /* 背景固定，内容滚动 */
+  display: flex;
+  justify-content: center;  /* 居中 */
+  scroll-behavior: smooth;
+}
+::-webkit-scrollbar {
+  width: 5px; /* 滚动条的宽度 */
+}
+::-webkit-scrollbar-thumb {
+    background: skyblue; /* 渐变颜色 */
+}
+::-webkit-scrollbar-thumb:hover {
+    background: wheat; /* 悬停颜色 */
+}
