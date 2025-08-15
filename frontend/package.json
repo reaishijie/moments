@@ -17,6 +17,8 @@
   },
   "devDependencies": {
     "@types/node": "^24.0.15",
+    "@vicons/fa": "^0.13.0",
+    "@vicons/utils": "^0.1.4",
     "@vitejs/plugin-vue": "^6.0.0",
     "@vue/tsconfig": "^0.7.0",
     "typescript": "~5.8.3",

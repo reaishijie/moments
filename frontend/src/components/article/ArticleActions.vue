@@ -1,6 +1,9 @@
 <script setup lang="ts" name="ArticleActions">
 import { showTime, showDetailTime } from '@/utils/time';
 import { ref } from 'vue';
+import { HeartRegular, CommentAltRegular } from '@vicons/fa'
+import { Icon } from '@vicons/utils'
+
 const {article} = defineProps({
     article: {
         type: Object,
@@ -33,17 +36,16 @@ function handelComment() {
             </div>
             <div v-if="isPopupOpen" class="popup">
                 <div class="popup-item like" @click="handelLike">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" :fill="article.isLiked ? 'red' : 'none'" :stroke="article.isLiked ? 'red' : 'white'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-                    </svg>
+                    <Icon>
+                        <HeartRegular />
+                    </Icon>
                     <span>{{ article.isLiked ? '取消喜欢' : '喜欢' }}</span>
                 </div>
                 <div class="popup-divider"></div>
                 <div class="popup-item comment" @click="handelComment">
-                    <!-- 补全了评论图标的 SVG -->
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                    </svg>
+                    <Icon >
+                        <CommentAltRegular />
+                    </Icon>
                     <span>评论</span>
                 </div>
             </div>

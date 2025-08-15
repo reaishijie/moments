@@ -71,6 +71,7 @@ onUnmounted(() => {
 }
 
 .status-indicator {
+    font-size: smaller;
     text-align: center;
     color: #888;
     padding: 1.5rem;

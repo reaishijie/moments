@@ -6,17 +6,17 @@ import { getArticle } from "@/api/articles"
 
 export const useFeedStore = defineStore('feed', () => {
     const articles = ref<articleData[]>([])
-    const page = ref(1)
+    const page = ref(0)
     const isLoading = ref(false)
     const hasMore = ref(true)
 
     // 加载初始文章
-    const fetchInitialArticles = async() => {
-        if(articles.value.length > 0) return //放置重复加载文章
+    const fetchInitialArticles = async () => {
+        if (articles.value.length > 0) return //防止重复加载文章
 
         isLoading.value = true
         try {
-            const response = await getArticle({page: 1, pageSize: 5})
+            const response = await getArticle({ page: 1, pageSize: 5 })
             articles.value = response.data.data
             page.value = 1
             hasMore.value = articles.value.length < response.data.total
@@ -29,16 +29,21 @@ export const useFeedStore = defineStore('feed', () => {
     // 加载更多文章
     const fetchMoreArticles = async () => {
         // 如果正在加载或文章没有更多，直接返回
-        if(isLoading.value || !hasMore.value) return
-        
+        if (isLoading.value || !hasMore.value) return
+
         isLoading.value = true
         try {
             const nextPage = page.value + 1
-            const response = await getArticle({page: nextPage, pageSize: 3})
+            const response = await getArticle({ page: nextPage, pageSize: 3 })
 
             // 将新文章数据放入articles数组中
-            if(response.data.data.length > 0) {
-                articles.value.push(...response.data.data)
+            if (response.data.data.length > 0) {
+                // articles.value.push(...response.data.data)
+                const existingIds = new Set(articles.value.map((a: articleData) => a.id));
+                // 使用existingIds.has(a.id)判断每一个a.id是否包含在articles数组内，filter将为真的结果返回
+                const newArticles = response.data.data.filter((a: articleData) => !existingIds.has(a.id));
+
+                articles.value.push(...newArticles);
                 page.value += 1
             }
             hasMore.value = articles.value.length < response.data.total
