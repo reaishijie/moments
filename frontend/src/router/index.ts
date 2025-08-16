@@ -8,9 +8,10 @@ const routes = [
         component: () => import ('@/views/Index.vue')
     },
     {
-        path: '/demo',
-        name: 'demo',
-        component: () => import ('@/components/user/Login.vue')
+        path: '/login',
+        name: 'auth',
+        alias: '/auth',
+        component: () => import ('@/components/user/Auth.vue')
     }
 ]
 
