@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup lang="ts" name="MessageList">
 import { useMessageStore } from '@/store/message'
 import { CheckCircleRegular, TimesCircleRegular, InfoCircle, Spinner } from '@vicons/fa'
 import { Icon } from '@vicons/utils'

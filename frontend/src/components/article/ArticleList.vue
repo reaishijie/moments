@@ -2,7 +2,11 @@
 import ArticleItem from './ArticleItem.vue';
 import { onMounted, onUnmounted, ref } from 'vue';
 import { useFeedStore } from '@/store/feed';
+import { useMessageStore } from '@/store/message'
+const messageStore = useMessageStore()
 const feedStore = useFeedStore()
+
+
 // 创建一个 ref 来引用滚动触发器元素
 const scrollTrigger = ref<HTMLElement | null>(null)
 let observer: IntersectionObserver | null = null
