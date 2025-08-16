@@ -6,6 +6,11 @@ const routes = [
         name: 'index',
         alias: '/index',
         component: () => import ('@/views/Index.vue')
+    },
+    {
+        path: '/demo',
+        name: 'demo',
+        component: () => import ('@/components/user/Login.vue')
     }
 ]
 
