@@ -20,8 +20,10 @@ export const useFeedStore = defineStore('feed', () => {
             articles.value = response.data.data
             page.value = 1
             hasMore.value = articles.value.length < response.data.total
+            return true
         } catch (error) {
             console.error('获取初始文章失败：', error)
+            return false
         } finally {
             isLoading.value = false
         }
@@ -29,7 +31,7 @@ export const useFeedStore = defineStore('feed', () => {
     // 加载更多文章
     const fetchMoreArticles = async () => {
         // 如果正在加载或文章没有更多，直接返回
-        if (isLoading.value || !hasMore.value) return
+        if (isLoading.value || !hasMore.value) return {status: 0}
 
         isLoading.value = true
         try {
@@ -46,9 +48,12 @@ export const useFeedStore = defineStore('feed', () => {
                 articles.value.push(...newArticles);
                 page.value += 1
             }
-            hasMore.value = articles.value.length < response.data.total
+            // hasMore.value = articles.value.length < response.data.total
+            hasMore.value = response.data.data.length > 0
+            return { status: 1}
         } catch (error) {
             console.error('获取更多文章失败:', error)
+            return { status: 2, error}
         } finally {
             isLoading.value = false
         }

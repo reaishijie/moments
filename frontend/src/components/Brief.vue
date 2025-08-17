@@ -2,7 +2,7 @@
 import { computed } from 'vue';
 import { useUserStore } from '@/store/user'
 const userStore = useUserStore()
-const defaultAvatar = '../../public/img/avatar.jpg'
+const defaultAvatar = '/img/avatar.jpg'
 const defaultBrief = '更简洁、更现代化的内容发布平台'
 const avatar = computed(() => {
     return userStore.profile?.avatar || defaultAvatar
