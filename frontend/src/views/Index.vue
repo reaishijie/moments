@@ -16,13 +16,13 @@ import ArticleList from '@/components/article/ArticleList.vue';
 <style scoped>
 /* 主容器 */
 .main {
-    /* min-width: 550px;
-    max-width: 550px; */
-    width: 550px;
     display: flex;
     flex-direction: column;
     background-color: #ffffff;
     border-radius: 5px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    min-width: 375px;     /* 内容最小宽度 */
+    /* width: 550px; */
+    max-width: 550px;     /* 内容最大宽度 */
 }
 </style>
