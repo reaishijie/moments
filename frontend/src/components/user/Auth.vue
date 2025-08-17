@@ -27,7 +27,7 @@ const handleLogin = async () => {
         messageStore.show('请输入登录信息', 'info', 2000)
         return
     }
-    if (userRegisterInput.value.username.length < 6 || userRegisterInput.value.password.length < 6) {
+    if (userLoginInput.value.identifier.length < 6 || userLoginInput.value.password.length < 6) {
         messageStore.show('信息不能小于 6 位', 'info', 2000)
         return
     }
@@ -52,7 +52,6 @@ const handleRegister = async () => {
     }
     let id = messageStore.show('正在注册中', 'loading')
     const isSuccess = await register(userRegisterInput.value)
-    console.log('isSuccess@', isSuccess);
 
     if (isSuccess) {
         messageStore.update(id, { type: 'success', text: '注册成功', duration: 2000 })

@@ -5,7 +5,7 @@ import { useUserStore } from '@/store/user'
 const userStore = useUserStore()
 
 // 默认背景图
-const defaultBackground = '../../public/img/background.mp4'
+const defaultBackground = '/img/background.mp4'
 
 // 获取背景路径（优先使用用户配置）
 const backgroundPath = computed(() => {

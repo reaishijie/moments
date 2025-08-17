@@ -2,8 +2,6 @@
 import ArticleItem from './ArticleItem.vue';
 import { onMounted, onUnmounted, ref } from 'vue';
 import { useFeedStore } from '@/store/feed';
-import { useMessageStore } from '@/store/message'
-const messageStore = useMessageStore()
 const feedStore = useFeedStore()
 
 
