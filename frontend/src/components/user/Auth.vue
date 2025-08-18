@@ -5,6 +5,8 @@ import { useUserStore } from '@/store/user'
 import { useMessageStore } from '@/store/message'
 import { register } from '@/api/auth'
 import router from '@/router'
+import { UserRegular, Fingerprint, EnvelopeRegular } from '@vicons/fa'
+import { Icon } from '@vicons/utils'
 const messageStore = useMessageStore()
 const userStore = useUserStore()
 // 定义页面展示类型
@@ -31,13 +33,22 @@ const handleLogin = async () => {
         messageStore.show('信息不能小于 6 位', 'info', 2000)
         return
     }
+
     let id = messageStore.show('正在登录中', 'loading')
-    const isSuccess = await userStore.handleLogin(userLoginInput.value)
-    if (isSuccess) {
-        messageStore.update(id, { type: 'success', text: '登陆成功', duration: 2000 })
-        router.replace('/')
-    } else {
-        messageStore.update(id, { type: 'error', text: '登陆失败', duration: 2000 })
+    try {
+        const res = await userStore.handleLogin(userLoginInput.value)
+        // 如果请求成功
+        if (res.status === 0) {
+            messageStore.update(id, { type: 'success', text: '登陆成功', duration: 2000 })
+            router.replace('/')
+        }
+        else {
+            messageStore.update(id, { type: 'error', text: `${res.error.response.data.error}`, duration: 2000 })
+        }
+    } catch (error) {
+        console.log(error);
+
+        messageStore.update(id, { type: 'error', text: `网络异常`, duration: 2000 })
     }
 }
 // 处理注册
@@ -50,14 +61,21 @@ const handleRegister = async () => {
         messageStore.show('信息不能小于 6 位', 'info', 2000)
         return
     }
-    let id = messageStore.show('正在注册中', 'loading')
-    const isSuccess = await register(userRegisterInput.value)
 
-    if (isSuccess) {
-        messageStore.update(id, { type: 'success', text: '注册成功', duration: 2000 })
-        show.value = 'showLogin'
-    } else {
-        messageStore.update(id, { type: 'error', text: '登陆失败', duration: 2000 })
+    let id = messageStore.show('正在注册中', 'loading')
+    try {
+        // 用注册函数等待结果
+        const response = await register(userRegisterInput.value)
+        // 判断是否成功
+        if (response) {
+            messageStore.update(id, { type: 'success', text: '注册成功', duration: 2000 })
+            show.value = 'showLogin'
+        } else {
+            messageStore.update(id, { type: 'error', text: '注册失败', duration: 2000 })
+        }
+    } catch (error: any) {
+        console.error('注册过程中发生错误:', error);
+        messageStore.update(id, { type: 'error', text: `${error.response.data.error}`, duration: 2000 });
     }
 }
 </script>
@@ -71,12 +89,22 @@ const handleRegister = async () => {
             </div>
             <div class="body">
                 <div class="identifier">
-                    <label for="identifier">用户名：</label>
+                    <label for="identifier">
+                        <Icon class="icon">
+                            <UserRegular />
+                        </Icon>
+                        账号：
+                    </label>
                     <input type="text" id="identifier" v-model="userLoginInput.identifier" placeholder="用户名/邮箱"
                         @keyup.enter="handleLogin">
                 </div>
                 <div class="password">
-                    <label for="password">密 码：</label>
+                    <label for="password">
+                        <Icon class="icon">
+                            <Fingerprint />
+                        </Icon>
+                        密码：
+                    </label>
                     <input type="password" id="password" v-model="userLoginInput.password" placeholder="密码"
                         @keyup.enter="handleLogin">
                 </div>
@@ -97,17 +125,32 @@ const handleRegister = async () => {
             </div>
             <div class="body">
                 <div class="identifier">
-                    <label for="identifier">用户名：</label>
+                    <label for="identifier">
+                        <Icon class="icon">
+                            <UserRegular />
+                        </Icon>
+                        账号：
+                    </label>
                     <input type="text" id="identifier" v-model="userRegisterInput.username" placeholder="用户名"
                         @keyup.enter="handleLogin">
                 </div>
                 <div class="identifier">
-                    <label for="identifier">邮 箱：</label>
-                    <input type="text" id="identifier" v-model="userRegisterInput.email" placeholder="邮箱"
+                    <label for="email">
+                        <Icon class="icon">
+                            <EnvelopeRegular />
+                        </Icon>
+                        邮箱：
+                    </label>
+                    <input type="text" id="email" v-model="userRegisterInput.email" placeholder="邮箱"
                         @keyup.enter="handleLogin">
                 </div>
                 <div class="password">
-                    <label for="password">密 码：</label>
+                    <label for="password">
+                        <Icon class="icon">
+                            <Fingerprint />
+                        </Icon>
+                        密码：
+                    </label>
                     <input type="password" id="password" v-model="userRegisterInput.password" placeholder="密码"
                         @keyup.enter="handleLogin">
                 </div>
@@ -125,61 +168,62 @@ const handleRegister = async () => {
 
 <style scoped>
 @media (max-width: 480px) {
-  .container {
-    width: 90%;
-    padding: 16px;
-  }
+    .container {
+        width: 90%;
+        padding: 16px;
+    }
 }
 /* 遮罩层 */
 .overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background-color: rgba(0, 0, 0, 0.4); /* 半透明黑色背景 */
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 999;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.4);
+    /* 半透明黑色背景 */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 999;
 }
 
 .container {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 1000;
-
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-
-  min-width: 320px;
-  max-width: 440px;
-  background-color: rgba(255, 255, 255, 0.95);
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 0 12px rgba(0, 0, 0, 0.2);
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-width: 320px;
+    max-width: 440px;
+    background-color: rgba(255, 255, 255, 0.95);
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 0 12px rgba(0, 0, 0, 0.2);
 }
+
 /* 淡入动画 */
 @keyframes flipIn {
-  from {
-    transform: translate(-50%, -50%) rotateY(90deg);
-    opacity: 0;
-  }
-  to {
-    transform: translate(-50%, -50%) rotateY(0deg);
-    opacity: 1;
-  }
+    from {
+        transform: translate(-50%, -50%) rotateY(90deg);
+        opacity: 0;
+    }
+
+    to {
+        transform: translate(-50%, -50%) rotateY(0deg);
+        opacity: 1;
+    }
+}
+.container {
+    animation: flipIn 0.4s ease-out;
+    transform-style: preserve-3d;
+    backface-visibility: hidden;
 }
 
-.container {
-  animation: flipIn 0.4s ease-out;
-  transform-style: preserve-3d;
-  backface-visibility: hidden;
-}
 /* 头部：用户注册、用户登录 */
 .header {
     margin-bottom: 20px;
@@ -192,13 +236,22 @@ const handleRegister = async () => {
 
 label {
     display: inline-block;
-    width: 70px;
+    width: 80px;
+    line-height: 30px;
+}
+label:hover {
+    cursor: pointer;
+}
+
+.icon {
+    margin-right: 5px;
 }
 
 input {
     background-color: inherit;
-    margin-bottom: 10px;
+    margin-bottom: 15px;
     border: none;
+    line-height: 20px;
     font-size: smaller;
     border-bottom: 1px solid #cac5c5;
     /* 只保留底部边框 */
@@ -209,7 +262,6 @@ input {
     transition: border-color 0.3s;
     /* 过渡效果 */
 }
-
 input:focus {
     border-bottom: 2px solid #eadfdf;
 }
@@ -233,12 +285,11 @@ button {
     background-color: rgb(22, 195, 106);
     color: whitesmoke;
 }
-
 button:hover {
     background-color: rgb(5, 229, 109);
     /* 悬浮时按钮颜色 */
+    cursor: pointer;
 }
-
 button:active {
     transform: scale(0.98);
     /* 按钮点击时缩小 */
@@ -246,7 +297,13 @@ button:active {
 
 .footer {
     font-size: xx-small;
-    margin-top: 10px;
-    font-weight: 100;
+    margin-top: 12px;
+    font-weight: 200;
+    color: #e133b6;
+}
+span:hover {
+    cursor: pointer;
+    color: #be2a99;
+
 }
 </style>

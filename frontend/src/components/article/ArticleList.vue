@@ -45,8 +45,7 @@ onMounted(async () => {
             }
         },
         {
-            // 当触发器元素距离视口底部 100px 时，就触发回调
-            rootMargin: '0px 0px 100px 0px',
+            rootMargin: '0px 0px 10px 0px',
         }
     );
     // 开始监听触发器元素
@@ -93,7 +92,8 @@ onUnmounted(() => {
 }
 
 .scroll-trigger {
-    height: 50px;
+    height: 1px;
+    margin-bottom: -20px;
 }
 
 .status-indicator {

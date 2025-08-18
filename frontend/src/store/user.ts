@@ -7,7 +7,7 @@ import { getUserInfo } from "@/api/users"
 export const useUserStore = defineStore('user', () => {
     const token = ref(localStorage.getItem('token') || null)
     const profile = ref<userData | null>(null)
-
+    // 登录
     const handleLogin = async(credentials: any) => {
         try {
             const response = await login(credentials)
@@ -15,10 +15,9 @@ export const useUserStore = defineStore('user', () => {
             localStorage.setItem('token', response.data.token)
             // 登录成功后立即获取用户信息
             await fetchUserProfile()
-            return true
-        } catch (error) {
-            console.log('登录失败：', error);
-            return false
+            return { status: 0, response }
+        } catch (error:any) {
+            return { status: 1, error}
         }
     }
     const fetchUserProfile = async() => {

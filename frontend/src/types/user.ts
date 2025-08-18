@@ -4,7 +4,7 @@ export interface userData {
     nickname: string,
     brief:string,
     role: string,
-    headerBackground: string,
+    header_background: string,
     avatar: string,
 }
 

@@ -9,8 +9,10 @@ const defaultBackground = '/img/background.mp4'
 
 // 获取背景路径（优先使用用户配置）
 const backgroundPath = computed(() => {
-  return userStore.profile?.headerBackground || defaultBackground
+  return userStore.profile?.header_background || defaultBackground
 })
+
+console.log(backgroundPath.value);
 
 // 判断文件类型
 const isImage = computed(() => {

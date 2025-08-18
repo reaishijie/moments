@@ -36,7 +36,7 @@ export const useFeedStore = defineStore('feed', () => {
         isLoading.value = true
         try {
             const nextPage = page.value + 1
-            const response = await getArticle({ page: nextPage, pageSize: 3 })
+            const response = await getArticle({ page: nextPage, pageSize: 5 })
 
             // 将新文章数据放入articles数组中
             if (response.data.data.length > 0) {
@@ -48,8 +48,7 @@ export const useFeedStore = defineStore('feed', () => {
                 articles.value.push(...newArticles);
                 page.value += 1
             }
-            // hasMore.value = articles.value.length < response.data.total
-            hasMore.value = response.data.data.length > 0
+            hasMore.value = articles.value.length < response.data.total
             return { status: 1}
         } catch (error) {
             console.error('获取更多文章失败:', error)

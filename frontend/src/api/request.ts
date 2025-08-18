@@ -33,7 +33,6 @@ service.interceptors.response.use(
     },
     async (error) => {
         const { useUserStore } = await import('@/store/user');
-        // const { default: router } = await import('@/router');
         const userStore = useUserStore();
         if (error.response) {
             switch (error.response.status) {
@@ -41,8 +40,6 @@ service.interceptors.response.use(
                     console.error('认证失败，Token无效或已过期，请重新登录。')
                     // 执行退出
                     userStore.handleLogout()
-                    // 跳转路由
-                    // router.replace('/login')
                     break
                 case 403:
                     console.error('权限不足，无法访问资源。')
@@ -51,7 +48,7 @@ service.interceptors.response.use(
                     console.error('请求的资源并不存在')
                     break
                 default:
-                    console.error(`请求错误，状态码： ${error.response.status}`)
+                    console.error(`请求错误：\n 状态码： ${error.response.status}, \n 原因： ${error.response.data.error}`)
             }
         } else if (error.request) {
             // 请求发送但未收到响应
