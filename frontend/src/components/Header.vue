@@ -59,6 +59,9 @@ onUnmounted(() => {
   observer && observer.disconnect()
 
 })
+
+// 根据token判断用户是否登录
+const isLogin = computed(() => !!userStore.token )
 </script>
 
 <template>
@@ -71,7 +74,7 @@ onUnmounted(() => {
     <div class="top-bar-wrapper">
       <div :class="['top-bar', { blurred: isBlurred}]">
         <Icon  :class="['icon', { blurred: isBlurred}]">
-          <UserCircleRegular @click="authStore.showAuth" />
+          <UserCircleRegular @click="authStore.showAuth" v-if="!isLogin"/>
         </Icon>
         <Icon :class="['icon', { blurred: isBlurred}]">
           <Hive />

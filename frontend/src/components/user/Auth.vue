@@ -45,7 +45,8 @@ const handleLogin = async () => {
         // 如果请求成功
         if (res.status === 0) {
             messageStore.update(id, { type: 'success', text: '登陆成功', duration: 2000 })
-            router.replace('/')
+            authStore.closeAuth()
+            router.push('/')
         }
         else {
             messageStore.update(id, { type: 'error', text: `${res.error.response.data.error}`, duration: 2000 })
