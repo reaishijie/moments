@@ -5,10 +5,15 @@ import { useUserStore } from '@/store/user'
 import { useMessageStore } from '@/store/message'
 import { register } from '@/api/auth'
 import router from '@/router'
-import { UserRegular, Fingerprint, EnvelopeRegular } from '@vicons/fa'
+import { UserRegular, Fingerprint, EnvelopeRegular, Times } from '@vicons/fa'
 import { Icon } from '@vicons/utils'
+import { useAuthStore } from '@/store/auth'
+
+
+const authStore = useAuthStore()
 const messageStore = useMessageStore()
 const userStore = useUserStore()
+
 // 定义页面展示类型
 const show = ref<'showLogin' | 'showRegister'>('showLogin')
 
@@ -81,11 +86,14 @@ const handleRegister = async () => {
 </script>
 
 <template>
-    <div class="overlay">
+    <div class="overlay" v-if="authStore.isShow">
         <!-- 用户登录 -->
         <div class="container" v-if="show === 'showLogin'">
             <div class="header">
-                用户登录
+                <span>用户登录</span>
+                <Icon class="icon" @click="authStore.closeAuth" >
+                    <Times class="close" />
+                </Icon>
             </div>
             <div class="body">
                 <div class="identifier">
@@ -121,7 +129,10 @@ const handleRegister = async () => {
         <!-- 用户注册 -->
         <div class="container" v-if="show === 'showRegister'">
             <div class="header">
-                用户注册
+                <span>用户注册</span>
+                <Icon class="icon" @click="authStore.closeAuth">
+                    <Times class="close" />
+                </Icon>
             </div>
             <div class="body">
                 <div class="identifier">
@@ -173,6 +184,7 @@ const handleRegister = async () => {
         padding: 16px;
     }
 }
+
 /* 遮罩层 */
 .overlay {
     position: fixed;
@@ -218,6 +230,7 @@ const handleRegister = async () => {
         opacity: 1;
     }
 }
+
 .container {
     animation: flipIn 0.4s ease-out;
     transform-style: preserve-3d;
@@ -226,19 +239,25 @@ const handleRegister = async () => {
 
 /* 头部：用户注册、用户登录 */
 .header {
+    width: 100%;
     margin-bottom: 20px;
     display: flex;
-    /* align-self: start; */
+    justify-content: space-between;
     font-size: large;
     font-weight: 900;
     color: rgb(246, 201, 117);
 }
-
+.close:hover {
+    cursor: pointer;
+    color: rgb(237, 172, 51);
+    font-size: x-large;
+}
 label {
     display: inline-block;
     width: 80px;
     line-height: 30px;
 }
+
 label:hover {
     cursor: pointer;
 }
@@ -262,6 +281,7 @@ input {
     transition: border-color 0.3s;
     /* 过渡效果 */
 }
+
 input:focus {
     border-bottom: 2px solid #eadfdf;
 }
@@ -285,11 +305,13 @@ button {
     background-color: rgb(22, 195, 106);
     color: whitesmoke;
 }
+
 button:hover {
     background-color: rgb(5, 229, 109);
     /* 悬浮时按钮颜色 */
     cursor: pointer;
 }
+
 button:active {
     transform: scale(0.98);
     /* 按钮点击时缩小 */
@@ -301,9 +323,10 @@ button:active {
     font-weight: 200;
     color: #e133b6;
 }
-span:hover {
+
+.footer span:hover {
     cursor: pointer;
-    color: #be2a99;
+    color: #ef81d3;
 
 }
 </style>

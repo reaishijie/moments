@@ -1,9 +1,10 @@
 <script setup lang="ts" name="Header">
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useUserStore } from '@/store/user'
-import {UserCircleRegular, Link } from '@vicons/fa'
+import {UserCircleRegular, Hive } from '@vicons/fa'
 import { Icon } from '@vicons/utils'
-
+import { useAuthStore } from '@/store/auth'
+const authStore = useAuthStore()
 const userStore = useUserStore()
 
 // 默认背景图
@@ -70,10 +71,10 @@ onUnmounted(() => {
     <div class="top-bar-wrapper">
       <div :class="['top-bar', { blurred: isBlurred}]">
         <Icon  :class="['icon', { blurred: isBlurred}]">
-          <UserCircleRegular />
+          <UserCircleRegular @click="authStore.showAuth" />
         </Icon>
         <Icon :class="['icon', { blurred: isBlurred}]">
-          <Link />
+          <Hive />
         </Icon>
       </div>
     </div>
@@ -123,7 +124,7 @@ video {
 /* 模糊状态 */
 .top-bar.blurred {
   backdrop-filter: blur(8px);
-  background-color: rgba(234, 233, 233, 0.3);
+  background-color: rgba(234, 233, 233, 0.8);
 }
 .icon {
   font-size: 20px;
@@ -131,8 +132,8 @@ video {
   margin: 3px;
 }
 .icon:hover {
-  font-size: 23px;
   color: rgb(200, 194, 194);
+  cursor: pointer;
 }
 .icon.blurred {
   font-size: 20px;
@@ -140,6 +141,5 @@ video {
 }
 .icon.blurred:hover {
   color: rgb(81, 78, 78);
-  font-size: 23px;
 }
 </style>
