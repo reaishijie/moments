@@ -1,7 +1,7 @@
 <script setup lang="ts" name="Header">
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useUserStore } from '@/store/user'
-import {UserCircleRegular, Hive } from '@vicons/fa'
+import { UserCircleRegular, Hive, Camera } from '@vicons/fa'
 import { Icon } from '@vicons/utils'
 import { useAuthStore } from '@/store/auth'
 const authStore = useAuthStore()
@@ -61,7 +61,7 @@ onUnmounted(() => {
 })
 
 // 根据token判断用户是否登录
-const isLogin = computed(() => !!userStore.token )
+const isLogin = computed(() => !!userStore.token)
 </script>
 
 <template>
@@ -72,13 +72,24 @@ const isLogin = computed(() => !!userStore.token )
       <video v-else :src="defaultBackground" autoplay muted loop playsinline />
     </div>
     <div class="top-bar-wrapper">
-      <div :class="['top-bar', { blurred: isBlurred}]">
-        <Icon  :class="['icon', { blurred: isBlurred}]">
-          <UserCircleRegular @click="authStore.showAuth" v-if="!isLogin"/>
+      <div :class="['top-bar', { blurred: isBlurred }]">
+        <div class="top-bar-left">
+          <Icon :class="['icon', { blurred: isBlurred }]">
+          <UserCircleRegular @click="authStore.showAuth" v-if="!isLogin" />
         </Icon>
-        <Icon :class="['icon', { blurred: isBlurred}]">
-          <Hive />
-        </Icon>
+        </div>
+        <div class="top-bar-right">
+          <div class="addArticle">
+            <Icon :class="['icon', { blurred: isBlurred }]" v-if="isLogin">
+              <Camera />
+            </Icon>
+          </div>
+          <div class="link">
+            <Icon :class="['icon', { blurred: isBlurred }]">
+            <Hive />
+          </Icon>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -116,33 +127,46 @@ video {
   width: min(100%, 550px);
   z-index: 10;
 }
+
 /* 栏本身 */
 .top-bar {
   display: flex;
   justify-content: space-between;
   background-color: rgba(255, 255, 255, 0);
   transition: backdrop-filter 0.3s ease, background-color 0.3s ease;
-  padding:10px ;
+  padding: 10px;
 }
+
 /* 模糊状态 */
 .top-bar.blurred {
   backdrop-filter: blur(8px);
   background-color: rgba(234, 233, 233, 0.8);
 }
+
 .icon {
   font-size: 20px;
   color: rgb(238, 233, 233);
   margin: 3px;
 }
+
 .icon:hover {
   color: rgb(200, 194, 194);
   cursor: pointer;
 }
+
 .icon.blurred {
   font-size: 20px;
   color: black;
 }
+
 .icon.blurred:hover {
   color: rgb(81, 78, 78);
+}
+
+.top-bar-right {
+  display: flex;
+}
+.addArticle {
+  padding: 0 10px 0 0;
 }
 </style>

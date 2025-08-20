@@ -11,21 +11,45 @@ const prisma = new PrismaClient();
 router.post('/', authMiddleware, async (req: Request, res: Response) => {
     try {
         const userId = req.user?.userId;
-        const { content, status, location } = req.body;
+        const { content, status, location, type, isTop, isAd, imageUrls, videoUrls } = req.body;
         if (!content) {
-            return res.status(400).json({ error: '内容不能为空' });
+            return res.status(400).json({ error: '文章内容不能为空' });
         }
-        const newArticle = await prisma.articles.create({
-            data: {
-                content,
-                status,
-                location,
-                user: {
-                    connect: {
-                        id: BigInt(userId!),
+        //创建一篇文章
+        const newArticle = await prisma.$transaction(async (tx) => {
+            // 操作文章表
+            const createdArticle = await tx.articles.create({
+                data: {
+                    content,
+                    status,
+                    location,
+                    type,
+                    is_top: isTop,
+                    is_ad: isAd,
+                    user: {
+                        connect: { id: BigInt(userId!), }
                     }
                 }
+            })
+            // 操作视频
+            if (imageUrls && Array.isArray(imageUrls) && imageUrls.length > 0) {
+                const imageData = imageUrls.map((url: string, index: number) => ({
+                    article_id: createdArticle.id,
+                    image_url: url,
+                    sort_order: index
+                }))
+                await tx.article_images.createMany({ data: imageData })
             }
+            // 操作视频
+            if (videoUrls && Array.isArray(videoUrls) && videoUrls.length > 0) {
+                const videoData = videoUrls.map((url: string, index: number) => ({
+                    article_id: createdArticle.id,
+                    video_url: url,
+                    sort_order: index
+                }))
+                await tx.article_videos.createMany({ data: videoData })
+            }
+            return createdArticle
         })
         logger.add({
             userId: BigInt(userId!),
@@ -41,7 +65,6 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
             id: newArticle.id.toString(), //将 BigInt 类型转换
             user_id: newArticle.user_id.toString()
         });
-
     } catch (error) {
         console.error('创建文章失败:', error);
         res.status(500).json({ error: '服务器内部错误' });
@@ -63,10 +86,11 @@ router.get('/', async (req: Request, res: Response) => {
             },
             skip: skip,
             take: pageSize,
-            orderBy: {
-                published_at: 'desc' //按时间发布降序排列
-            },
-            //同时查询作者部分信息
+            orderBy: [
+                {is_top: 'desc'}, 
+                {published_at: 'desc'} //按时间发布降序排列
+            ],
+            //同时查询作者部分信息、文章的相关图片/视频
             include: {
                 user: {
                     select: {
@@ -76,7 +100,9 @@ router.get('/', async (req: Request, res: Response) => {
                         avatar: true,
                         header_background: true
                     }
-                }
+                },
+                article_images: { orderBy: { sort_order: 'asc'}},
+                article_videos: { orderBy: { sort_order: 'asc'}}
             }
         })
         // 总文章数
@@ -91,7 +117,17 @@ router.get('/', async (req: Request, res: Response) => {
             user: {
                 ...article.user,
                 id: article.user.id.toString()
-            }
+            },
+            article_images: article.article_images.map(image => ({
+                ...image,
+                id: image.id.toString(),
+                article_id: image.article_id.toString()
+            })),
+            article_videos: article.article_videos.map(video => ({
+                ...video,
+                id: video.id.toString(),
+                article_id: video.article_id.toString()
+            })),
         }));
 
         res.status(200).json({
