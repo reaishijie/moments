@@ -53,7 +53,6 @@ const handleLogin = async () => {
         }
     } catch (error) {
         console.log(error);
-
         messageStore.update(id, { type: 'error', text: `网络异常`, duration: 2000 })
     }
 }

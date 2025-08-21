@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, article_images, article_videos } from '@prisma/client';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { optionalAuthMiddleware } from '../middleware/optionalAuthMiddleware';
 import { logAction, logger } from "../services/log.service"
@@ -55,7 +55,7 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
             userId: BigInt(userId!),
             action: logAction.ARTICLE_CREATE,
             targetType: 'articles',
-            targetId: BigInt(userId!),
+            targetId: BigInt(newArticle.id),
             details: newArticle,
             ipAddress: req.ip,
             userAgent: req.headers['user-agent'] || '',
@@ -71,8 +71,8 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
     }
 })
 
-// 获取文章
-router.get('/', async (req: Request, res: Response) => {
+// 获取文章列表
+router.get('/', optionalAuthMiddleware, async (req: Request, res: Response) => {
     try {
         const page = parseInt(req.query.page as string) || 1
         const pageSize = parseInt(req.query.pageSize as string) || 5
@@ -87,8 +87,8 @@ router.get('/', async (req: Request, res: Response) => {
             skip: skip,
             take: pageSize,
             orderBy: [
-                {is_top: 'desc'}, 
-                {published_at: 'desc'} //按时间发布降序排列
+                { is_top: 'desc' },
+                { published_at: 'desc' } //按时间发布降序排列
             ],
             //同时查询作者部分信息、文章的相关图片/视频
             include: {
@@ -101,16 +101,53 @@ router.get('/', async (req: Request, res: Response) => {
                         header_background: true
                     }
                 },
-                article_images: { orderBy: { sort_order: 'asc'}},
-                article_videos: { orderBy: { sort_order: 'asc'}}
+                article_images: { orderBy: { sort_order: 'asc' } },
+                article_videos: { orderBy: { sort_order: 'asc' } },
             }
         })
+
+        // 动态计算用户对文章的喜欢状态
+        let articleWithLikeStatus: any[] = articles
+        if (req.user) {
+            // 返回文章id为一个数组
+            const articleIds = articles.map(a => a.id)
+            const userLikes = await prisma.article_likes.findMany({
+                where: {
+                    user_id: BigInt(req.user.userId),
+                    article_id: { in: articleIds }
+                },
+                select: { article_id: true }
+            })
+            // 将用户点赞的文章储存到一个 Set 里（Set.has()判断比数组块）
+            const likeArticleIds = new Set(userLikes.map(like => like.article_id))
+            articleWithLikeStatus = articles.map(article => ({
+                ...article,
+                // 喜欢的文章id列表里有没有当前文章id 有为true | 无为false
+                isLiked: likeArticleIds.has(article.id)
+            }))
+        } else {
+            // 游客
+            const guestId = req.headers['x-guest-id'] as string
+            const articleIds = articles.map(a => a.id)
+            if(guestId && articleIds.length > 0) {
+                const guestLikes = await prisma.article_guest_likes.findMany({
+                    where: { guest_id: guestId, article_id: { in: articleIds}},
+                    select: { article_id: true}
+                })
+
+                const likeArticleIds = new Set(guestLikes.map( like => like.article_id))
+                articleWithLikeStatus = articles.map(article => ({
+                    ...article,
+                    isLike: likeArticleIds.has(article.id)
+                }))
+            }
+        }
         // 总文章数
         const totalArticles = await prisma.articles.count({
             where: { status: 1, deleted_at: null }
         });
         // 处理数据，转化BigInt
-        const responseArticles = articles.map(article => ({
+        const responseArticles = articleWithLikeStatus.map(article => ({
             ...article,
             id: article.id.toString(),
             user_id: article.user_id.toString(),
@@ -118,18 +155,19 @@ router.get('/', async (req: Request, res: Response) => {
                 ...article.user,
                 id: article.user.id.toString()
             },
-            article_images: article.article_images.map(image => ({
+            article_images: article.article_images.map((image: article_images) => ({
                 ...image,
                 id: image.id.toString(),
                 article_id: image.article_id.toString()
             })),
-            article_videos: article.article_videos.map(video => ({
+            article_videos: article.article_videos.map((video: article_videos) => ({
                 ...video,
                 id: video.id.toString(),
                 article_id: video.article_id.toString()
             })),
         }));
-
+        console.log('@@@',responseArticles);
+        
         res.status(200).json({
             data: responseArticles,
             total: totalArticles,
@@ -161,7 +199,9 @@ router.get('/:articleId', async (req: Request, res: Response) => {
                         avatar: true,
                         header_background: true
                     }
-                }
+                },
+                article_images: { orderBy: { sort_order: 'asc' } },
+                article_videos: { orderBy: { sort_order: 'asc' } }
             }
         })
         if (!article) {
@@ -174,8 +214,17 @@ router.get('/:articleId', async (req: Request, res: Response) => {
             user: {
                 ...article.user,
                 id: article.user.id.toString()
-            }
-
+            },
+            article_images: article.article_images.map(image => ({
+                ...image,
+                id: image.id.toString(),
+                article_id: image.article_id.toString()
+            })),
+            article_videos: article.article_videos.map(video => ({
+                ...video,
+                id: video.id.toString(),
+                article_id: video.article_id.toString()
+            })),
         }
         res.status(200).json(responseData)
     } catch (error) {
@@ -189,7 +238,7 @@ router.patch('/:articleId', authMiddleware, async (req: Request, res: Response) 
     try {
         const userId = req.user?.userId
         const { articleId } = req.params
-        const { content, status, location } = req.body
+        const { content, status, location, type, isAd, isTop, imageUrls, videoUrls } = req.body
         // 验证文章是否存在
         const article = await prisma.articles.findUnique({
             where: {
@@ -205,7 +254,7 @@ router.patch('/:articleId', authMiddleware, async (req: Request, res: Response) 
                 userId: BigInt(userId!),
                 action: logAction.ARTICLE_UPDATE,
                 targetType: 'articles',
-                targetId: BigInt(userId!),
+                targetId: BigInt(articleId),
                 status: 'FAILED',
                 details: { error: '无权修改此文章' },
                 ipAddress: req.ip,
@@ -214,10 +263,16 @@ router.patch('/:articleId', authMiddleware, async (req: Request, res: Response) 
             return res.status(403).json({ error: '无权修改此文章' })
         }
         // 构建更新数据
-        const updateData: { content?: string, status?: number, location?: string } = {}
+        const updateData: { content?: string, status?: number, location?: string, type?: number, isAd?: boolean, isTop?: boolean, imageUrls?: object, videoUrls?: object } = {}
+        // 数据不为空进行更新
         if (content) updateData.content = content
         if (status != undefined) updateData.status = status
         if (location) updateData.location = location
+        if (type) updateData.type = type
+        if (isAd) updateData.isAd = isAd
+        if (isTop) updateData.isTop = isTop
+        if (imageUrls) updateData.imageUrls = imageUrls
+        if (videoUrls) updateData.videoUrls = videoUrls
         const updateArticle = await prisma.articles.update({
             where: {
                 id: BigInt(articleId)
@@ -234,7 +289,7 @@ router.patch('/:articleId', authMiddleware, async (req: Request, res: Response) 
             userId: BigInt(userId),
             action: logAction.ARTICLE_UPDATE,
             targetType: 'articles',
-            targetId: BigInt(userId),
+            targetId: BigInt(articleId),
             details: responseData,
             ipAddress: req.ip,
             userAgent: req.headers['user-agent'] || '',
@@ -265,7 +320,7 @@ router.delete('/:articleId', authMiddleware, async (req: Request, res: Response)
                 userId: BigInt(userId!),
                 action: logAction.ARTICLE_DELETE,
                 targetType: 'articles',
-                targetId: BigInt(userId!),
+                targetId: BigInt(articleId),
                 status: 'FAILED',
                 details: { error: '无权删除此文章' },
                 ipAddress: req.ip,
@@ -284,7 +339,7 @@ router.delete('/:articleId', authMiddleware, async (req: Request, res: Response)
             userId: BigInt(userId),
             action: logAction.ARTICLE_DELETE,
             targetType: 'articles',
-            targetId: BigInt(userId),
+            targetId: BigInt(articleId),
             details: article,
             ipAddress: req.ip,
             userAgent: req.headers['user-agent'] || '',

@@ -1,6 +1,9 @@
+const api = import.meta.env.VITE_API_BASE_URL
+console.log(api);
+
 async function getLocation() {
   try {
-    const response = await fetch(`http://127.0.0.1:9889/api/getLocation`)
+    const response = await fetch(`${api}/location`)
     // 双重解构并重命名
     const {data:{data: result}} =await response.json()
     if (response.status != 200) {

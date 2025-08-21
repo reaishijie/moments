@@ -1,10 +1,24 @@
-export interface articleData{
+export interface articleData {
     id: number,
     nickname: string,
     avatar: string,
     context: string,
-    location? : string,
-    createdAt: string
+    type: number,
+    isTop?: boolean,
+    isAd?: boolean,
+    isLiked?: boolean,
+    likeCount: number,
+    commentCount: number,
+    location?: string,
+    createdAt: string,
+    user: {
+        id: string,
+        username: string,
+        nickname: string,
+        avatar_url: string,
+    },
+    article_images: any[],
+    article_videos: any[]
 }
 export interface createArticleData {
     content: string,

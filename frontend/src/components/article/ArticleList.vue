@@ -30,8 +30,6 @@ onMounted(async () => {
                 const id = messageStore.show('正在加载文章', 'loading')
 
                 const isSuccess = await feedStore.fetchMoreArticles();
-                console.log(isSuccess);
-                
                 // 消息通知
                 if (isSuccess?.status === 0) {
                         messageStore.update(id, { type: 'info', text: '没有更多文章了', duration: 2000 })

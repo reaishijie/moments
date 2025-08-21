@@ -24,9 +24,7 @@ function showTime(value:number) {
 
 function showDetailTime(value:number){
     const articleTime = value
-    console.log('当前文章时间戳为：', articleTime)
     const detailTime = new Date(articleTime).toLocaleString()
-    console.log('文章时间为：', detailTime)
     return detailTime
 }
 showDetailTime(1753490992681)

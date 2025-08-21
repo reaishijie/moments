@@ -2,7 +2,9 @@
 import ArticleActions from './ArticleActions.vue';
 import Review from './Review.vue';
 import { getLocation } from '@/utils/location'
+import { useFeedStore } from '@/store/feed';
 
+const feedStore = useFeedStore()
 defineProps({
     article: {
         type: Object,
@@ -19,6 +21,11 @@ async function showLocation() {
     } catch(error) {
         console.log('@error', error)
     }
+}
+
+function toggleLike(articleId: number) {
+    console.log(`ArticleItem 接收到信号: 准备操作文章 ${articleId}`);
+    feedStore.toggleLike(articleId)
 }
 </script>
 
@@ -41,7 +48,10 @@ async function showLocation() {
             <div class="location" @click="showLocation">
                 <p>{{ article.location }}</p>
             </div>
-            <ArticleActions :article="article" />
+            <!-- 时间、点赞评论按钮 -->
+            <ArticleActions :article="article" 
+                @like="toggleLike(article.id)"
+            />
             <!-- 评论 -->
             <div class="review">
                 <Review />

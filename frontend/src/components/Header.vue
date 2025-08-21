@@ -15,8 +15,6 @@ const backgroundPath = computed(() => {
   return userStore.profile?.header_background || defaultBackground
 })
 
-console.log(backgroundPath.value);
-
 // 判断文件类型
 const isImage = computed(() => {
   const imageExtension = ['jpg', 'png', 'webp', 'svg', 'gif']

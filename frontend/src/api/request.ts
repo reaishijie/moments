@@ -42,7 +42,7 @@ service.interceptors.response.use(
                     userStore.handleLogout()
                     break
                 case 403:
-                    console.error('权限不足，无法访问资源。')
+                    console.error('权限不足，无法访问资源。', error)
                     break
                 case 404:
                     console.error('请求的资源并不存在')

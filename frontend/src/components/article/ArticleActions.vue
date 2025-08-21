@@ -1,34 +1,42 @@
 <script setup lang="ts" name="ArticleActions">
 import { showTime, showDetailTime } from '@/utils/time';
-import { ref } from 'vue';
+import { ref, toRefs, computed } from 'vue';
 import { HeartRegular, CommentAltRegular } from '@vicons/fa'
 import { Icon } from '@vicons/utils'
 
-const {article} = defineProps({
+const props = defineProps({
     article: {
         type: Object,
         required: true
     }
 });
+
+const { id, created_at} = toRefs(props.article)
 const isDetailTime = ref(false)
 const isPopupOpen = ref(false)
 function togglePopup() {
     isPopupOpen.value = !isPopupOpen.value
 }
+// 传递事件给父组件
+const emit = defineEmits(['like', 'comment'])
 function handelLike() {
-    console.log('like被调用了', article.id)
-    article.isLiked = !article.isLiked
+    console.log('like被调用了', id.value)
+    emit('like')
 }
 function handelComment() {
-    console.log('comment被调用了', article.id)
+    console.log('comment被调用了', id)
 }
+const createdAtTimestamp = computed(() => {
+  // 增加一个检查，防止 created_at 无效时页面崩溃
+  const date = new Date(created_at.value);
+  return isNaN(date.getTime()) ? 0 : date.getTime();
+});
 </script>
 
 <template>
     <div class="timeAndAction">
-        <!-- 使用 props.article.createdAt 来访问传递进来的数据 -->
-        <p @click="isDetailTime = !isDetailTime">{{ isDetailTime ?showDetailTime(+ article.createdAt) : showTime(+ article.createdAt) }}</p>
-        <!-- <p>{{ showDetailTime(+props.article.createdAt) }}</p> -->
+        <!-- 使用 article.created_at 来访问传递进来的数据 -->
+        <p @click="isDetailTime = !isDetailTime">{{ isDetailTime ?showDetailTime(createdAtTimestamp) : showTime(createdAtTimestamp) }}</p>
         <div class="action-wrapper" @click="togglePopup">
             <div class="dots-button">
                 <p></p>

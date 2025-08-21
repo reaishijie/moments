@@ -1,5 +1,7 @@
 import service from '@/api/request'
 import type { createArticleData, updateArticleData } from '@/types/article'
+import { getOrCreateGuestId } from '@/utils/guest'
+import { useUserStore } from '@/store/user'
 
 // 创建文章
 export const createArticle = (data: createArticleData) => {
@@ -40,19 +42,27 @@ export const deleteArticle = (articleId: string | number) => {
     });
 }
 // 文章点赞
-export const likeArticle = (articleId: string | number , guestId?: string) => {
+export const likeArticle = (articleId: string | number, guestId?: string) => {
+    const userStore = useUserStore()
+    if(!userStore.token) {
+        guestId = getOrCreateGuestId()
+    }
     return service({
         url: `/articles/${articleId}/like`,
         method: 'post',
         // 如果是访客，则添加自定义请求头
-        headers: guestId? {'X-Guest_ID': guestId } : {}
+        headers: guestId? {'X-Guest-ID': guestId } : {}
     })
 }
 // 取消文章点赞
 export const dislikeArticle = (articleId: string | number , guestId?: string) => {
+    const userStore = useUserStore()
+    if(!userStore.token) {
+        guestId = getOrCreateGuestId()
+    }
     return service({
         url: `/articles/${articleId}/like`,
         method: 'delete',
-        headers: guestId? {'X-Guest_ID': guestId } : {}
+        headers: guestId? {'X-Guest-ID': guestId } : {}
     })
 }

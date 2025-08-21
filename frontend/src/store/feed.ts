@@ -2,7 +2,10 @@
 import { defineStore } from "pinia"
 import { ref } from "vue"
 import type { articleData } from '@/types/article'
-import { getArticle } from "@/api/articles"
+import { getArticle,likeArticle, dislikeArticle } from "@/api/articles"
+import { useUserStore } from "./user"
+import { getOrCreateGuestId } from "@/utils/guest"
+const userStore = useUserStore()
 
 export const useFeedStore = defineStore('feed', () => {
     const articles = ref<articleData[]>([])
@@ -58,13 +61,62 @@ export const useFeedStore = defineStore('feed', () => {
         }
     }
 
+    // 点赞处理
+    const toggleLike =async( articleId: number) => {
+        // 本地查找文章
+        const article = articles.value.find( a => a.id === articleId)
+        if(!article) {
+            console.error(`未在 Store 中找到 ID 为 ${articleId} 的文章`);
+            return
+        }
+
+        //修改本地状态
+        const originalIsLiked = article.isLiked
+        const originalLikeCount = article.likeCount
+
+        if(originalIsLiked) {
+            article.isLiked = false
+            article.likeCount --
+        } else {
+            article.isLiked = true
+            article.likeCount ++
+        }
+
+        // 修改数据库中
+        try {
+            if(userStore.token) {
+                // 用户
+                if(article.isLiked) {
+                    await likeArticle(articleId)
+                } else {
+                    await dislikeArticle(articleId)
+                }
+            } else {
+                // 游客
+                const guestId = getOrCreateGuestId()
+                if(article.isLiked) {
+                    await likeArticle(articleId, guestId)
+                } else {
+                    await dislikeArticle(articleId, guestId)
+                }
+            }
+        } catch(error) {
+            console.error(`为文章 ${articleId} 更新点赞状态失败：`, error);
+            // 本地状态重置
+            article.isLiked = originalIsLiked
+            article.likeCount = originalLikeCount
+            alert('操作失败')
+        }
+    }
+
     // 将数据和方法返回
     return {
         articles,
         isLoading,
         hasMore,
         fetchInitialArticles,
-        fetchMoreArticles
+        fetchMoreArticles,
+        toggleLike
     }
 
 })
