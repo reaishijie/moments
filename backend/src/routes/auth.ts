@@ -12,7 +12,6 @@ const prisma = new PrismaClient()
 router.post('/register', async (req: Request, res: Response) => {
     try {
         const { username, password: rawPassword, email } = req.body
-        console.log(req.body)
         // 验证输入
         if (!username || !rawPassword) {
             return res.status(400).json({ error: '用户名、密码不能为空' })

@@ -5,6 +5,9 @@ import type { articleData } from '@/types/article'
 import { getArticle,likeArticle, dislikeArticle } from "@/api/articles"
 import { useUserStore } from "./user"
 import { getOrCreateGuestId } from "@/utils/guest"
+import { useMessageStore } from "./message"
+
+const messageStore = useMessageStore()
 const userStore = useUserStore()
 
 export const useFeedStore = defineStore('feed', () => {
@@ -19,7 +22,9 @@ export const useFeedStore = defineStore('feed', () => {
 
         isLoading.value = true
         try {
-            const response = await getArticle({ page: 1, pageSize: 5 })
+            const guestId = !userStore.token ? getOrCreateGuestId() : undefined;
+
+            const response = await getArticle({ page: 1, pageSize: 5 }, guestId)
             articles.value = response.data.data
             page.value = 1
             hasMore.value = articles.value.length < response.data.total
@@ -39,7 +44,8 @@ export const useFeedStore = defineStore('feed', () => {
         isLoading.value = true
         try {
             const nextPage = page.value + 1
-            const response = await getArticle({ page: nextPage, pageSize: 5 })
+            const guestId = !userStore.token ? getOrCreateGuestId() : undefined;
+            const response = await getArticle({ page: nextPage, pageSize: 5 }, guestId)
 
             // 将新文章数据放入articles数组中
             if (response.data.data.length > 0) {
@@ -87,25 +93,35 @@ export const useFeedStore = defineStore('feed', () => {
             if(userStore.token) {
                 // 用户
                 if(article.isLiked) {
+                    const id = messageStore.show('正在点赞', 'loading')
                     await likeArticle(articleId)
+                    messageStore.update(id,{ text:'点赞成功', type: 'success', duration:2000})
                 } else {
+                    const id = messageStore.show('正在取消点赞', 'loading')
                     await dislikeArticle(articleId)
+                    messageStore.update(id,{ text:'取消点赞成功', type: 'success', duration:2000})
                 }
             } else {
                 // 游客
                 const guestId = getOrCreateGuestId()
                 if(article.isLiked) {
+                    const id = messageStore.show('正在点赞', 'loading')
                     await likeArticle(articleId, guestId)
+                    messageStore.update(id,{ text:'点赞成功', type: 'success', duration:2000})
                 } else {
+                    const id = messageStore.show('正在取消点赞', 'loading')
                     await dislikeArticle(articleId, guestId)
+                    messageStore.update(id,{ text:'取消点赞成功', type: 'success', duration:2000})
                 }
             }
-        } catch(error) {
+        } catch(error:any) {
             console.error(`为文章 ${articleId} 更新点赞状态失败：`, error);
             // 本地状态重置
             article.isLiked = originalIsLiked
             article.likeCount = originalLikeCount
-            alert('操作失败')
+            if(error.response.status === 429) {
+                messageStore.show('操作过于频繁', 'error', 2000)
+            }
         }
     }
 

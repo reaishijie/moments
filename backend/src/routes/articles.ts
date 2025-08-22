@@ -3,6 +3,7 @@ import { PrismaClient, article_images, article_videos } from '@prisma/client';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { optionalAuthMiddleware } from '../middleware/optionalAuthMiddleware';
 import { logAction, logger } from "../services/log.service"
+import { log } from 'console';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -129,16 +130,16 @@ router.get('/', optionalAuthMiddleware, async (req: Request, res: Response) => {
             // 游客
             const guestId = req.headers['x-guest-id'] as string
             const articleIds = articles.map(a => a.id)
-            if(guestId && articleIds.length > 0) {
+            if (guestId && articleIds.length > 0) {
                 const guestLikes = await prisma.article_guest_likes.findMany({
-                    where: { guest_id: guestId, article_id: { in: articleIds}},
-                    select: { article_id: true}
+                    where: { guest_id: guestId, article_id: { in: articleIds } },
+                    select: { article_id: true }
                 })
 
-                const likeArticleIds = new Set(guestLikes.map( like => like.article_id))
+                const likeArticleIds = new Set(guestLikes.map(like => like.article_id))
                 articleWithLikeStatus = articles.map(article => ({
                     ...article,
-                    isLike: likeArticleIds.has(article.id)
+                    isLiked: likeArticleIds.has(article.id)
                 }))
             }
         }
@@ -166,8 +167,7 @@ router.get('/', optionalAuthMiddleware, async (req: Request, res: Response) => {
                 article_id: video.article_id.toString()
             })),
         }));
-        console.log('@@@',responseArticles);
-        
+
         res.status(200).json({
             data: responseArticles,
             total: totalArticles,
@@ -631,4 +631,47 @@ router.delete('/:articleId/like', optionalAuthMiddleware, async (req: Request, r
         res.status(500).json({ error: '服务器内部错误' });
     }
 });
+
+// 获取文章的点赞用户信息
+router.get('/:articleId/like', optionalAuthMiddleware, async (req: Request, res: Response) => {
+    try {
+        const { articleId } = req.params
+        const likes = await prisma.article_likes.findMany({
+            where: { article_id: BigInt(articleId) },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        username: true,
+                        nickname: true,
+                        avatar: true
+                    }
+                }
+            },
+            orderBy: {
+                created_at: 'desc'
+            }
+        })
+        //返回全部信息
+        // const responseData2 = likes.map(like => ({
+        //     ...like,
+        //     user_id: like.user_id.toString(),
+        //     article_id: like.article_id.toString(),
+        //     user: {
+        //         ...like.user,
+        //         id: like.user.id.toString()
+        //     }
+        // }))
+        //返回目前所需信息
+        const responseData = likes.map(like => ({
+            id: like.user_id.toString(),
+            displayName: like.user.nickname || like.user.username,
+            avater: like.user.avatar
+        }))
+            res.status(200).json(responseData)
+    } catch (error) {
+        console.error('获取文章的点赞用户信息失败：', error);
+        res.status(500).json({ error: '获取文章的点赞用户信息失败'});
+    }
+})
 export default router

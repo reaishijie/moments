@@ -8,8 +8,7 @@ router.get('/', async(req, res) => {
         console.log(data);
         res.status(200).json({data})
     } catch(error){
-        console.log("src\routes\index.ts Error", error)
-        return res.status(500).json({error: 'error'})
+        return res.status(500).json({error: `${error}`})
     }
 })
 

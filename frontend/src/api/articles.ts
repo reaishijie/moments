@@ -12,11 +12,12 @@ export const createArticle = (data: createArticleData) => {
     })
 }
 // 获取文章列表
-export const getArticle = (params?: { page?: number, pageSize?: number, skip?: number}) => {
+export const getArticle = (params?: { page?: number, pageSize?: number, skip?: number}, guestId?: string) => {
     return service({
         url: '/articles',
         method: 'get',
-        params
+        params,
+        headers: guestId ? { 'X-Guest-ID': guestId } : {},
     })
 }
 // 根据文章id获取单篇文章详情
@@ -64,5 +65,12 @@ export const dislikeArticle = (articleId: string | number , guestId?: string) =>
         url: `/articles/${articleId}/like`,
         method: 'delete',
         headers: guestId? {'X-Guest-ID': guestId } : {}
+    })
+}
+// 获取文章点赞用户信息
+export const usersOfLikeArticle = (articleId: string | number) => {
+    return service({
+        url: `/articles/${articleId}/like`,
+        method: 'get'
     })
 }

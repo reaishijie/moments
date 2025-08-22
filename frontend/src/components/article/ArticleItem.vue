@@ -17,14 +17,13 @@ async function showLocation() {
         const promiseResult = await getLocation()
         const data = promiseResult?.result
         console.log(data);
-        
-    } catch(error) {
+
+    } catch (error) {
         console.log('@error', error)
     }
 }
 
 function toggleLike(articleId: number) {
-    console.log(`ArticleItem 接收到信号: 准备操作文章 ${articleId}`);
     feedStore.toggleLike(articleId)
 }
 </script>
@@ -49,12 +48,10 @@ function toggleLike(articleId: number) {
                 <p>{{ article.location }}</p>
             </div>
             <!-- 时间、点赞评论按钮 -->
-            <ArticleActions :article="article" 
-                @like="toggleLike(article.id)"
-            />
+            <ArticleActions :article="article" @like="toggleLike(article.id)" />
             <!-- 评论 -->
             <div class="review">
-                <Review />
+                <Review :article="article" />
             </div>
         </div>
     </div>
@@ -97,11 +94,13 @@ function toggleLike(articleId: number) {
 
 /* 用户名、文章内容、评论 */
 .article-context {
-    flex: 1; /**撑满剩余区域 */
+    flex: 1;
+    /**撑满剩余区域 */
     display: flex;
     flex-direction: column;
     min-width: 0;
 }
+
 /**昵称样式 */
 .nickname p {
     margin: 0;
@@ -109,6 +108,7 @@ function toggleLike(articleId: number) {
     font-weight: 600;
     color: #586C97;
 }
+
 /** 文章内容样式 */
 .main-context p {
     margin: 0;
@@ -125,10 +125,12 @@ function toggleLike(articleId: number) {
     color: #4E6086;
     font-size: 12px;
 }
+
 .location p {
     margin: 2px 0 2px 0;
     padding: 0;
 }
+
 .main-context {
     margin-top: 8px;
     margin-bottom: 5px;

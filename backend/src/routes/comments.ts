@@ -12,7 +12,6 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
     try {
         const userId = req.user?.userId
         const { articleId, content, parentId } = req.body
-        console.log("articleId", typeof articleId);
 
         // 验证输入
         if (!articleId || !content) {
@@ -24,7 +23,6 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
             const parentComment = await prisma.comments.findUnique({
                 where: { id: BigInt(parentId) }
             });
-            console.log("parentComment", parentComment);
 
             // 检查父评论是否存在
             if (!parentComment) {
@@ -130,7 +128,6 @@ router.delete('/:commentId', authMiddleware, async (req: Request, res: Response)
                 }
             })
             item = replies.map(i => i.id)
-            console.log('replies@item@list', '\n', replies, '\n', item, '\n', list)
         }
         // 事务处理
         await prisma.$transaction([

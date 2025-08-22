@@ -1,8 +1,11 @@
 <script setup lang="ts" name="ArticleActions">
 import { showTime, showDetailTime } from '@/utils/time';
 import { ref, toRefs, computed } from 'vue';
-import { HeartRegular, CommentAltRegular } from '@vicons/fa'
+import { HeartRegular, Heart, CommentAltRegular } from '@vicons/fa'
 import { Icon } from '@vicons/utils'
+
+import { useCommentStore } from '@/store/comment';
+const commentStore = useCommentStore()
 
 const props = defineProps({
     article: {
@@ -11,7 +14,7 @@ const props = defineProps({
     }
 });
 
-const { id, created_at} = toRefs(props.article)
+const { id, created_at, isLiked} = toRefs(props.article)
 const isDetailTime = ref(false)
 const isPopupOpen = ref(false)
 function togglePopup() {
@@ -20,11 +23,7 @@ function togglePopup() {
 // 传递事件给父组件
 const emit = defineEmits(['like', 'comment'])
 function handelLike() {
-    console.log('like被调用了', id.value)
     emit('like')
-}
-function handelComment() {
-    console.log('comment被调用了', id)
 }
 const createdAtTimestamp = computed(() => {
   // 增加一个检查，防止 created_at 无效时页面崩溃
@@ -44,13 +43,16 @@ const createdAtTimestamp = computed(() => {
             </div>
             <div v-if="isPopupOpen" class="popup">
                 <div class="popup-item like" @click="handelLike">
-                    <Icon>
+                    <Icon v-if="!isLiked">
                         <HeartRegular />
+                    </Icon>
+                    <Icon color="rgb(255,100,100)" v-else="isLiked">
+                        <Heart />
                     </Icon>
                     <span>{{ article.isLiked ? '取消喜欢' : '喜欢' }}</span>
                 </div>
                 <div class="popup-divider"></div>
-                <div class="popup-item comment" @click="handelComment">
+                <div class="popup-item comment" @click="commentStore.isShowInput = !commentStore.isShowInput">
                     <Icon >
                         <CommentAltRegular />
                     </Icon>

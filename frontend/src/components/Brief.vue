@@ -58,6 +58,9 @@ const brief = computed(() => {
     margin-right: 25px;
     z-index: 5;
 }
+.brief-img img:hover {
+    cursor: pointer;
+}
 
 /* 简介语 */
 .brief p {
