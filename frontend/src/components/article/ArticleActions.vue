@@ -4,9 +4,6 @@ import { ref, toRefs, computed } from 'vue';
 import { HeartRegular, Heart, CommentAltRegular } from '@vicons/fa'
 import { Icon } from '@vicons/utils'
 
-import { useCommentStore } from '@/store/comment';
-const commentStore = useCommentStore()
-
 const props = defineProps({
     article: {
         type: Object,
@@ -14,7 +11,7 @@ const props = defineProps({
     }
 });
 
-const { id, created_at, isLiked} = toRefs(props.article)
+const { created_at, isLiked} = toRefs(props.article)
 const isDetailTime = ref(false)
 const isPopupOpen = ref(false)
 function togglePopup() {
@@ -24,6 +21,9 @@ function togglePopup() {
 const emit = defineEmits(['like', 'comment'])
 function handelLike() {
     emit('like')
+}
+function handelComment() {
+    emit('comment')
 }
 const createdAtTimestamp = computed(() => {
   // 增加一个检查，防止 created_at 无效时页面崩溃
@@ -52,7 +52,7 @@ const createdAtTimestamp = computed(() => {
                     <span>{{ article.isLiked ? '取消喜欢' : '喜欢' }}</span>
                 </div>
                 <div class="popup-divider"></div>
-                <div class="popup-item comment" @click="commentStore.isShowInput = !commentStore.isShowInput">
+                <div class="popup-item comment" @click.stop="handelComment">
                     <Icon >
                         <CommentAltRegular />
                     </Icon>

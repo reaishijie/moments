@@ -3,12 +3,16 @@ import { ref, onMounted } from 'vue'
 import { HeartRegular } from '@vicons/fa';
 import { Icon } from '@vicons/utils';
 import { usersOfLikeArticle } from '@/api/articles'
-import { useCommentStore } from '@/store/comment';
-const commentStore = useCommentStore()
+import { getCommentsByArticleId } from '@/api/comments'
+import CommentNode from './CommentNode.vue'
 
 const props = defineProps({
   article: {
     type: Object,
+    required: true
+  },
+  isShowInput: {
+    type: Boolean,
     required: true
   }
 })
@@ -16,17 +20,68 @@ const props = defineProps({
 interface User {
   id: string;
   displayName: string;
-  avater: string; // 确保拼写正确
+  avatar: string;
 }
-const name = ref<string[]>([])
+
+const names = ref<string[]>([])
 const showDisplayName = async (articleId: number) => {
   const res = await usersOfLikeArticle(articleId)
   const userData: User[] = res.data
-  name.value = userData.map(user => user.displayName)
+  names.value = userData.map(user => user.displayName)
 }
-onMounted(() => {
-  showDisplayName(props.article.id)
+
+interface RawComment {
+  id: string;
+  content: string;
+  parent_id: string | null;
+  user: {
+    nickname?: string;
+    username: string;
+    avatar: string;
+  };
+  replies?: RawComment[];
+}
+
+interface CommentItem {
+  id: string;
+  content: string;
+  parent_id: string | null;
+  displayName: string;
+  avatar: string;
+  replies?: CommentItem[];
+}
+
+interface CommentResponse {
+  data: RawComment[];
+  page: number;
+  pageSize: number;
+  total: number;
+}
+
+const comments = ref<CommentItem[]>([])
+
+const transformComment = (raw: RawComment): CommentItem => ({
+  id: raw.id,
+  content: raw.content,
+  parent_id: raw.parent_id,
+  displayName: raw.user.nickname || raw.user.username,
+  avatar: raw.user.avatar,
+  replies: raw.replies?.map(transformComment) || []
 })
+
+const showComments = async (articleId: number) => {
+  const res = await getCommentsByArticleId(articleId, { page: 1, pageSize: 3 })
+  const commentRes: CommentResponse = res.data
+  comments.value = commentRes.data.map(transformComment)
+  console.log('@@@', comments.value);
+  
+}
+
+onMounted(async () => {
+  await showDisplayName(props.article.id)
+  await showComments(props.article.id)
+})
+
 const adjustHeight = (event: Event) => {
   const textarea = event.target as HTMLTextAreaElement
   textarea.style.height = 'auto'
@@ -40,17 +95,25 @@ const adjustHeight = (event: Event) => {
       <Icon v-if="article.like_count !== 0" class="users-icon">
         <HeartRegular />
       </Icon>
-      <span v-for="(displayName, index) in name" :key="index">{{ displayName }} <span v-if="index < name.length - 1">,
-        </span>
+      <span v-for="(displayName, index) in names" :key="index">
+        {{ displayName }}<span v-if="index < names.length - 1">,</span>
       </span>
-      <span v-if="name.length !== 0">...共</span>
+      <span v-if="names.length !== 0">...共</span>
       <span v-if="article.like_count !== 0">{{ article.like_count }}人喜欢</span>
     </div>
-    <div class="input" v-if="commentStore.isShowInput">
-      <textarea  placeholder="写下你的评论..." rows="4" @input="adjustHeight"></textarea>
+
+    <div class="input" v-if="isShowInput">
+      <textarea placeholder="写下你的评论..." @input="adjustHeight"></textarea>
       <button @click="">发送</button>
     </div>
-    <div class="comments">评论内容</div>
+
+    <div class="comments">
+      <CommentNode
+        v-for="comment in comments"
+        :key="comment.id"
+        :comment="comment"
+      />
+    </div>
   </div>
 </template>
 
@@ -69,7 +132,6 @@ const adjustHeight = (event: Event) => {
 .users-icon {
   margin-right: 6px;
 }
-
 .input {
   display: flex;
   flex-direction: column;
@@ -77,9 +139,8 @@ const adjustHeight = (event: Event) => {
   margin: 10px auto;
   background: #fff;
   border-radius: 5px;
-  overflow: hidden; /* 让圆角生效 */
+  overflow: hidden;
 }
-
 textarea {
   border: none;
   resize: none;
@@ -95,12 +156,10 @@ textarea {
 }
 .input:focus-within {
   border: 2px solid #f8a778;
-
 }
 textarea:focus {
   outline: none;
 }
-
 button {
   align-self: flex-end;
   margin: 10px;
@@ -110,8 +169,7 @@ button {
   border: none;
   padding: 5px 20px;
 }
-
 button:hover {
-  background: #f8a778;
+  background: #f8bc99;
 }
 </style>

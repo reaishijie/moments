@@ -3,7 +3,13 @@ import ArticleActions from './ArticleActions.vue';
 import Review from './Review.vue';
 import { getLocation } from '@/utils/location'
 import { useFeedStore } from '@/store/feed';
+import { ref } from 'vue';
 
+// 每篇文章评论框状态
+const isShowInput = ref(false)
+function toggleComment() {
+    isShowInput.value = !isShowInput.value
+}
 const feedStore = useFeedStore()
 defineProps({
     article: {
@@ -48,10 +54,10 @@ function toggleLike(articleId: number) {
                 <p>{{ article.location }}</p>
             </div>
             <!-- 时间、点赞评论按钮 -->
-            <ArticleActions :article="article" @like="toggleLike(article.id)" />
+            <ArticleActions :article="article" @like="toggleLike(article.id)"  @comment="toggleComment"/>
             <!-- 评论 -->
             <div class="review">
-                <Review :article="article" />
+                <Review :article="article" :is-show-input="isShowInput"/>
             </div>
         </div>
     </div>
