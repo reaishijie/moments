@@ -1,12 +1,28 @@
 <script setup lang="ts" name="Review">
-import { ref, onMounted } from 'vue'
+import type { PropType } from 'vue';
 import { HeartRegular } from '@vicons/fa';
 import { Icon } from '@vicons/utils';
-import { usersOfLikeArticle } from '@/api/articles'
-import { getCommentsByArticleId } from '@/api/comments'
-import CommentNode from './CommentNode.vue'
 
-const props = defineProps({
+// 接口
+interface Liker {
+  id: string;
+  displayName: string;
+  avatar: string
+}
+interface Comment {
+  id: string,
+  user_id: string
+  content: string,
+  parent_id: string,
+  parent_displayName:string,
+  user: {
+    id: string,
+    nickname: string,
+    username: string,
+    avatar: string
+  }
+}
+defineProps({
   article: {
     type: Object,
     required: true
@@ -14,72 +30,16 @@ const props = defineProps({
   isShowInput: {
     type: Boolean,
     required: true
+  },
+  likers: {
+    // 期望收到一个 Liker 对象的数组
+    type: Array as PropType<Liker[]>,
+    default: () => []
+  },
+  comments: {
+    type: Array as PropType<Comment[]>,
+    default: () => []
   }
-})
-
-interface User {
-  id: string;
-  displayName: string;
-  avatar: string;
-}
-
-const names = ref<string[]>([])
-const showDisplayName = async (articleId: number) => {
-  const res = await usersOfLikeArticle(articleId)
-  const userData: User[] = res.data
-  names.value = userData.map(user => user.displayName)
-}
-
-interface RawComment {
-  id: string;
-  content: string;
-  parent_id: string | null;
-  user: {
-    nickname?: string;
-    username: string;
-    avatar: string;
-  };
-  replies?: RawComment[];
-}
-
-interface CommentItem {
-  id: string;
-  content: string;
-  parent_id: string | null;
-  displayName: string;
-  avatar: string;
-  replies?: CommentItem[];
-}
-
-interface CommentResponse {
-  data: RawComment[];
-  page: number;
-  pageSize: number;
-  total: number;
-}
-
-const comments = ref<CommentItem[]>([])
-
-const transformComment = (raw: RawComment): CommentItem => ({
-  id: raw.id,
-  content: raw.content,
-  parent_id: raw.parent_id,
-  displayName: raw.user.nickname || raw.user.username,
-  avatar: raw.user.avatar,
-  replies: raw.replies?.map(transformComment) || []
-})
-
-const showComments = async (articleId: number) => {
-  const res = await getCommentsByArticleId(articleId, { page: 1, pageSize: 3 })
-  const commentRes: CommentResponse = res.data
-  comments.value = commentRes.data.map(transformComment)
-  console.log('@@@', comments.value);
-  
-}
-
-onMounted(async () => {
-  await showDisplayName(props.article.id)
-  await showComments(props.article.id)
 })
 
 const adjustHeight = (event: Event) => {
@@ -91,14 +51,14 @@ const adjustHeight = (event: Event) => {
 
 <template>
   <div class="container">
-    <div class="users">
-      <Icon v-if="article.like_count !== 0" class="users-icon">
+    <div class="users" v-if="article.like_count !== 0">
+      <Icon class="users-icon">
         <HeartRegular />
       </Icon>
-      <span v-for="(displayName, index) in names" :key="index">
-        {{ displayName }}<span v-if="index < names.length - 1">,</span>
+      <span v-for="(liker, index) in likers" :key="index">{{ liker.displayName }}<span
+          v-if="index < likers.length - 1">，</span>
       </span>
-      <span v-if="names.length !== 0">...共</span>
+      <span v-if="likers.length !== 0">...共</span>
       <span v-if="article.like_count !== 0">{{ article.like_count }}人喜欢</span>
     </div>
 
@@ -108,11 +68,14 @@ const adjustHeight = (event: Event) => {
     </div>
 
     <div class="comments">
-      <CommentNode
-        v-for="comment in comments"
-        :key="comment.id"
-        :comment="comment"
-      />
+      <div class="comment" v-for="(comment,index) in comments" :key="index">
+        <span v-if="!comment.parent_id" class="comment-displayName">{{ comment.user.nickname }}</span>
+        <span v-if="comment.parent_id" class="comment-displayName">{{ comment.user.nickname }}</span>
+        <span v-if="comment.parent_id"> 回复</span>
+        <span v-if="comment.parent_id" class="comment-displayName">{{ comment.parent_displayName }}</span>
+        <span>：</span>
+        <span>{{ comment.content }}</span>
+      </div>
     </div>
   </div>
 </template>
@@ -125,13 +88,16 @@ const adjustHeight = (event: Event) => {
   background-color: #f7f7f7;
   flex-direction: column;
 }
+
 .users {
-  padding: 10px 5px 0px 10px;
+  padding: 5px 5px 5px 10px;
   color: #9ac3ef;
 }
+
 .users-icon {
   margin-right: 6px;
 }
+
 .input {
   display: flex;
   flex-direction: column;
@@ -141,6 +107,7 @@ const adjustHeight = (event: Event) => {
   border-radius: 5px;
   overflow: hidden;
 }
+
 textarea {
   border: none;
   resize: none;
@@ -154,12 +121,15 @@ textarea {
   overflow: hidden;
   overflow-y: auto;
 }
+
 .input:focus-within {
   border: 2px solid #f8a778;
 }
+
 textarea:focus {
   outline: none;
 }
+
 button {
   align-self: flex-end;
   margin: 10px;
@@ -169,7 +139,13 @@ button {
   border: none;
   padding: 5px 20px;
 }
+
 button:hover {
   background: #f8bc99;
+}
+
+.comment-displayName {
+  padding: 5px 5px 5px 10px;
+  color: #9ac3ef;
 }
 </style>

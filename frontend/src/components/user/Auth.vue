@@ -34,7 +34,7 @@ const handleLogin = async () => {
         messageStore.show('请输入登录信息', 'info', 2000)
         return
     }
-    if (userLoginInput.value.identifier.length < 6 || userLoginInput.value.password.length < 6) {
+    if (userLoginInput.value.identifier !== 'admin' && userLoginInput.value.identifier.length < 6 || userLoginInput.value.password.length < 6) {
         messageStore.show('信息不能小于 6 位', 'info', 2000)
         return
     }

@@ -3,21 +3,33 @@ import ArticleActions from './ArticleActions.vue';
 import Review from './Review.vue';
 import { getLocation } from '@/utils/location'
 import { useFeedStore } from '@/store/feed';
-import { ref } from 'vue';
+import { ref, onMounted, computed } from 'vue';
+import { getArticleLikes } from '@/api/articles';
 
-// 每篇文章评论框状态
-const isShowInput = ref(false)
-function toggleComment() {
-    isShowInput.value = !isShowInput.value
-}
-const feedStore = useFeedStore()
-defineProps({
+
+const props = defineProps({
     article: {
         type: Object,
         required: true
     }
 })
 
+// 状态管理
+const isShowInput = ref(false)
+const likers =ref<any[]>([])
+const comments = ref<any[]>([])
+const feedStore = useFeedStore()
+
+// 函数
+// 创建一个计算属性，从 store 中实时查找当前文章
+const articleState = computed(() => {
+    // find 方法会返回一个响应式的对象引用
+    return feedStore.articles.find(a => a.id === props.article.id);
+});
+const commentState = computed(() => {
+    // find 方法会返回一个响应式的对象引用
+    return feedStore.comments.find(a => a.article_id === props.article.id);
+});
 async function showLocation() {
     try {
         const promiseResult = await getLocation()
@@ -28,36 +40,68 @@ async function showLocation() {
         console.log('@error', error)
     }
 }
-
-function toggleLike(articleId: number) {
-    feedStore.toggleLike(articleId)
+async function fetchLikers() {
+    if(articleState.value && articleState.value?.like_count > 0) {
+        try {
+            const res = await getArticleLikes(props.article.id)
+            likers.value = res.data
+        } catch (error) {
+            console.error('获取点赞列表失败', error);
+        }
+    } else {
+        likers.value = []
+    }
 }
+async function fetchComments() {
+    try {
+        const res = await feedStore.fetchInitialComments(props.article.id)
+        if (res) {
+            comments.value = feedStore.comments.filter(c => c.article_id === props.article.id)
+            console.log('comments.value = feedStore.comments', comments.value, feedStore.comments);
+        }
+    } catch (error) {
+        console.error('获取评论列表失败', error);
+    }
+}
+function toggleComment() {
+    isShowInput.value = !isShowInput.value
+}
+async function toggleLike(articleId: number) {
+    const res = await feedStore.toggleLike(articleId)
+    if (res) {
+        await fetchLikers()
+    }
+}
+onMounted(() => {
+    fetchLikers()
+    fetchComments()
+})
 </script>
 
 <template>
-    <div class="article-item">
+    <div class="article-item" v-if="articleState">
         <!-- 左侧头像 -->
         <div class="article-avatar">
-            <img :src="article.user.avatar" alt="avatar">
+            <img :src="articleState.user?.avatar" alt="avatar">
         </div>
         <!-- 内容 -->
         <div class="article-context">
             <!-- 用户昵称 -->
             <div class="nickname">
-                <p>{{ article.user.nickname || article.user.username }}</p>
+                <p>{{ articleState.user?.nickname || articleState.user.username }}</p>
             </div>
             <!-- 文章内容 -->
             <div class="main-context">
-                <p>{{ article.content }}</p>
+                <p>{{ articleState.content }}</p>
             </div>
             <div class="location" @click="showLocation">
-                <p>{{ article.location }}</p>
+                <p>{{ articleState.location }}</p>
             </div>
             <!-- 时间、点赞评论按钮 -->
-            <ArticleActions :article="article" @like="toggleLike(article.id)"  @comment="toggleComment"/>
+            <ArticleActions :article="articleState" @like="toggleLike(article.id)"  @comment="toggleComment"/>
             <!-- 评论 -->
             <div class="review">
-                <Review :article="article" :is-show-input="isShowInput"/>
+                <Review :article="articleState" :likers="likers" :comments="comments" :is-show-input="isShowInput"/>
             </div>
         </div>
     </div>

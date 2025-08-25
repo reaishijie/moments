@@ -68,7 +68,7 @@ export const dislikeArticle = (articleId: string | number , guestId?: string) =>
     })
 }
 // 获取文章点赞用户信息
-export const usersOfLikeArticle = (articleId: string | number) => {
+export const getArticleLikes = (articleId: string | number) => {
     return service({
         url: `/articles/${articleId}/like`,
         method: 'get'

@@ -77,14 +77,14 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
             parent_id: newComment.parent_id?.toString()
         }
         logger.add({
-                userId: null,
-                action: logAction.COMMENT_CREATE,
-                targetType: 'comments',
-                targetId: BigInt(articleId),
-                details: responseData,
-                ipAddress: req.ip,
-                userAgent: req.headers['user-agent'] || '',
-            })
+            userId: null,
+            action: logAction.COMMENT_CREATE,
+            targetType: 'comments',
+            targetId: BigInt(articleId),
+            details: responseData,
+            ipAddress: req.ip,
+            userAgent: req.headers['user-agent'] || '',
+        })
         res.status(201).json(responseData)
     } catch (error) {
         console.error('创建评论失败:', error);
@@ -151,19 +151,123 @@ router.delete('/:commentId', authMiddleware, async (req: Request, res: Response)
             })
         ])
         logger.add({
-                userId: null,
-                action: logAction.COMMENT_DELETE,
-                targetType: 'comments',
-                targetId: BigInt(commentId),
-                details: {comment:comment, deleteCommentList: list},
-                ipAddress: req.ip,
-                userAgent: req.headers['user-agent'] || '',
-            })
+            userId: null,
+            action: logAction.COMMENT_DELETE,
+            targetType: 'comments',
+            targetId: BigInt(commentId),
+            details: { comment: comment, deleteCommentList: list },
+            ipAddress: req.ip,
+            userAgent: req.headers['user-agent'] || '',
+        })
         res.status(204).send()
     } catch (error) {
         console.error('删除评论失败:', error);
         res.status(500).json({ error: '服务器内部错误' });
     }
 });
+// 获取文章评论（分页根评论和前N条子评论）
+// router.get('/:articleId', async (req: Request, res: Response) => {
+//     const { articleId } = req.params
+//     const page = parseInt(req.query.page as string) || 1
+//     const pageSize = parseInt(req.query.pageSize as string) || 5
+//     const skip = (page - 1) * pageSize
+//     const previewCount = 3 // 每条根评论返回子评论数
 
+//     // 根评论
+//     const rootComments = await prisma.comments.findMany({
+//         where: {
+//             article_id: BigInt(articleId),
+//             parent_id: null,
+//             deleted_at: null
+//         },
+//         orderBy: { created_at: 'asc' }, // 顺序排列
+//         skip,
+//         take: pageSize,
+//         include: {
+//             user: {
+//                 select: { id: true, username: true, nickname: true, avatar: true }
+//             },
+//             replies: {
+//                 where: { deleted_at: null },
+//                 orderBy: { created_at: 'asc' },
+//                 take: previewCount,
+//                 include: {
+//                     user: {
+//                         select: { id: true, username: true, nickname: true, avatar: true }
+//                     },
+//                     _count: { select: { replies: true } }
+//                 }
+//             },
+//             _count: { select: { replies: true } }
+//         }
+//     })
+//     res.status(200).json({ data: articleId })
+
+// })
+
+// 获取文章评论
+router.get('/:articleId', async (req: Request, res: Response) => {
+    try {
+        const { articleId } = req.params
+        const page = parseInt(req.query.page as string) || 1
+        const pageSize = parseInt(req.query.pageSize as string) || 5
+        const skip = (page - 1) * pageSize
+        const allComments = await prisma.comments.findMany({
+            where: {
+                article_id: BigInt(articleId),
+                deleted_at: null
+            },
+            orderBy: { created_at: 'asc' }, //顺序排列
+            skip,
+            take: pageSize,
+            include: {
+                user: {
+                    select: { id: true, username: true, nickname: true, avatar: true }
+                }
+            }
+        })
+        const totalComments = await prisma.comments.count({
+            where: { deleted_at: null }
+        })
+        // 构建响应数据
+        const responseData = await Promise.all(
+            allComments.map(async comment => {
+                let parentNickname = null
+                if (comment.parent_id) {
+                    const res = await prisma.comments.findUnique({
+                        where: { id: comment.parent_id },
+                        include: {
+                            user: {
+                                select: { nickname: true, username: true }
+                            }
+                        }
+                    })
+                    parentNickname = res?.user?.nickname ?? res?.user?.username ?? null
+                }
+
+                return {
+                    ...comment,
+                    id: comment.id.toString(),
+                    article_id: comment.article_id.toString(),
+                    user_id: comment.user_id.toString(),
+                    parent_id: comment.parent_id?.toString(),
+                    parent_displayName: parentNickname,
+                    user: {
+                        ...comment.user,
+                        id: comment.user.id.toString()
+                    }
+                }
+            })
+        )
+        res.status(200).json({
+            data: responseData,
+            page,
+            pageSize,
+            totalComments
+        })
+    } catch (error) {
+        console.error('查询文章评论失败', error);
+        res.status(500).json({ error: error })
+    }
+})
 export default router

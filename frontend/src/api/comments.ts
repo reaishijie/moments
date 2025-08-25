@@ -26,3 +26,12 @@ export const getCommentsByArticleId = (articleId: string | number, params?: {pag
         params,
     })
 }
+
+// 获取所有评论
+export const getAllComment = (articleId: string, params?: {page?: number, pageSize?: number} ) => {
+    return service({
+        url: `comments/${articleId}`,
+        method: 'get',
+        params,
+    })
+}
