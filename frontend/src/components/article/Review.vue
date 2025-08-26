@@ -1,7 +1,10 @@
 <script setup lang="ts" name="Review">
-import type { PropType } from 'vue';
-import { HeartRegular } from '@vicons/fa';
+import { ref, type PropType } from 'vue';
+import { HeartRegular, AngleDown } from '@vicons/fa';
 import { Icon } from '@vicons/utils';
+import { useMessageStore } from '@/store/message'
+
+const messageStore = useMessageStore()
 
 // 接口
 interface Liker {
@@ -27,7 +30,12 @@ defineProps({
     type: Object,
     required: true
   },
-  isShowInput: {
+  isShowInput: Boolean,
+  hasMore: {
+    type: Boolean,
+    required: true
+  },
+  isLoading: {
     type: Boolean,
     required: true
   },
@@ -39,6 +47,10 @@ defineProps({
   comments: {
     type: Array as PropType<Comment[]>,
     default: () => []
+  },
+  loadMore:{
+    type: Function as PropType<() => void>,
+    required: true
   }
 })
 
@@ -46,6 +58,39 @@ const adjustHeight = (event: Event) => {
   const textarea = event.target as HTMLTextAreaElement
   textarea.style.height = 'auto'
   textarea.style.height = textarea.scrollHeight + 'px'
+}
+
+const emit = defineEmits(['send-reply'])
+const activeReplyId = ref<string | null>(null)
+const replyContent = ref('')
+// 切换评论框的显示
+const toggleReply = (commentId: string) => {
+  if(activeReplyId.value === commentId) {
+    // 如果点击的是当前已打开的评论 -> 关闭
+    activeReplyId.value = null
+  } else {
+    // 赋值并清空输入框内容
+    activeReplyId.value = commentId
+    replyContent.value = ''
+  }
+}
+
+// 发送函数
+const handleSendReply = () => {
+  if (!replyContent.value.trim()) {
+        messageStore.show('评论内容不能为空', 'info', 2000)
+    return
+  }
+
+  // 通过 emit 将parent_id 和 content 传给父组件处理
+  emit('send-reply', {
+    parentId: activeReplyId.value,
+    content: replyContent.value
+  })
+
+  // 发送后进行处理
+  replyContent.value = ''
+  activeReplyId.value = null
 }
 </script>
 
@@ -63,19 +108,33 @@ const adjustHeight = (event: Event) => {
     </div>
 
     <div class="input" v-if="isShowInput">
-      <textarea placeholder="写下你的评论..." @input="adjustHeight"></textarea>
-      <button @click="">发送</button>
+      <textarea v-model="replyContent" placeholder="写下你的评论..." @input="adjustHeight"></textarea>
+      <button @click="handleSendReply">发送</button>
     </div>
 
-    <div class="comments">
-      <div class="comment" v-for="(comment,index) in comments" :key="index">
-        <span v-if="!comment.parent_id" class="comment-displayName">{{ comment.user.nickname }}</span>
-        <span v-if="comment.parent_id" class="comment-displayName">{{ comment.user.nickname }}</span>
+    <div class="comments-container">
+      <div class="comment" v-for="comment in comments" :key="comment.id" >
+
+        <div @click="toggleReply(comment.id)">
+        <span v-if="!comment.parent_id" class="comment-displayName">{{ comment.user.nickname || comment.user.username }}</span>
+        <span v-if="comment.parent_id" class="comment-displayName">{{ comment.user.nickname || comment.user.username }}</span>
         <span v-if="comment.parent_id"> 回复</span>
         <span v-if="comment.parent_id" class="comment-displayName">{{ comment.parent_displayName }}</span>
         <span>：</span>
         <span>{{ comment.content }}</span>
+        </div>
+
+        <div class="input" v-if="activeReplyId === comment.id">
+          <textarea v-model="replyContent" :placeholder="`回复${(comment.user.nickname || comment.user.username)}`" @input="adjustHeight"></textarea>
+          <button @click="handleSendReply">发送</button>
+        </div>
+
       </div>
+      <span class="load-more" v-if="hasMore" @click="loadMore">
+        <Icon size="18px">
+          <AngleDown />
+        </Icon>
+      </span>
     </div>
   </div>
 </template>
@@ -143,9 +202,23 @@ button {
 button:hover {
   background: #f8bc99;
 }
-
+.comments-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
 .comment-displayName {
   padding: 5px 5px 5px 10px;
   color: #9ac3ef;
+}
+
+.load-more {
+font-size: xx-small;
+color: #9ac3ef;
+margin-left: 10px;
+}
+.load-more:hover {
+  cursor: pointer;
+  color: #bfd7f1;
 }
 </style>

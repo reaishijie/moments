@@ -5,6 +5,7 @@ import { getLocation } from '@/utils/location'
 import { useFeedStore } from '@/store/feed';
 import { ref, onMounted, computed } from 'vue';
 import { getArticleLikes } from '@/api/articles';
+import { useMessageStore } from '@/store/message';
 
 
 const props = defineProps({
@@ -17,8 +18,12 @@ const props = defineProps({
 // 状态管理
 const isShowInput = ref(false)
 const likers =ref<any[]>([])
-const comments = ref<any[]>([])
 const feedStore = useFeedStore()
+const messageStore = useMessageStore()
+
+const comments = computed(() => feedStore.commentsMap[props.article.id] || [] )
+const hasMore = computed(() => feedStore.commentPagination[props.article.id]?.hasMore || false)
+const isLoading = computed(() => feedStore.commentPagination[props.article.id]?.isLoading || false)
 
 // 函数
 // 创建一个计算属性，从 store 中实时查找当前文章
@@ -26,10 +31,7 @@ const articleState = computed(() => {
     // find 方法会返回一个响应式的对象引用
     return feedStore.articles.find(a => a.id === props.article.id);
 });
-const commentState = computed(() => {
-    // find 方法会返回一个响应式的对象引用
-    return feedStore.comments.find(a => a.article_id === props.article.id);
-});
+
 async function showLocation() {
     try {
         const promiseResult = await getLocation()
@@ -52,17 +54,6 @@ async function fetchLikers() {
         likers.value = []
     }
 }
-async function fetchComments() {
-    try {
-        const res = await feedStore.fetchInitialComments(props.article.id)
-        if (res) {
-            comments.value = feedStore.comments.filter(c => c.article_id === props.article.id)
-            console.log('comments.value = feedStore.comments', comments.value, feedStore.comments);
-        }
-    } catch (error) {
-        console.error('获取评论列表失败', error);
-    }
-}
 function toggleComment() {
     isShowInput.value = !isShowInput.value
 }
@@ -72,9 +63,27 @@ async function toggleLike(articleId: number) {
         await fetchLikers()
     }
 }
+
+async function handleSendReply(replyData: { content: string, parentId?: string}) {
+    if(!articleState.value) return
+    const id = messageStore.show('正在创建评论', 'loading',)
+    const success = await feedStore.createComment({
+        articleId: articleState.value.id.toString(),
+        content: replyData.content,
+        parentId: replyData.parentId
+    })
+
+    if(success) {
+        feedStore.fetchInitialComments(articleState.value.id.toString())
+        messageStore.update(id, {type: 'success', text: '评论成功', duration: 2000})
+    } else {
+        console.error('回复失败');
+        messageStore.update(id, {type: 'error', text: '评论失败', duration: 2000})
+    }
+}
 onMounted(() => {
     fetchLikers()
-    fetchComments()
+    feedStore.fetchInitialComments(props.article.id)
 })
 </script>
 
@@ -98,10 +107,19 @@ onMounted(() => {
                 <p>{{ articleState.location }}</p>
             </div>
             <!-- 时间、点赞评论按钮 -->
-            <ArticleActions :article="articleState" @like="toggleLike(article.id)"  @comment="toggleComment"/>
+            <ArticleActions :article="articleState" @like="toggleLike(articleState.id)"  @comment="toggleComment"/>
             <!-- 评论 -->
             <div class="review">
-                <Review :article="articleState" :likers="likers" :comments="comments" :is-show-input="isShowInput"/>
+                <Review 
+                :article="articleState" 
+                :likers="likers" 
+                :comments="comments" 
+                :is-show-input="isShowInput"
+                :has-more="hasMore"
+                :is-loading="isLoading"
+                :load-more="() => feedStore.fetchMoreComments(props.article.id)"
+                @send-reply="handleSendReply" 
+            />
             </div>
         </div>
     </div>

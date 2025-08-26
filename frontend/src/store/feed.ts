@@ -7,20 +7,24 @@ import { getArticle, likeArticle, dislikeArticle } from "@/api/articles"
 import { useUserStore } from "./user"
 import { getOrCreateGuestId } from "@/utils/guest"
 import { useMessageStore } from "./message"
-import { getAllComment } from "@/api/comments"
+import { getAllComment, createComment as apiCreateComment } from "@/api/comments"
 
 const messageStore = useMessageStore()
 const userStore = useUserStore()
 
 export const useFeedStore = defineStore('feed', () => {
     const articles = ref<articleData[]>([])
-    const comments = ref<Comment[]>([])
     const page = ref(0)
     const isLoading = ref(false)
     const hasMore = ref(true)
-    const commentPage = ref(0)
-    const hasMoreComment = ref(true)
-    const isLoadingComment = ref(false)
+    const commentsMap = ref<Record<string, Comment[]>>({})
+    const commentPagination = ref<Record<string, {
+        page: number
+        pageSize: number
+        total: number
+        hasMore: boolean
+        isLoading: boolean
+    }>>({})
 
     // 加载初始文章
     const fetchInitialArticles = async () => {
@@ -61,7 +65,7 @@ export const useFeedStore = defineStore('feed', () => {
                 const newArticles = response.data.data.filter((a: articleData) => !existingIds.has(a.id));
 
                 articles.value.push(...newArticles);
-                page.value += 0
+                page.value += 1
 
                 hasMore.value = articles.value.length < response.data.total
                 return { status: 1 }
@@ -134,45 +138,95 @@ export const useFeedStore = defineStore('feed', () => {
         }
     }
 
-    // 获取文章评论
+    // 更新 hasMore 状态
+    function updateHasMore(articleId: string, total: number) {
+        const currentLength = commentsMap.value[articleId]?.length || 0
+        commentPagination.value[articleId].hasMore = currentLength < total
+    }
+    // 获取文章初始评论
     const fetchInitialComments = async (articleId: string) => {
-        if (comments.value.length > 0) return
-        isLoadingComment.value = true
+        const state = commentPagination.value[articleId]
+        if (state?.isLoading || state?.page > 0) return
+
+        commentPagination.value[articleId] = {
+            page: 1,
+            pageSize: 3,
+            total: 0,
+            hasMore: true,
+            isLoading: true
+        }
         try {
-            const response = await getAllComment(articleId, { page: 1, pageSize: 3 })
-            comments.value = response.data.data
-            commentPage.value = 1
-            hasMoreComment.value = comments.value.length < response.data.total
+            const response = await getAllComment(articleId, {
+                page: 1,
+                pageSize: commentPagination.value[articleId].pageSize
+            })
+            commentsMap.value[articleId] = response.data.data
+            commentPagination.value[articleId].total = response.data.total
+            updateHasMore(articleId, response.data.total)
             return true
         } catch (error) {
             console.error('获取初始评论失败：', error);
             return false
         } finally {
-            isLoadingComment.value = false
+            commentPagination.value[articleId].isLoading = false
         }
     }
     // 加载更多文章评论
     const fetchMoreComments = async (articleId: string) => {
-        if (isLoadingComment.value || !hasMoreComment.value) return
-        isLoadingComment.value = true
+        const state = commentPagination.value[articleId]
+        if (!state || state.isLoading || !state.hasMore) return
+
+        commentPagination.value[articleId].isLoading = true
 
         try {
-            const nextPage = commentPage.value + 1
-            const response = await getAllComment(articleId, { page: nextPage, pageSize: 3 })
+            const nextPage = state.page + 1
+            const pageSize = state.pageSize
 
-            if (response.data.data.length > 0) {
-                const existingIds = new Set(comments.value.map((c: Comment) => c.id))
-                const newComments = response.data.data.filter((a: Comment) => !existingIds.has(a.id))
-                comments.value.push(...newComments)
-                commentPage.value += 1
-                hasMoreComment.value = comments.value.length < response.data.total
-                return true
+            const response = await getAllComment(articleId, { 
+                page: nextPage,
+                pageSize,
+            })
+
+            if (!commentsMap.value[articleId]) {
+                commentsMap.value[articleId] = []
             }
+
+            const existingIds = new Set(commentsMap.value[articleId]?.map(c => c.id))
+            const newComments = response.data.data.filter((c: Comment) => !existingIds.has(c.id))
+            
+            commentsMap.value[articleId].push(...newComments)
+            commentPagination.value[articleId].page = nextPage
+            updateHasMore(articleId, response.data.total)
+            return true
         } catch (error) {
             console.error('获取更多更多评论失败：', error);
             return false
         } finally {
-            isLoadingComment.value = false
+            commentPagination.value[articleId].isLoading = false
+        }
+    }
+
+    // 创建评论
+    const createComment = async (payload: { articleId: string; content: string; parentId?: string }) => {
+        try {
+            const res = await apiCreateComment(payload)
+
+            if(res.data) {
+                const newComment = res.data; //返回的新文章内容)
+                if(!commentsMap.value[payload.articleId]) {
+                    commentsMap.value[payload.articleId] = []
+                }
+                commentsMap.value[payload.articleId].push(newComment)
+
+                const article = articles.value.find(a => a.id === Number(payload.articleId))
+                if(article) {
+                    article.comment_count++
+                }
+            }
+            return true
+        } catch (error) {
+            console.error('创建评论失败：', error);
+            return false
         }
     }
     // 将数据和方法返回
@@ -183,11 +237,11 @@ export const useFeedStore = defineStore('feed', () => {
         fetchInitialArticles,
         fetchMoreArticles,
         toggleLike,
-        comments,
-        isLoadingComment,
-        hasMoreComment,
         fetchInitialComments,
-        fetchMoreComments
+        fetchMoreComments,
+        commentPagination,
+        commentsMap,
+        createComment 
     }
 
 })

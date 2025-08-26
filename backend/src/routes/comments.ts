@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
 import { authMiddleware } from "../middleware/authMiddleware";
 import { logAction, logger } from "../services/log.service"
+import { create } from "axios";
 
 
 const router = Router()
@@ -56,6 +57,11 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
                     article: { connect: { id: BigInt(articleId) } },
                     user: { connect: { id: BigInt(userId!) } },
                     ...(parentId && { parent: { connect: { id: BigInt(parentId) } } })
+                },
+                include: {
+                    user: {
+                        select: { id: true, username: true, nickname: true, avatar: true}
+                    }
                 }
             }),
             // 更新文章评论计数
@@ -70,11 +76,17 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
         ])
         // 构建返回数据
         const responseData = {
-            ...newComment,
             id: newComment.id.toString(),
+            content: newComment.content,
+            created_at: newComment.created_at,
+            updated_at: newComment.updated_at,
             article_id: newComment.article_id.toString(),
             user_id: newComment.user_id.toString(),
-            parent_id: newComment.parent_id?.toString()
+            parent_id: newComment.parent_id?.toString() ?? null,
+            user: {
+                ...newComment.user,
+                id: newComment.user.id.toString()
+            }
         }
         logger.add({
             userId: null,
@@ -165,45 +177,6 @@ router.delete('/:commentId', authMiddleware, async (req: Request, res: Response)
         res.status(500).json({ error: '服务器内部错误' });
     }
 });
-// 获取文章评论（分页根评论和前N条子评论）
-// router.get('/:articleId', async (req: Request, res: Response) => {
-//     const { articleId } = req.params
-//     const page = parseInt(req.query.page as string) || 1
-//     const pageSize = parseInt(req.query.pageSize as string) || 5
-//     const skip = (page - 1) * pageSize
-//     const previewCount = 3 // 每条根评论返回子评论数
-
-//     // 根评论
-//     const rootComments = await prisma.comments.findMany({
-//         where: {
-//             article_id: BigInt(articleId),
-//             parent_id: null,
-//             deleted_at: null
-//         },
-//         orderBy: { created_at: 'asc' }, // 顺序排列
-//         skip,
-//         take: pageSize,
-//         include: {
-//             user: {
-//                 select: { id: true, username: true, nickname: true, avatar: true }
-//             },
-//             replies: {
-//                 where: { deleted_at: null },
-//                 orderBy: { created_at: 'asc' },
-//                 take: previewCount,
-//                 include: {
-//                     user: {
-//                         select: { id: true, username: true, nickname: true, avatar: true }
-//                     },
-//                     _count: { select: { replies: true } }
-//                 }
-//             },
-//             _count: { select: { replies: true } }
-//         }
-//     })
-//     res.status(200).json({ data: articleId })
-
-// })
 
 // 获取文章评论
 router.get('/:articleId', async (req: Request, res: Response) => {
@@ -223,47 +196,42 @@ router.get('/:articleId', async (req: Request, res: Response) => {
             include: {
                 user: {
                     select: { id: true, username: true, nickname: true, avatar: true }
+                },
+                parent: {
+                    include: {
+                        user: {
+                            select: { id: true, username: true, nickname: true, avatar: true }
+                        }
+                    }
                 }
             }
         })
         const totalComments = await prisma.comments.count({
-            where: { deleted_at: null }
+            where: { article_id: BigInt(articleId) , deleted_at: null }
         })
         // 构建响应数据
-        const responseData = await Promise.all(
-            allComments.map(async comment => {
-                let parentNickname = null
-                if (comment.parent_id) {
-                    const res = await prisma.comments.findUnique({
-                        where: { id: comment.parent_id },
-                        include: {
-                            user: {
-                                select: { nickname: true, username: true }
-                            }
-                        }
-                    })
-                    parentNickname = res?.user?.nickname ?? res?.user?.username ?? null
+        const responseData = allComments.map(comment => {
+            const parentDisplayName = comment.parent?.user.nickname ?? comment.parent?.user.username ?? null
+            return {
+                id: comment.id.toString(),
+                content: comment.content,
+                created_at: comment.created_at,
+                updated_at: comment.updated_at,
+                article_id: comment.article_id.toString(),
+                user_id: comment.user_id.toString(),
+                parent_id: comment.parent_id?.toString(),
+                parent_displayName: parentDisplayName,
+                user: {
+                    ...comment.user,
+                    id: comment.user.id.toString()
                 }
-
-                return {
-                    ...comment,
-                    id: comment.id.toString(),
-                    article_id: comment.article_id.toString(),
-                    user_id: comment.user_id.toString(),
-                    parent_id: comment.parent_id?.toString(),
-                    parent_displayName: parentNickname,
-                    user: {
-                        ...comment.user,
-                        id: comment.user.id.toString()
-                    }
-                }
-            })
-        )
+            }
+        })
         res.status(200).json({
             data: responseData,
             page,
             pageSize,
-            totalComments
+            total: totalComments
         })
     } catch (error) {
         console.error('查询文章评论失败', error);

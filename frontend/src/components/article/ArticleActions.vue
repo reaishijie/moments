@@ -52,7 +52,7 @@ const createdAtTimestamp = computed(() => {
                     <span>{{ article.isLiked ? '取消喜欢' : '喜欢' }}</span>
                 </div>
                 <div class="popup-divider"></div>
-                <div class="popup-item comment" @click.stop="handelComment">
+                <div class="popup-item comment" @click.stop="handelComment" @click="isPopupOpen = !isPopupOpen">
                     <Icon >
                         <CommentAltRegular />
                     </Icon>

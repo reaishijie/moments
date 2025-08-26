@@ -36,8 +36,6 @@ onMounted(async () => {
                 } else if(isSuccess?.status === 1) {
                         messageStore.update(id, { type: 'success', text: '文章加载成功', duration: 2000 })
                 } else {
-                    console.log(isSuccess.error);
-                    
                     messageStore.update(id, { type: 'error', text: '文章加载失败', duration: 2000 })
                 }
             }
