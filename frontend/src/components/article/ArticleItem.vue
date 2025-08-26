@@ -77,8 +77,8 @@ async function handleSendReply(replyData: { content: string, parentId?: string})
         feedStore.fetchInitialComments(articleState.value.id.toString())
         messageStore.update(id, {type: 'success', text: '评论成功', duration: 2000})
     } else {
-        console.error('回复失败');
-        messageStore.update(id, {type: 'error', text: '评论失败', duration: 2000})
+        console.error('评论失败');
+        messageStore.update(id, {type: 'info', text: '请先登录账号', duration: 2000})
     }
 }
 onMounted(() => {

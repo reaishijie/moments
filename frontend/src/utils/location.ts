@@ -1,5 +1,4 @@
 const api = import.meta.env.VITE_API_BASE_URL
-console.log(api);
 
 async function getLocation() {
   try {
