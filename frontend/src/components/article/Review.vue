@@ -131,7 +131,7 @@ const handleSendReply = () => {
 
       </div>
       <span class="load-more" v-if="hasMore" @click="loadMore">
-        <Icon size="18px">
+        <Icon>
           <AngleDown />
         </Icon>
       </span>
@@ -213,12 +213,14 @@ button:hover {
 }
 
 .load-more {
-font-size: xx-small;
 color: #9ac3ef;
 margin-left: 10px;
+transition: color 0.3s, font-size 0.3s;
+height: 20px;
 }
 .load-more:hover {
   cursor: pointer;
-  color: #bfd7f1;
+  color: #afbfcf;
+  font-size: larger;
 }
 </style>

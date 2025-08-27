@@ -139,7 +139,7 @@ export const useFeedStore = defineStore('feed', () => {
                     messageStore.update(id.value, { text: '操作过于频繁，请稍后重试', 'type': 'error', duration: 2000 })
                 } else {
                     console.error('id 变量为 null，无法传递给函数');
-                    messageStore.update(id.value, { text: '操作失败，请稍后重试', 'type': 'error', duration: 2000 })
+                    messageStore.update(id.value, { text: '操作过于频繁，请稍后重试', 'type': 'error', duration: 2000 })
                 }
             }
             messageStore.update(id.value, { text: '操作失败，请稍后重试', 'type': 'error', duration: 2000 })

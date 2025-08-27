@@ -122,17 +122,22 @@ video {
 .top-bar-wrapper {
   position: fixed;
   top: 0;
-  width: min(100%, 550px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(100%, 520px);
+  /* width: max(100%, 520px); */
   z-index: 10;
 }
 
 /* 栏本身 */
 .top-bar {
   display: flex;
+  width: 100%;
   justify-content: space-between;
   background-color: rgba(255, 255, 255, 0);
   transition: backdrop-filter 0.3s ease, background-color 0.3s ease;
   padding: 10px;
+  box-sizing: border-box;
 }
 
 /* 模糊状态 */

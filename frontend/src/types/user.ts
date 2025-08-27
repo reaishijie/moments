@@ -1,11 +1,14 @@
 export interface userData {
-    id: number,
+    id: string,
     username: string,
+    email:string,
     nickname: string,
     brief:string,
     role: string,
+    status:string,
     header_background: string,
     avatar: string,
+    created_at:string
 }
 
 export interface registerData {
@@ -23,6 +26,6 @@ export interface updateUserInfoData {
     brief?: string,
     nickname?: string,
     header_background?: string,
-    avater?: string
-
+    avater?: string,
+    email?:string
 }

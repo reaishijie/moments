@@ -1,9 +1,10 @@
 <script setup lang="ts" name="Brief">
 import { computed } from 'vue';
 import { useUserStore } from '@/store/user'
+import router from '@/router';
 
 const userStore = useUserStore()
-const defaultNickname = '小辉'
+const defaultNickname = '瞬刻'
 const defaultAvatar = '/img/avatar.jpg'
 const defaultBrief = '更简洁、更现代化的内容发布平台'
 const nickname = computed(() => {
@@ -22,7 +23,7 @@ const brief = computed(() => {
     <div class="brief">
         <div class="brief-img">
             <span>{{ nickname }}</span>
-            <img :src="avatar" alt="avatar">
+            <img :src="avatar" alt="avatar" @click="router.push('/home')">
         </div>
         <p>{{ brief }}</p>
     </div>
@@ -54,7 +55,7 @@ const brief = computed(() => {
     border-radius: 10%;
     width: 60px;
     height: 60px;
-    margin-top: -35px;
+    margin-top: -40px;
     margin-right: 25px;
     z-index: 5;
 }
