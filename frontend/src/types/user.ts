@@ -26,6 +26,7 @@ export interface updateUserInfoData {
     brief?: string,
     nickname?: string,
     header_background?: string,
-    avater?: string,
-    email?:string
+    avatar?: string,
+    email?:string,
+    status?: number
 }

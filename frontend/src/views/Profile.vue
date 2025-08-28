@@ -5,11 +5,14 @@ import { Icon } from '@vicons/utils';
 import router from '@/router';
 import { useUserStore } from '@/store/user';
 import { useMessageStore } from '@/store/message';
+import { updateUserInfo } from '@/api/users';
+import type { updateUserInfoData } from '@/types/user';
 
 const userStore = useUserStore()
 const messageStore = useMessageStore()
 const states = reactive({
   avatar: false,
+  header_background: false,
   role: false,
   status: false,
   nickname: false,
@@ -18,15 +21,60 @@ const states = reactive({
   brief: false,
 })
 const userData = reactive({
-  avatar: computed( () => userStore.profile?.avatar ?? '/img/avatar.jpg'),
-  role: computed( () => Number(userStore.profile?.role) === 1 ? '管理员' : '用户'),
-  status: computed( () => Number(userStore.profile?.status) === 1 ? '正常' : '异常'),
-  nickname: computed( () => userStore.profile?.nickname ?? '未设置'),
-  username: computed( () => userStore.profile?.username),
-  email: computed( () => userStore.profile?.email ?? '未绑定'),
-  brief: computed( () => userStore.profile?.brief ?? '未设置'),
+  avatar: computed(() => userStore.profile?.avatar ?? '/img/avatar.jpg'),
+  header_background: computed(() => userStore.profile?.header_background ?? '/img/header.jpg'),
+  role: computed(() => Number(userStore.profile?.role) === 1 ? '管理员' : '用户'),
+  status: computed(() => Number(userStore.profile?.status) === 1 ? '正常' : '异常'),
+  nickname: computed(() => userStore.profile?.nickname ?? '未设置'),
+  username: computed(() => userStore.profile?.username),
+  email: computed(() => userStore.profile?.email ?? '未绑定'),
+  brief: computed(() => userStore.profile?.brief ?? '未设置'),
 })
+const editData = reactive({
+  avatar: '',
+  header_background: '',
+  nickname: '',
+  email: '',
+  brief: ''
+})
+const updatingStates = reactive({
+  avatar: false,
+  header_background: false,
+  nickname: false,
+  email: false,
+  brief: false,
+  status: false,
+})
+// 更新信息
+async function haldleUpdate(key: keyof updateUserInfoData, value: string) {
+  if (updatingStates[key]) {
+    return
+  }
 
+  if (value === userData[key]) {
+    messageStore.show('内容未作修改', 'info', 2000)
+    return
+  }
+  const dataToUpdate = { [key]: value }
+  const id = messageStore.show(`正在修改中`, 'loading')
+  try {
+    updatingStates[key] = true
+    await updateUserInfo(dataToUpdate)
+    await userStore.fetchUserProfile()
+    messageStore.update(id, { text: '更新成功', type: 'success', duration: 2000 })
+    if (key in states) {
+      states[key] = false
+    }
+  } catch (error) {
+    console.error('更新信息失败，请稍后重试', error);
+    messageStore.update(id, { text: '更新信息失败，请稍后重试', type: 'error', duration: 2000 })
+  } finally {
+    updatingStates[key] = false
+    setTimeout(() => {
+      messageStore.close(id)
+    }, 2000);
+  }
+}
 if (!userStore.token) {
   messageStore.show('请先登录账户', 'info', 2000)
   userStore.handleLogout()
@@ -51,7 +99,7 @@ function handleLogout() {
     </div>
     <div class="body">
 
-      <div class="body-item" @click="states.avatar = !states.avatar">
+      <div class="body-item" @click="editData.avatar = userData.avatar; states.avatar = !states.avatar;">
         <div class="body-item-left">头像</div>
         <div class="body-item-right">
           <img :src="userData.avatar" alt="avatar" style="width: 35px;">
@@ -61,11 +109,26 @@ function handleLogout() {
         </div>
       </div>
       <div v-if="states.avatar" class="input">
-        <input type="text" placeholder="请输入 新头像url">
-        <button>更新</button>
+        <input type="text" placeholder="请输入 新头像url" v-model="editData.avatar">
+        <button @click="haldleUpdate('avatar', editData.avatar)">更新</button>
       </div>
 
-      <div class="body-item">
+      <div class="body-item"
+        @click="editData.header_background = userData.header_background; states.header_background = !states.header_background">
+        <div class="body-item-left">背景</div>
+        <div class="body-item-right">
+          <img :src="userData.header_background" alt="header_background" style="width: 60px;">
+          <Icon :class="['icon', { 'rotate-icon': states.avatar }]">
+            <ChevronRight />
+          </Icon>
+        </div>
+      </div>
+      <div v-if="states.header_background" class="input">
+        <input type="text" placeholder="请输入 新背景url" v-model="editData.header_background">
+        <button @click="haldleUpdate('header_background', editData.header_background)">更新</button>
+      </div>
+
+      <div class="body-item" @click="states.role = !states.role">
         <div class="body-item-left">角色</div>
         <div class="body-item-right">
           {{ userData.role }}
@@ -74,8 +137,12 @@ function handleLogout() {
           </Icon>
         </div>
       </div>
+      <div v-if="states.role" class="input">
+        <input type="text" placeholder="请输入 角色" readonly v-model="userData.username" style="color: #00000098;">
+        <button style="background: #00000098;">不可更改</button>
+      </div>
 
-      <div class="body-item" @click="states.status = !states.status" v-if="Number(states.role) ===1">
+      <div class="body-item" @click="states.status = !states.status">
         <div class="body-item-left">状态</div>
         <div class="body-item-right">
           {{ userData.status }}
@@ -84,17 +151,12 @@ function handleLogout() {
           </Icon>
         </div>
       </div>
-      <div v-if="states.status " class="input">
-        <select name="status" id="status">
-          <option value=""></option>
-          <option value="0">封禁</option>
-          <option value="1">正常</option>
-        </select>
-        <input type="text" placeholder="请输入 状态码">
-        <button>更新</button>
+      <div v-if="states.status" class="input">
+        <input type="text" placeholder="请输入 状态码" readonly v-model="userData.status" style="color: #00000098;">
+        <button style="background: #00000098;">不可更改</button>
       </div>
 
-      <div class="body-item" @click="states.nickname = !states.nickname">
+      <div class="body-item" @click="editData.nickname = userData.nickname; states.nickname = !states.nickname">
         <div class="body-item-left">昵称</div>
         <div class="body-item-right">
           {{ userData.nickname }}
@@ -104,25 +166,25 @@ function handleLogout() {
         </div>
       </div>
       <div v-if="states.nickname" class="input">
-        <input type="text" placeholder="请输入 昵称">
-        <button>更新</button>
+        <input type="text" placeholder="请输入 新昵称" v-model="editData.nickname">
+        <button @click="haldleUpdate('nickname', editData.nickname)">更新</button>
       </div>
 
       <div class="body-item" @click="states.username = !states.username">
         <div class="body-item-left">账号</div>
         <div class="body-item-right">
-          {{ userData.username}}
+          {{ userData.username }}
           <Icon :class="['icon', { 'rotate-icon': states.username }]">
             <ChevronRight />
           </Icon>
         </div>
       </div>
       <div v-if="states.username" class="input">
-        <input type="text" placeholder="请输入 用户名" readonly>
-        <!-- <button>更新</button> -->
+        <input type="text" placeholder="请输入 用户名" readonly v-model="userData.username" style="color: #00000098;">
+        <button style="background: #00000098;">不可更改</button>
       </div>
 
-      <div class="body-item" @click="states.email = !states.email">
+      <div class="body-item" @click="editData.email = userData.email; states.email = !states.email">
         <div class="body-item-left">邮箱</div>
         <div class="body-item-right">
           {{ userData.email }}
@@ -132,11 +194,11 @@ function handleLogout() {
         </div>
       </div>
       <div v-if="states.email" class="input">
-        <input type="text" placeholder="请输入 邮箱">
-        <button>更新</button>
+        <input type="text" placeholder="请输入 邮箱" v-model="editData.email">
+        <button @click="haldleUpdate('email', editData.email)">更新</button>
       </div>
 
-      <div class="body-item" @click="states.brief = !states.brief">
+      <div class="body-item" @click="editData.brief = userData.brief; states.brief = !states.brief">
         <div class="body-item-left">签名</div>
         <div class="body-item-right">
           {{ userData.brief }}
@@ -146,8 +208,8 @@ function handleLogout() {
         </div>
       </div>
       <div v-if="states.brief" class="input">
-        <input type="text" placeholder="请输入 签名">
-        <button>更新</button>
+        <input type="text" placeholder="请输入 签名" v-model="editData.brief">
+        <button @click="haldleUpdate('brief', editData.brief)">更新</button>
       </div>
 
       <div class="body-logout" @click="handleLogout">

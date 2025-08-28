@@ -60,18 +60,20 @@ router.patch('/', authMiddleware, async(req: Request, res: Response) => {
             return res.status(401).json({ error: '未授权' })
         }
         // 从请求体获取修改的内容
-        const { nickname, brief, avatar, header_background } = req.body
+        const { nickname, brief, avatar, header_background, email } = req.body
         const updateData: {
-            nickname? :string,
-            brief?: string,
-            avatar?: string,
+            nickname? :string;
+            brief?: string;
+            avatar?: string;
             header_background?: string;
+            email?: string;
         } = {}
         // 根据解构出的内容给 updateData对象 进行赋值
         if (nickname !== undefined) updateData.nickname = nickname;
         if (brief !== undefined) updateData.brief = brief;
         if (avatar !== undefined) updateData.avatar = avatar;
         if (header_background !== undefined) updateData.header_background = header_background;
+        if (email !== undefined) updateData.email = email;
         // 如果为空直接返回
         if(Object.keys(updateData).length === 0) {
             return res.status(400).json({ error: '没有提供任何需要更新的数据' })
