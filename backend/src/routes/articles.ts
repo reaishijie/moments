@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient, article_images, article_videos } from '@prisma/client';
+import { Prisma, PrismaClient, article_images, article_videos } from '@prisma/client';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { optionalAuthMiddleware } from '../middleware/optionalAuthMiddleware';
 import { logAction, logger } from "../services/log.service"
@@ -75,16 +75,23 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
 // 获取文章列表
 router.get('/', optionalAuthMiddleware, async (req: Request, res: Response) => {
     try {
-        const page = parseInt(req.query.page as string) || 1
-        const pageSize = parseInt(req.query.pageSize as string) || 5
+        const { page: pageStr, pageSize: pageSizeStr, userId } = req.query
+        const page = parseInt(pageStr as string) || 1
+        const pageSize = parseInt(pageSizeStr as string) || 5
         const skip = (page - 1) * pageSize
 
+        // 构建查询条件
+        const where: Prisma.articlesWhereInput = {
+            status: 1, //1为已发布
+            deleted_at: null // 未软删除的
+        }
+        // 如果提供了userId，将其加入到where条件中
+        if(userId) {
+            where.user_id = BigInt(userId as string)
+        }
         // 查询已发布、未删除文章
         const articles = await prisma.articles.findMany({
-            where: {
-                status: 1, //1为已发布
-                deleted_at: null, //软删除的
-            },
+            where: where,
             skip: skip,
             take: pageSize,
             orderBy: [
@@ -145,7 +152,7 @@ router.get('/', optionalAuthMiddleware, async (req: Request, res: Response) => {
         }
         // 总文章数
         const totalArticles = await prisma.articles.count({
-            where: { status: 1, deleted_at: null }
+            where: where
         });
         // 处理数据，转化BigInt
         const responseArticles = articleWithLikeStatus.map(article => ({
