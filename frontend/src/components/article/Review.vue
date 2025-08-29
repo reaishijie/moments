@@ -35,6 +35,10 @@ defineProps({
     type: Boolean,
     required: true
   },
+  remainingComments : {
+    type: Number,
+    required: true
+  },
   isLoading: {
     type: Boolean,
     required: true
@@ -131,9 +135,12 @@ const handleSendReply = () => {
 
       </div>
       <span class="load-more" v-if="hasMore" @click="loadMore">
+        <div>
+        {{ remainingComments }}条回复
         <Icon>
           <AngleDown />
         </Icon>
+        </div>
       </span>
     </div>
   </div>
@@ -213,14 +220,14 @@ button:hover {
 }
 
 .load-more {
-color: #9ac3ef;
+color: #25252574;
 margin-left: 10px;
 transition: color 0.3s, font-size 0.3s;
 height: 20px;
 }
 .load-more:hover {
   cursor: pointer;
-  color: #afbfcf;
+  color: #bbd7f4;
   font-size: larger;
 }
 </style>

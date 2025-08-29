@@ -6,7 +6,8 @@ import { useFeedStore } from '@/store/feed';
 import { ref, onMounted, computed } from 'vue';
 import { getArticleLikes } from '@/api/articles';
 import { useMessageStore } from '@/store/message';
-
+import { Thumbtack, Ad } from '@vicons/fa';
+import { Icon } from '@vicons/utils';
 
 const props = defineProps({
     article: {
@@ -17,13 +18,20 @@ const props = defineProps({
 
 // 状态管理
 const isShowInput = ref(false)
-const likers =ref<any[]>([])
+const likers = ref<any[]>([])
 const feedStore = useFeedStore()
 const messageStore = useMessageStore()
 
-const comments = computed(() => feedStore.commentsMap[props.article.id] || [] )
-const hasMore = computed(() => feedStore.commentPagination[props.article.id]?.hasMore || false)
-const isLoading = computed(() => feedStore.commentPagination[props.article.id]?.isLoading || false)
+const comments = computed(() => feedStore.commentsMap[props.article.id] ?? [])
+const hasMore = computed(() => feedStore.commentPagination[props.article.id]?.hasMore ?? false)
+const remainingComments = computed(() => {
+    const pagination = feedStore.commentPagination[props.article.id]
+    if (!pagination) {
+        return 0
+    }
+    return pagination.total - (pagination.page * pagination.pageSize)
+})
+const isLoading = computed(() => feedStore.commentPagination[props.article.id]?.isLoading ?? false)
 
 // 函数
 // 创建一个计算属性，从 store 中实时查找当前文章
@@ -43,7 +51,7 @@ async function showLocation() {
     }
 }
 async function fetchLikers() {
-    if(articleState.value && articleState.value?.like_count > 0) {
+    if (articleState.value && articleState.value?.like_count > 0) {
         try {
             const res = await getArticleLikes(props.article.id)
             likers.value = res.data
@@ -64,8 +72,8 @@ async function toggleLike(articleId: number) {
     }
 }
 
-async function handleSendReply(replyData: { content: string, parentId?: string}) {
-    if(!articleState.value) return
+async function handleSendReply(replyData: { content: string, parentId?: string }) {
+    if (!articleState.value) return
     const id = messageStore.show('正在创建评论', 'loading',)
     const success = await feedStore.createComment({
         articleId: articleState.value.id.toString(),
@@ -73,12 +81,12 @@ async function handleSendReply(replyData: { content: string, parentId?: string})
         parentId: replyData.parentId
     })
 
-    if(success) {
+    if (success) {
         feedStore.fetchInitialComments(articleState.value.id.toString())
-        messageStore.update(id, {type: 'success', text: '评论成功', duration: 2000})
+        messageStore.update(id, { type: 'success', text: '评论成功', duration: 2000 })
     } else {
         console.error('评论失败');
-        messageStore.update(id, {type: 'info', text: '请先登录账号', duration: 2000})
+        messageStore.update(id, { type: 'info', text: '请先登录账号', duration: 2000 })
     }
 }
 onMounted(() => {
@@ -97,7 +105,23 @@ onMounted(() => {
         <div class="article-context">
             <!-- 用户昵称 -->
             <div class="nickname">
-                <p>{{ articleState.user?.nickname || articleState.user.username }}</p>
+                <div>
+                    <p>{{ articleState.user?.nickname || articleState.user.username }}</p>
+                </div>
+                <div class="tags">
+                    <div class="tag-item" v-if="articleState.is_top">
+                        <Icon class="tag-icon">
+                            <Thumbtack />
+                        </Icon>
+                        <span>置顶</span>
+                    </div>
+                    <div class="tag-item" v-if="articleState.type === 1">
+                        <Icon class="tag-icon">
+                            <Ad />
+                        </Icon>
+                        <span>广告</span>
+                    </div>
+                </div>
             </div>
             <!-- 文章内容 -->
             <div class="main-context">
@@ -107,19 +131,12 @@ onMounted(() => {
                 <p>{{ articleState.location }}</p>
             </div>
             <!-- 时间、点赞评论按钮 -->
-            <ArticleActions :article="articleState" @like="toggleLike(articleState.id)"  @comment="toggleComment"/>
+            <ArticleActions :article="articleState" @like="toggleLike(articleState.id)" @comment="toggleComment" />
             <!-- 评论 -->
             <div class="review">
-                <Review 
-                :article="articleState" 
-                :likers="likers" 
-                :comments="comments" 
-                :is-show-input="isShowInput"
-                :has-more="hasMore"
-                :is-loading="isLoading"
-                :load-more="() => feedStore.fetchMoreComments(props.article.id)"
-                @send-reply="handleSendReply" 
-            />
+                <Review :article="articleState" :likers="likers" :comments="comments" :is-show-input="isShowInput"
+                    :has-more="hasMore" :is-loading="isLoading" :remaining-comments="remainingComments"
+                    :load-more="() => feedStore.fetchMoreComments(props.article.id)" @send-reply="handleSendReply" />
             </div>
         </div>
     </div>
@@ -170,11 +187,41 @@ onMounted(() => {
 }
 
 /**昵称样式 */
+.nickname {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+}
+
 .nickname p {
     margin: 0;
     font-size: 16px;
     font-weight: 600;
     color: #586C97;
+}
+/* 置顶和广告样式 */
+.tags {
+    display: flex;
+    gap: 8px;
+}
+
+.tag-item {
+    display: flex;
+    align-items: center;
+    font-size: 12px;
+    color: #909399;
+    background-color: #f0f2f5;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.tag-icon {
+    margin-right: 4px;
+    font-size: 12px;
+    /* Set icon size */
+    color: #909399;
+    /* Set icon color */
 }
 
 /** 文章内容样式 */
@@ -202,32 +249,6 @@ onMounted(() => {
 .main-context {
     margin-top: 8px;
     margin-bottom: 5px;
-}
-
-/* 定义按钮容器的样式 */
-.dots-button {
-    display: inline-flex;
-    justify-content: center;
-    align-items: center;
-    gap: 4px;
-    width: 30px;
-    height: 20px;
-    background-color: #f0f2f5dd;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-}
-
-.dots-button:hover {
-    background-color: #e5e7eb;
-}
-
-.dots-button p {
-    width: 4px;
-    height: 4px;
-    background-color: #6b7280;
-    border-radius: 50%;
-    margin: 0;
 }
 
 .review {

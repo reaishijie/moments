@@ -61,7 +61,9 @@ onUnmounted(() => {
     <div class="article-container">
         <ul>
             <li v-for="article in feedStore.articles" :key="article.id">
-                <ArticleItem :article="article" />
+                <slot :article="article">
+                    <ArticleItem :article="article" />
+                </slot>
                 <div class="divider"></div>
             </li>
         </ul>
