@@ -71,23 +71,30 @@ const isLogin = computed(() => !!userStore.token)
     </div>
     <div class="top-bar-wrapper">
       <div :class="['top-bar', { blurred: isBlurred }]">
+
         <div class="top-bar-left">
-          <Icon :class="['icon', { blurred: isBlurred }]">
-          <UserCircleRegular @click="authStore.showAuth" v-if="!isLogin" />
-        </Icon>
-        </div>
-        <div class="top-bar-right">
-          <div class="addArticle">
-            <Icon :class="['icon', { blurred: isBlurred }]" v-if="isLogin">
-              <Camera />
-            </Icon>
-          </div>
-          <div class="link">
+          <slot name="left" :isBlurred="isBlurred">
             <Icon :class="['icon', { blurred: isBlurred }]">
-            <Hive />
-          </Icon>
-          </div>
+              <UserCircleRegular @click="authStore.showAuth" v-if="!isLogin" />
+            </Icon>
+          </slot>
         </div>
+
+        <div class="top-bar-right">
+          <slot name="right" :isBlurred="isBlurred">
+            <div class="addArticle">
+              <Icon :class="['icon', { blurred: isBlurred }]" v-if="isLogin">
+                <Camera />
+              </Icon>
+            </div>
+            <div class="link">
+              <Icon :class="['icon', { blurred: isBlurred }]">
+                <Hive />
+              </Icon>
+            </div>
+          </slot>
+        </div>
+
       </div>
     </div>
   </div>
@@ -100,7 +107,6 @@ const isLogin = computed(() => !!userStore.token)
   height: 40vh;
   position: relative;
 }
-
 
 /* 背景 */
 .background {
@@ -169,6 +175,7 @@ video {
 .top-bar-right {
   display: flex;
 }
+
 .addArticle {
   padding: 0 10px 0 0;
 }

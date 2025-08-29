@@ -117,7 +117,7 @@ function handleLogout() {
         @click="editData.header_background = userData.header_background; states.header_background = !states.header_background">
         <div class="body-item-left">背景</div>
         <div class="body-item-right">
-          <img :src="userData.header_background" alt="header_background" style="width: 60px;">
+          <img :src="userData.header_background" alt="不支持视频" style="width: 60px;">
           <Icon :class="['icon', { 'rotate-icon': states.avatar }]">
             <ChevronRight />
           </Icon>

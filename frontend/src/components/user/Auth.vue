@@ -304,6 +304,7 @@ button {
     border-radius: 25px;
     background-color: rgb(22, 195, 106);
     color: whitesmoke;
+    border: none;
 }
 
 button:hover {
