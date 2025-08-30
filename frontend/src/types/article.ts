@@ -1,5 +1,6 @@
 export interface articleData {
     id: number,
+    user_id: number,
     nickname: string,
     avatar: string,
     content: string,

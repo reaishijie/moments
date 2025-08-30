@@ -61,10 +61,8 @@ onUnmounted(() => {
     <div class="article-container">
         <ul>
             <li v-for="article in feedStore.articles" :key="article.id">
-                <slot :article="article">
-                    <ArticleItem :article="article" />
-                </slot>
-                <div class="divider"></div>
+                <ArticleItem :article="article" />
+                <!-- <div class="divider"></div>  分割线通过文章自身实现-->
             </li>
         </ul>
         <div ref="scrollTrigger" class="scroll-trigger"></div>

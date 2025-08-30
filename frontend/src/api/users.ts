@@ -16,4 +16,12 @@ export const updateUserInfo = (data: updateUserInfoData) => {
         data
     })
 }
+// 根据 用户名 查询一些用户信息，主要是id
+export const getUserIdByUsername = (username:any) => {
+    return service({
+        url: `/user/${username}`,
+        method: 'get'
+    })
+}
+
 // 更新密码（后面做）

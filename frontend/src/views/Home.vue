@@ -1,30 +1,78 @@
 <script setup lang="ts" name="Home">
-import { onMounted } from 'vue'
+import { onMounted, ref, reactive, computed } from 'vue'
 import Header from '@/components/Header.vue';
 import Brief from '@/components/Brief.vue';
-import ArticleList from '@/components/article/ArticleList.vue';
 import HomeArticleItem from '@/components/article/HomeArticleItem.vue'
-import { ChevronLeft, Cog } from '@vicons/fa';
+import { ChevronLeft, Cog, AngleDown } from '@vicons/fa';
 import { Icon } from '@vicons/utils';
 import router from '@/router';
+import { useRoute } from 'vue-router';
 import { useUserStore } from '@/store/user';
 import { useMessageStore } from '@/store/message';
+import { getUserIdByUsername } from '@/api/users';
+import { getArticle } from '@/api/articles';
+import type { articleData } from '@/types/article';
+
 
 const userStore = useUserStore()
 const messageStore = useMessageStore()
+const route = useRoute()
+const username = route.params.username
+const userId = ref(1)
 
-onMounted(() => {
+const userArticle = reactive<articleData[]>([])
+const pagination = reactive({
+  total: 0,
+  currentPage: 1,
+  pageSize: 5,
+  isLoading: false
+})
+
+const hasMore = computed(() => {
+  return userArticle.length < pagination.total
+})
+const fetchArticles = async (userId: number) => {
+  if (pagination.isLoading) return
+  pagination.isLoading = true
+  const id = messageStore.show('正在加载文章', 'loading')
+  try {
+    const res = await getArticle({ page: pagination.currentPage, pageSize: pagination.pageSize, userId })
+
+    userArticle.push(...res.data.data)
+    pagination.total = res.data.total
+    pagination.currentPage++
+    messageStore.update(id, { 'type': 'success', 'text': '加载成功', 'duration': 2000 })
+  } catch (error) {
+    console.error('获取用户文章失败', error)
+    messageStore.update(id, { 'type': 'error', 'text': '加载失败', 'duration': 2000 })
+  } finally {
+    pagination.isLoading = false
+  }
+}
+
+onMounted(async () => {
   if (!userStore.token) {
-    userStore.handleLogout
+    userStore.handleLogout()
     messageStore.show('请先登录账号', 'info', 2000)
     router.back()
+    return
+  }
+  try {
+    const res = await getUserIdByUsername(username)
+    userId.value = res.data.id
+    if (userId.value) {
+      await fetchArticles(userId.value)
+    }
+  } catch (error) {
+    console.error('获取用户文章失败', error);
+    messageStore.show('加载用户文章失败', 'error', 2000)
   }
 })
 </script>
 
 <template>
   <div class="container">
-    <div id="top-bar">
+    <div class="top-bar">
       <Header>
         <template #left="{ isBlurred }">
           <div class="top-bar-left">
@@ -43,23 +91,29 @@ onMounted(() => {
         </template>
       </Header>
     </div>
-    <!-- 修改背景暂不开发 | 用户中心已支持 -->
-    <!-- <div class="changebackground">
-      <Icon class="icon">
-        <ImageRegular />
-      </Icon>
-    </div> -->
     <div class="brief">
       <Brief></Brief>
     </div>
-    <div class="content">
-      <ArticleList>
-        <template #default="{article}">
-          <HomeArticleItem 
-          :article="article"
-          />
-        </template>
-      </ArticleList>
+    <div class="content-container">
+      <!-- 简略文章展示 -->
+      <div class="content-main">
+        <ul>
+          <li v-for="article in userArticle" :key="article.id">
+            <!-- 每篇文章都循环使用 template 进行展示 -->
+            <HomeArticleItem :article="article" />
+          </li>
+        </ul>
+      </div>
+      <div class="content-footer">
+        <div v-if="pagination.isLoading" class="status-indicator">正在加载中...</div>
+        <div v-if="hasMore && !pagination.isLoading" @click="fetchArticles(userId)" class="status-indicator">
+          加载更多
+          <Icon>
+            <AngleDown />
+          </Icon>
+        </div>
+        <div v-if="!hasMore && userArticle.length > 0" class="status-indicator">- 没有更多了 -</div>
+      </div>
     </div>
   </div>
 </template>
@@ -95,15 +149,40 @@ onMounted(() => {
   color: rgb(81, 78, 78);
 }
 
-.changebackground {
-  margin-top: -30px;
-  margin-left: 10px;
-  z-index: 5;
-}
 /* 内容 */
-.content {
+.content-container {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   width: 100%;
+}
+/* 文章主内容 */
+.content-main{
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.content-main ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.content-footer {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+.status-indicator {
+color: #25252574;
+margin-left: 10px;
+transition: color 0.3s, font-size 0.3s;
+height: 20px;
+font-size: smaller;
+}
+.status-indicator:hover {
+  cursor: pointer;
+  color: #bbd7f4;
 }
 </style>

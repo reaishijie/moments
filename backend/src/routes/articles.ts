@@ -96,7 +96,8 @@ router.get('/', optionalAuthMiddleware, async (req: Request, res: Response) => {
             take: pageSize,
             orderBy: [
                 { is_top: 'desc' },
-                { published_at: 'desc' } //按时间发布降序排列
+                { created_at: 'desc' }, //按时间发布降序排列
+                { id: 'desc' }
             ],
             //同时查询作者部分信息、文章的相关图片/视频
             include: {

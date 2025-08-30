@@ -13,7 +13,8 @@ const routes = [
         component: () => import ('@/views/Post.vue')
     },
     {
-        path: '/home',
+        // 查询单个用户的文章页面
+        path: '/home/:username',
         name: 'home',
         component: () => import ('@/views/Home.vue')
     },{

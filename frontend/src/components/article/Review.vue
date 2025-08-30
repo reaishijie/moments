@@ -158,6 +158,8 @@ const handleSendReply = () => {
 .users {
   padding: 5px 5px 5px 10px;
   color: #9ac3ef;
+  border-bottom: 1px solid #dae4f28d;
+
 }
 
 .users-icon {

@@ -122,6 +122,34 @@ router.patch('/', authMiddleware, async(req: Request, res: Response) => {
     }
 })
 
+// 根据用户名查询一些用户信息，主要id
+router.get('/:username', async (req: Request, res: Response) => {
+    const { username } = req.params
+    try {
+        const result = await prisma.users.findUnique({
+            where: {
+                username: username
+            },
+            select: {
+                id: true,
+                nickname: true,
+            }
+        })
+        if (!result) {
+            return res.status(404).json({ message: '用户未找到' });
+        }
+        const responseData = {
+            ...result,
+            id:result?.id.toString()
+        }
+        res.status(200).json(responseData)
+    } catch(error) {
+        console.log('error:', error);
+        res.status(500).json({error: '服务器错误'})
+    }
+    
+})
+
 // 修改密码 ···待添加
 
 export default router

@@ -12,7 +12,7 @@ export const createArticle = (data: createArticleData) => {
     })
 }
 // 获取文章列表
-export const getArticle = (params?: { page?: number, pageSize?: number, skip?: number}, guestId?: string) => {
+export const getArticle = (params?: { page?: number, pageSize?: number, userId?: number}, guestId?: string) => {
     return service({
         url: '/articles',
         method: 'get',
