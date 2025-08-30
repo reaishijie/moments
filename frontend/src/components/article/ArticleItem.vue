@@ -115,7 +115,7 @@ onMounted(() => {
                         </Icon>
                         <span>置顶</span>
                     </div>
-                    <div class="tag-item" v-if="articleState.type === 1">
+                    <div class="tag-item" v-if="articleState.is_ad">
                         <Icon class="tag-icon">
                             <Ad />
                         </Icon>
