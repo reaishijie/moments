@@ -19,6 +19,10 @@ const messageStore = useMessageStore()
 const route = useRoute()
 const username = route.params.username
 const userId = ref(1)
+const displayName = ref('')
+const avatar = ref('')
+const header_background = ref('')
+const brief = ref('')
 
 const userArticle = reactive<articleData[]>([])
 const pagination = reactive({
@@ -60,6 +64,10 @@ onMounted(async () => {
   try {
     const res = await getUserIdByUsername(username)
     userId.value = res.data.id
+    displayName.value = res.data.nickname ?? username
+    avatar.value = res.data.avatar ?? '/img/avatar.jpg'
+    header_background.value = res.data.header_background ?? '/img/background.png'
+    avatar.value = res.data.avatar
     if (userId.value) {
       await fetchArticles(userId.value)
     }
@@ -92,7 +100,15 @@ onMounted(async () => {
       </Header>
     </div>
     <div class="brief">
-      <Brief></Brief>
+      <Brief>
+        <template #brief-img>
+          <span>{{ displayName }}</span>
+          <img :src="avatar" alt="avatar" @click="router.push({ name: 'profile'})">
+        </template>
+        <template #brief-content>
+          {{ brief }}
+        </template>
+      </Brief>
     </div>
     <div class="content-container">
       <!-- 简略文章展示 -->
@@ -127,7 +143,38 @@ onMounted(async () => {
   min-height: 100vh;
   background: rgb(255, 255, 255);
 }
+.brief span {
+    padding: 5px;
+    color: rgb(255, 255, 255, 0.9);
+    margin-top: -35px;
+    margin-right: 10px;
+    z-index: 5;
+    font-size: large;
+    font-weight: 600;
+}
+/* 简介头像 */
+.brief img {
+    border-radius: 10%;
+    width: 60px;
+    height: 60px;
+    margin-top: -40px;
+    margin-right: 25px;
+    z-index: 5;
+}
 
+.brief img:hover {
+    cursor: pointer;
+}
+
+/* 简介语 */
+.brief p {
+    margin: 5px 5px 1px 5px;
+    padding: 5px;
+    font-size: smaller;
+    color: #787878;
+    font-style: italic;
+
+}
 /* bar的图标 */
 .icon {
   font-size: 20px;
@@ -155,8 +202,9 @@ onMounted(async () => {
   flex-direction: column;
   width: 100%;
 }
+
 /* 文章主内容 */
-.content-main{
+.content-main {
   display: flex;
   flex-direction: column;
   width: 100%;
@@ -174,13 +222,15 @@ onMounted(async () => {
   justify-content: center;
   align-items: center;
 }
+
 .status-indicator {
-color: #25252574;
-margin-left: 10px;
-transition: color 0.3s, font-size 0.3s;
-height: 20px;
-font-size: smaller;
+  color: #25252574;
+  margin-left: 10px;
+  transition: color 0.3s, font-size 0.3s;
+  height: 20px;
+  font-size: smaller;
 }
+
 .status-indicator:hover {
   cursor: pointer;
   color: #bbd7f4;

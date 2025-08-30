@@ -22,10 +22,16 @@ const brief = computed(() => {
     <!-- 用户信息 -->
     <div class="brief">
         <div class="brief-img">
-            <span>{{ nickname }}</span>
-            <img :src="avatar" alt="avatar" @click="router.push('/home')">
+            <slot name="brief-img">
+                <span>{{ nickname }}</span>
+                <img :src="avatar" alt="avatar" @click="router.push(`/home/${userStore.profile?.username}`)">
+            </slot>
         </div>
-        <p>{{ brief }}</p>
+        <p>
+            <slot name="brief-content">
+                {{ brief }}
+            </slot>
+        </p>
     </div>
 </template>
 
@@ -38,9 +44,11 @@ const brief = computed(() => {
     align-items: flex-end;
     /* background-color: wheat; */
 }
+
 .brief-img {
     display: flex;
 }
+
 .brief-img span {
     padding: 5px;
     color: rgb(255, 255, 255, 0.9);
@@ -50,6 +58,7 @@ const brief = computed(() => {
     font-size: large;
     font-weight: 600;
 }
+
 /* 简介头像 */
 .brief-img img {
     border-radius: 10%;
@@ -59,6 +68,7 @@ const brief = computed(() => {
     margin-right: 25px;
     z-index: 5;
 }
+
 .brief-img img:hover {
     cursor: pointer;
 }

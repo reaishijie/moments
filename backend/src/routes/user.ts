@@ -133,6 +133,9 @@ router.get('/:username', async (req: Request, res: Response) => {
             select: {
                 id: true,
                 nickname: true,
+                avatar: true,
+                header_background: true,
+                brief: true
             }
         })
         if (!result) {
