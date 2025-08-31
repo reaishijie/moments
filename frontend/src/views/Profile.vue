@@ -234,7 +234,8 @@ function handleLogout() {
   align-items: center;
   height: 6vh;
   color: #00000098;
-  background: #f0f0f0e0;
+  background: #f3f3f3e8;
+  padding: 0px 5px 0px 10px;
 }
 
 #back {
@@ -255,7 +256,7 @@ function handleLogout() {
   flex-direction: column;
   /* width: min(100%,520px); */
   width: 100%;
-  background: rgb(252, 252, 252);
+  background: #f5f5f5;
 }
 
 .body-item {

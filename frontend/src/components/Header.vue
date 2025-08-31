@@ -4,6 +4,7 @@ import { useUserStore } from '@/store/user'
 import { UserCircleRegular, Hive, Camera } from '@vicons/fa'
 import { Icon } from '@vicons/utils'
 import { useAuthStore } from '@/store/auth'
+import router from '@/router'
 const authStore = useAuthStore()
 const userStore = useUserStore()
 
@@ -82,7 +83,7 @@ const isLogin = computed(() => !!userStore.token)
 
         <div class="top-bar-right">
           <slot name="right" :isBlurred="isBlurred">
-            <div class="addArticle">
+            <div class="addArticle" @click="router.push({name: 'post'})">
               <Icon :class="['icon', { blurred: isBlurred }]" v-if="isLogin">
                 <Camera />
               </Icon>

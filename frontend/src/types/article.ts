@@ -24,7 +24,12 @@ export interface articleData {
 export interface createArticleData {
     content: string,
     status: number,
-    location?: string
+    location?: string,
+    isTop?: boolean,
+    isAd?: boolean,
+    type?: number,
+    imageUrls?: string[],
+    videoUrls?: string[]
 }
 
 export interface updateArticleData {
