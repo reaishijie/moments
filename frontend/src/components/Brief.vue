@@ -16,6 +16,9 @@ const avatar = computed(() => {
 const brief = computed(() => {
     return userStore.profile?.brief || defaultBrief
 })
+const routerName = computed(() => {
+    return userStore.profile?.username ?? 'admin'
+})
 </script>
 
 <template>
@@ -24,7 +27,7 @@ const brief = computed(() => {
         <div class="brief-img">
             <slot name="brief-img">
                 <span>{{ nickname }}</span>
-                <img :src="avatar" alt="avatar" @click="router.push(`/home/${userStore.profile?.username}`)">
+                <img :src="avatar" alt="avatar" @click="router.push(`/home/${routerName}`)">
             </slot>
         </div>
         <p>

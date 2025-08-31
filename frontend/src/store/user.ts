@@ -35,6 +35,7 @@ export const useUserStore = defineStore('user', () => {
         token.value = null
         profile.value = null
         localStorage.removeItem('token')
+        localStorage.removeItem('user')
     }
     return {
         token,

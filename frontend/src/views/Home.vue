@@ -58,7 +58,7 @@ onMounted(async () => {
   if (!userStore.token) {
     userStore.handleLogout()
     messageStore.show('请先登录账号', 'info', 2000)
-    router.back()
+    router.replace({ name: 'index'})
     return
   }
   try {
