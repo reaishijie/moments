@@ -7,7 +7,9 @@ import { type createArticleData } from '@/types/article';
 import { useMessageStore } from '@/store/message';
 import { getLocation } from '@/utils/location';
 import { createArticle } from '@/api/articles';
+import { useUserStore } from '@/store/user';
 
+const userStore = useUserStore()
 const messageStore = useMessageStore()
 const articleData = reactive<createArticleData>({
   content: '',
@@ -21,6 +23,10 @@ const articleData = reactive<createArticleData>({
 })
 const imageData = ref('')
 const videoData = ref('')
+const states = reactive({
+  location: false,
+  add: false
+})
 
 
 // 避免出现 过早优化（可以采用防抖）
@@ -59,26 +65,49 @@ function toggleIsAd() {
 function toggleType() {
   articleData.type = (articleData.type! + 1) % 3;
   if (articleData.type === 0) {
+    imageData.value = ''
+    videoData.value = ''
     messageStore.show('已切换到文本类型', 'success', 2000)
   } else if (articleData.type === 1) {
+    imageData.value = ''
+    videoData.value = ''
     messageStore.show('已切换到图片类型', 'success', 2000)
   } else {
+    imageData.value = ''
+    videoData.value = ''
     messageStore.show('已切换到视频类型', 'success', 2000)
   }
 }
 async function fetchLocation() {
+  if (states.location) {
+    messageStore.show('请勿重复点击', 'info', 2000)
+    return
+  }
+  const id = messageStore.show('正在获取位置信息', 'loading')
   try {
+    states.location = true
     const res = await getLocation()
     articleData.location = res?.result.subdivisions + '省 · ' + res?.result.city
-    messageStore.show('获取位置信息成功', 'success', 2000)
+    messageStore.update(id, { type: 'success', text: '获取位置信息成功', duration: 2000})
   } catch (error) {
     console.log(error);
-    messageStore.show('获取位置信息失败', 'error', 2000)
+    messageStore.update(id, { type: 'error', text: '获取位置信息失败', duration: 2000})
+  } finally {
+    states.location = false
   }
 }
 async function addArticle() {
+  if(!articleData.content) {
+    messageStore.show('文章内容不能为空', 'info', 2000)
+    return
+  }
+  if (states.add) {
+    messageStore.show('请勿重复点击', 'info', 2000)
+    return
+  }
   const id = messageStore.show('正在发表文章', 'loading')
   try {
+    states.add = true
     await createArticle(articleData)
     messageStore.update(id, {type: 'success', text: '发表成功', duration: 2000 })
   } catch(error) {
@@ -89,6 +118,7 @@ async function addArticle() {
     articleData.location = ''
     articleData.imageUrls = []
     articleData.videoUrls = []
+    states.add = false
   }
 }
 const adjustHeight = (event: Event) => {
@@ -125,16 +155,29 @@ const adjustHeight = (event: Event) => {
         </div>
       </div>
       <div class="func">
-        <span :class="['func-item', { true: articleData.isTop }]" @click="toggleIsTop">
+        <!-- 管理员正常操作 -->
+        <span :class="['func-item', { true: articleData.isTop }]" @click="toggleIsTop" v-if="Number(userStore.profile?.role) === 1">
           <Icon>
             <Thumbtack />
           </Icon>
         </span>
-        <span :class="['func-item', { true: articleData.isAd }]" @click="toggleIsAd">
+        <span :class="['func-item', { true: articleData.isAd }]" @click="toggleIsAd" v-if="Number(userStore.profile?.role) === 1">
           <Icon>
             <Ad />
           </Icon>
         </span>
+        <!-- 用户也显示，但提示权限不足 -->
+        <span :class="['func-item', { true: articleData.isTop }]" @click="messageStore.show('权限不足', 'info', 2000)" v-if="Number(userStore.profile?.role) !== 1">
+          <Icon>
+            <Thumbtack />
+          </Icon>
+        </span>
+        <span :class="['func-item', { true: articleData.isAd }]" @click="messageStore.show('权限不足', 'info', 2000)" v-if="Number(userStore.profile?.role) !== 1">
+          <Icon>
+            <Ad />
+          </Icon>
+        </span>
+
         <span :class="['func-item', { true: articleData.type === 0 }]" @click="toggleType" v-if="articleData.type === 0">
           <Icon>
             <FileWord />
