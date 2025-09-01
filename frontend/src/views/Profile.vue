@@ -256,7 +256,7 @@ function handleLogout() {
   flex-direction: column;
   /* width: min(100%,520px); */
   width: 100%;
-  background: #f5f5f5;
+  background: #ffffff;
 }
 
 .body-item {
