@@ -8,7 +8,7 @@ const messageStore = useMessageStore()
 <template>
     <div class="message-wrapper">
         <transition-group name="fade" tag="div">
-            <div v-for="msg in messageStore.messages" :key="msg.id" :class="['message', msg.type]">
+            <div v-for="msg in messageStore.messages" :key="msg.id" :class="['message', msg.type]" @click="messageStore.close(msg.id)">
                 <Icon class="icon" size="14px">
                     <CheckCircleRegular v-if="msg.type === 'success'" />
                     <TimesCircleRegular v-if="msg.type === 'error'" />
