@@ -24,7 +24,7 @@ export const getArticle = (params?: { page?: number, pageSize?: number, userId?:
 export const getArticleDetails = (articleId : string | number) => {
     return service({
         url: `/articles/${articleId}`,
-        method: 'post'
+        method: 'get'
     })
 }
 // 更新文章

@@ -88,7 +88,7 @@ function handleLogout() {
 </script>
 
 <template>
-  <div class="main-container">
+  <div class="container">
     <div class="header">
       <div id="back" @click="router.back()">
         <Icon>
@@ -220,7 +220,7 @@ function handleLogout() {
 </template>
 
 <style scoped>
-.main-container {
+.container {
   display: flex;
   flex-direction: column;
   min-width: 375px;
@@ -236,11 +236,15 @@ function handleLogout() {
   color: #00000098;
   background: #f3f3f3e8;
   padding: 0px 5px 0px 10px;
+  gap: 10px;
 }
 
 #back {
-  padding: 10px;
-  margin: 1px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 #back:hover {

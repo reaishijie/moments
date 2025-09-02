@@ -1,4 +1,4 @@
-<script setup lang="ts" name="">
+<script setup lang="ts" name="Post">
 import { ref, reactive, watch } from 'vue'
 import { ChevronLeft, MapMarkerAlt, Thumbtack, Ad, FileWord, Image, Video } from '@vicons/fa';
 import { Icon } from '@vicons/utils';

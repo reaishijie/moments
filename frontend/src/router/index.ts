@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from "vue-router";
 import { getUserIdByUsername } from "@/api/users";
+import { getArticleDetails } from "@/api/articles";
 import type { NavigationGuardNext, RouteLocationNormalized } from 'vue-router'
 
 
@@ -29,6 +30,29 @@ const routes = [
             try {
                 const exists = await getUserIdByUsername(to.params.username as string)
                 if (exists) {
+                    next()
+                } else {
+                    next({ name: 'NotFound' })
+                }
+            } catch (error) {
+                next({ name: 'NotFound' })
+            }
+        }
+    },
+    {
+        // 查询单个文章详情的页面
+        path: '/article/:articleId',
+        name: 'articleDetail',
+        component: () => import('@/views/Detail.vue'),
+        // 动态路由
+        beforeEnter: async (
+            to: RouteLocationNormalized,
+            _from: RouteLocationNormalized,
+            next: NavigationGuardNext
+        ) => {
+            try {
+                const res = await getArticleDetails( Number(to.params.articleId))
+                if (res.data.status === 1) {
                     next()
                 } else {
                     next({ name: 'NotFound' })

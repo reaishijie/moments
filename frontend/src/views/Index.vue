@@ -1,5 +1,5 @@
 <!-- 首页展示页面 -->
-<script setup lang="ts" name="">
+<script setup lang="ts" name="Index">
 import Header from '@/components/Header.vue';
 import Brief from '@/components/Brief.vue';
 import ArticleList from '@/components/article/ArticleList.vue';

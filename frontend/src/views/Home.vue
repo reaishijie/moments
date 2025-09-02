@@ -129,6 +129,7 @@ onMounted(async () => {
           </Icon>
         </div>
         <div v-if="!hasMore && userArticle.length > 0" class="status-indicator">- 没有更多了 -</div>
+        <div v-if="userArticle.length === 0" class="status-indicator">- 该用户还没有发表内容哦 -</div>
       </div>
     </div>
   </div>
