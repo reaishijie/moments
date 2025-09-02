@@ -14,6 +14,8 @@ const userStore = useUserStore()
 
 export const useFeedStore = defineStore('feed', () => {
     const articles = ref<articleData[]>([])
+    console.log(articles);
+    
     const page = ref(0)
     const isLoading = ref(false)
     const hasMore = ref(true)
@@ -254,5 +256,4 @@ export const useFeedStore = defineStore('feed', () => {
         commentsMap,
         createComment 
     }
-
 })

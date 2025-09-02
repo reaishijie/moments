@@ -33,6 +33,13 @@ const remainingComments = computed(() => {
 })
 const isLoading = computed(() => feedStore.commentPagination[props.article.id]?.isLoading ?? false)
 
+// 函数
+// 创建一个计算属性，从 store 中实时查找当前文章
+// const articleState = computed(() => {
+//     // find 方法会返回一个响应式的对象引用
+//     return feedStore.articles.find(a => a.id === props.article.id);
+// });
+
 async function showLocation() {
     try {
         const promiseResult = await getLocation()
@@ -44,7 +51,7 @@ async function showLocation() {
     }
 }
 async function fetchLikers() {
-    if (props.article.value && props.article.value?.like_count > 0) {
+    if (props.article && props.article?.like_count > 0) {
         try {
             const res = await getArticleLikes(props.article.id)
             likers.value = res.data
@@ -66,16 +73,16 @@ async function toggleLike(articleId: number) {
 }
 
 async function handleSendReply(replyData: { content: string, parentId?: string }) {
-    if (!props.article.value) return
+    if (!props.article) return
     const id = messageStore.show('正在创建评论', 'loading',)
     const success = await feedStore.createComment({
-        articleId: props.article.value.id.toString(),
+        articleId: props.article.id.toString(),
         content: replyData.content,
         parentId: replyData.parentId
     })
 
     if (success) {
-        feedStore.fetchInitialComments(props.article.value.id.toString())
+        feedStore.fetchInitialComments(props.article.id.toString())
         messageStore.update(id, { type: 'success', text: '评论成功', duration: 2000 })
     } else {
         console.error('评论失败');
@@ -193,6 +200,7 @@ onMounted(() => {
     font-weight: 600;
     color: #586C97;
 }
+
 /* 置顶和广告样式 */
 .tags {
     display: flex;
