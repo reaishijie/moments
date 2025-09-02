@@ -8,6 +8,7 @@ import { getArticleLikes } from '@/api/articles';
 import { useMessageStore } from '@/store/message';
 import { Thumbtack, Ad } from '@vicons/fa';
 import { Icon } from '@vicons/utils';
+import router from '@/router';
 
 const props = defineProps({
     article: {
@@ -124,7 +125,7 @@ onMounted(() => {
                 </div>
             </div>
             <!-- 文章内容 -->
-            <div class="main-context">
+            <div class="main-context" @click="router.push(`/article/${props.article.id}`)">
                 <p>{{ props.article.content }}</p>
             </div>
             <div class="location" @click="showLocation">
