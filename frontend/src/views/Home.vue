@@ -66,7 +66,7 @@ onMounted(async () => {
     userId.value = res.data.id
     displayName.value = res.data.nickname ?? username
     avatar.value = res.data.avatar ?? '/img/avatar.jpg'
-    header_background.value = res.data.header_background ?? '/img/background.png'
+    header_background.value = res.data.header_background ?? '/img/background.avif'
     avatar.value = res.data.avatar
     if (userId.value) {
       await fetchArticles(userId.value)
