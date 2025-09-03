@@ -86,7 +86,7 @@ router.get('/', optionalAuthMiddleware, async (req: Request, res: Response) => {
             deleted_at: null // 未软删除的
         }
         // 如果提供了userId，将其加入到where条件中
-        if(userId) {
+        if (userId) {
             where.user_id = BigInt(userId as string)
         }
         // 查询已发布、未删除文章
@@ -215,6 +215,35 @@ router.get('/:articleId', async (req: Request, res: Response) => {
         if (!article) {
             return res.status(404).json({ error: '文章未找到或未发布' });
         }
+        let isLiked = false
+        // 如果为登录用户
+        if (req.user) {
+            const userLike = await prisma.article_likes.findFirst({
+                where: {
+                    user_id: BigInt(req.user.userId),
+                    article_id: article.id
+                },
+                select: { article_id: true }
+            })
+            // 检查是否找到了点赞记录
+            isLiked = !!userLike
+        }
+        // 游客
+        else {
+            const guestId = req.headers['x-guest-id'] as string
+            if (guestId) {
+                const guestLike = await prisma.article_guest_likes.findFirst({
+                    where: {
+                        guest_id: guestId,
+                        article_id: article.id
+                    },
+                    select: { article_id: true }
+                })
+                // 检查是否找到了点赞记录
+                isLiked = !!guestLike
+            }
+        }
+        // 构建返回数据
         const responseData = {
             ...article,
             id: article.id.toString(),
@@ -233,6 +262,7 @@ router.get('/:articleId', async (req: Request, res: Response) => {
                 id: video.id.toString(),
                 article_id: video.article_id.toString()
             })),
+            isLiked
         }
         res.status(200).json(responseData)
     } catch (error) {
@@ -676,10 +706,10 @@ router.get('/:articleId/like', optionalAuthMiddleware, async (req: Request, res:
             displayName: like.user.nickname || like.user.username,
             avater: like.user.avatar
         }))
-            res.status(200).json(responseData)
+        res.status(200).json(responseData)
     } catch (error) {
         console.error('获取文章的点赞用户信息失败：', error);
-        res.status(500).json({ error: '获取文章的点赞用户信息失败'});
+        res.status(500).json({ error: '获取文章的点赞用户信息失败' });
     }
 })
 export default router
