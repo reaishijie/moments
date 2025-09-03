@@ -2,7 +2,7 @@ body {
   margin: 0;
   padding: 0;
   background-color: #f0f0f0;
-  background-image: url('/img/background.png');
+  background-image: url('/img/background.avif');
   background-size: cover; /* 覆盖整个容器 */
   background-position: center;    /* 图像居中显示 */
   background-repeat: no-repeat;   /* 不重复 */
