@@ -21,7 +21,7 @@ export const getArticle = (params?: { page?: number, pageSize?: number, userId?:
     })
 }
 // 根据文章id获取单篇文章详情
-export const getArticleDetails = (articleId : string | number, guestId: string | undefined) => {
+export const getArticleDetails = (articleId : string | number, guestId?: string | undefined) => {
     return service({
         url: `/articles/${articleId}`,
         method: 'get',

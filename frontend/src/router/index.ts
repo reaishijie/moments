@@ -51,7 +51,7 @@ const routes = [
             next: NavigationGuardNext
         ) => {
             try {
-                const res = await getArticleDetails( Number(to.params.articleId))
+                const res = await getArticleDetails(Number(to.params.articleId))
                 if (res.data.status === 1) {
                     next()
                 } else {
