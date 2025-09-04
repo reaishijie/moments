@@ -2,98 +2,32 @@
 import ArticleActions from './ArticleActions.vue';
 import Review from './Review.vue';
 import { getLocation } from '@/utils/location'
-import { useFeedStore } from '@/store/feed';
-import { ref, onMounted, computed } from 'vue';
-import { getArticleLikes } from '@/api/articles';
-import { useMessageStore } from '@/store/message';
 import { Thumbtack, Ad } from '@vicons/fa';
 import { Icon } from '@vicons/utils';
 import router from '@/router';
+import { type articleData } from '@/types/article';
 
-const props = defineProps({
-    article: {
-        type: Object,
-        required: true
-    }
-})
+const props = defineProps<{
+    article: articleData,
+    likers: any[], // 点赞人列表
+    comments: any[], // 评论列表
+    isShowInput: boolean, //评论框显示状态
+    hasMoreComments: boolean,
+    remainingComments: number,
+    isLoadingComments: boolean,
+}>();
 
-// 状态管理
-const isShowInput = ref(false)
-const likers = ref<any[]>([])
-const feedStore = useFeedStore()
-const messageStore = useMessageStore()
-
-const comments = computed(() => feedStore.commentsMap[props.article.id] ?? [])
-const hasMore = computed(() => feedStore.commentPagination[props.article.id]?.hasMore ?? false)
-const remainingComments = computed(() => {
-    const pagination = feedStore.commentPagination[props.article.id]
-    if (!pagination) {
-        return 0
-    }
-    return pagination.total - (pagination.page * pagination.pageSize)
-})
-const isLoading = computed(() => feedStore.commentPagination[props.article.id]?.isLoading ?? false)
-
-// 函数
-// 创建一个计算属性，从 store 中实时查找当前文章
-// const articleState = computed(() => {
-//     // find 方法会返回一个响应式的对象引用
-//     return feedStore.articles.find(a => a.id === props.article.id);
-// });
+const emit = defineEmits(['like', 'comment', 'send-reply', 'load-more-comments']);
 
 async function showLocation() {
     try {
         const promiseResult = await getLocation()
         const data = promiseResult?.result
         console.log(data);
-
     } catch (error) {
         console.log('@error', error)
     }
 }
-async function fetchLikers() {
-    if (props.article && props.article?.like_count > 0) {
-        try {
-            const res = await getArticleLikes(props.article.id)
-            likers.value = res.data
-        } catch (error) {
-            console.error('获取点赞列表失败', error);
-        }
-    } else {
-        likers.value = []
-    }
-}
-function toggleComment() {
-    isShowInput.value = !isShowInput.value
-}
-async function toggleLike(articleId: number) {
-    const res = await feedStore.toggleLike(articleId)
-    if (res) {
-        await fetchLikers()
-    }
-}
-
-async function handleSendReply(replyData: { content: string, parentId?: string }) {
-    if (!props.article) return
-    const id = messageStore.show('正在创建评论', 'loading',)
-    const success = await feedStore.createComment({
-        articleId: props.article.id.toString(),
-        content: replyData.content,
-        parentId: replyData.parentId
-    })
-
-    if (success) {
-        feedStore.fetchInitialComments(props.article.id.toString())
-        messageStore.update(id, { type: 'success', text: '评论成功', duration: 2000 })
-    } else {
-        console.error('评论失败');
-        messageStore.update(id, { type: 'info', text: '请先登录账号', duration: 2000 })
-    }
-}
-onMounted(() => {
-    fetchLikers()
-    feedStore.fetchInitialComments(props.article.id)
-})
 </script>
 
 <template>
@@ -132,12 +66,12 @@ onMounted(() => {
                 <p>{{ props.article.location }}</p>
             </div>
             <!-- 时间、点赞评论按钮 -->
-            <ArticleActions :article="props.article" @like="toggleLike(props.article.id)" @comment="toggleComment" />
+            <ArticleActions :article="props.article" @like="emit('like', props.article.id)" @comment="emit('comment')" />
             <!-- 评论 -->
             <div class="review">
-                <Review :article="props.article" :likers="likers" :comments="comments" :is-show-input="isShowInput"
-                    :has-more="hasMore" :is-loading="isLoading" :remaining-comments="remainingComments"
-                    :load-more="() => feedStore.fetchMoreComments(props.article.id)" @send-reply="handleSendReply" />
+                <Review :article="props.article" :likers="props.likers" :comments="props.comments" :is-show-input="props.isShowInput"
+                    :has-more="props.hasMoreComments" :is-loading="props.isLoadingComments" :remaining-comments="props.remainingComments"
+                    :load-more="() => emit('load-more-comments')" @send-reply="(payload) => emit('send-reply', payload)" />
             </div>
         </div>
     </div>

@@ -9,9 +9,9 @@ export interface commentData {
 }
 // 创建新评论
 export interface createCommentData {
-    articleId: string;
+    articleId: number;
     content: string;
-    partentId?: string
+    partentId?: number
 }
 export interface Comment {
     id: string;

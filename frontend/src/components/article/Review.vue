@@ -3,6 +3,7 @@ import { ref, type PropType } from 'vue';
 import { HeartRegular, AngleDown } from '@vicons/fa';
 import { Icon } from '@vicons/utils';
 import { useMessageStore } from '@/store/message'
+import { type articleData } from '@/types/article';
 
 const messageStore = useMessageStore()
 
@@ -25,9 +26,9 @@ interface Comment {
     avatar: string
   }
 }
-defineProps({
+const props = defineProps({
   article: {
-    type: Object,
+    type: Object as PropType<articleData>,
     required: true
   },
   isShowInput: Boolean,
@@ -88,6 +89,7 @@ const handleSendReply = () => {
 
   // 通过 emit 将parent_id 和 content 传给父组件处理
   emit('send-reply', {
+    articleId: props.article.id,
     parentId: activeReplyId.value,
     content: replyContent.value
   })
@@ -111,7 +113,7 @@ const handleSendReply = () => {
       <span v-if="article.like_count !== 0">{{ article.like_count }}人喜欢</span>
     </div>
 
-    <div class="input" v-if="isShowInput">
+    <div class="input" v-if="props.isShowInput">
       <textarea v-model="replyContent" placeholder="写下你的评论..." @input="adjustHeight"></textarea>
       <button @click="handleSendReply">发送</button>
     </div>
@@ -120,8 +122,7 @@ const handleSendReply = () => {
       <div class="comment" v-for="comment in comments" :key="comment.id" >
 
         <div @click="toggleReply(comment.id)">
-        <span v-if="!comment.parent_id" class="comment-displayName">{{ comment.user.nickname || comment.user.username }}</span>
-        <span v-if="comment.parent_id" class="comment-displayName">{{ comment.user.nickname || comment.user.username }}</span>
+        <span  class="comment-displayName">{{ comment.user.nickname || comment.user.username }}</span>
         <span v-if="comment.parent_id"> 回复</span>
         <span v-if="comment.parent_id" class="comment-displayName">{{ comment.parent_displayName }}</span>
         <span>：</span>

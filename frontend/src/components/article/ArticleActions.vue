@@ -1,6 +1,6 @@
 <script setup lang="ts" name="ArticleActions">
 import { showTime, showDetailTime } from '@/utils/time';
-import { ref, toRefs, computed } from 'vue';
+import { ref, computed } from 'vue';
 import { HeartRegular, Heart, CommentAltRegular } from '@vicons/fa'
 import { Icon } from '@vicons/utils'
 
@@ -11,7 +11,6 @@ const props = defineProps({
     }
 });
 
-const { created_at, isLiked} = toRefs(props.article)
 const isDetailTime = ref(false)
 const isPopupOpen = ref(false)
 function togglePopup() {
@@ -19,15 +18,10 @@ function togglePopup() {
 }
 // 传递事件给父组件
 const emit = defineEmits(['like', 'comment'])
-function handelLike() {
-    emit('like')
-}
-function handelComment() {
-    emit('comment')
-}
+
 const createdAtTimestamp = computed(() => {
   // 增加一个检查，防止 created_at 无效时页面崩溃
-  const date = new Date(created_at.value);
+  const date = new Date(props.article.created_at);
   return isNaN(date.getTime()) ? 0 : date.getTime();
 });
 </script>
@@ -42,17 +36,17 @@ const createdAtTimestamp = computed(() => {
                 <p></p>
             </div>
             <div v-if="isPopupOpen" class="popup">
-                <div class="popup-item like" @click="handelLike">
-                    <Icon v-if="!isLiked">
+                <div class="popup-item like" @click="emit('like')">
+                    <Icon v-if="!article.isLiked">
                         <HeartRegular />
                     </Icon>
-                    <Icon color="rgb(255,100,100)" v-else="isLiked">
+                    <Icon color="rgb(255,100,100)" v-else="article.isLiked">
                         <Heart />
                     </Icon>
                     <span>{{ article.isLiked ? '取消喜欢' : '喜欢' }}</span>
                 </div>
                 <div class="popup-divider"></div>
-                <div class="popup-item comment" @click.stop="handelComment" @click="isPopupOpen = !isPopupOpen">
+                <div class="popup-item comment" @click.stop="emit('comment')" @click="isPopupOpen = !isPopupOpen">
                     <Icon >
                         <CommentAltRegular />
                     </Icon>

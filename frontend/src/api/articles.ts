@@ -21,10 +21,11 @@ export const getArticle = (params?: { page?: number, pageSize?: number, userId?:
     })
 }
 // 根据文章id获取单篇文章详情
-export const getArticleDetails = (articleId : string | number) => {
+export const getArticleDetails = (articleId : string | number, guestId: string | undefined) => {
     return service({
         url: `/articles/${articleId}`,
-        method: 'get'
+        method: 'get',
+        headers: guestId ? { 'X-Gueat-ID': guestId} : {},
     })
 }
 // 更新文章
@@ -68,7 +69,7 @@ export const dislikeArticle = (articleId: string | number , guestId?: string) =>
     })
 }
 // 获取文章点赞用户信息
-export const getArticleLikes = (articleId: string | number) => {
+export const getArticleLikers = (articleId: string | number) => {
     return service({
         url: `/articles/${articleId}/like`,
         method: 'get'

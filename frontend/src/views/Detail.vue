@@ -1,53 +1,37 @@
 <script setup lang="ts" name="Detail">
-import { reactive, onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import { ChevronLeft } from '@vicons/fa';
 import { Icon } from '@vicons/utils';
 import ArticleItem from '@/components/article/ArticleItem.vue';
 import router from '@/router';
 import { useRoute } from 'vue-router';
-import { getArticleDetails } from '@/api/articles';
 import { type articleData } from '@/types/article';
+import { useArticleStore } from '@/store/article';
 
-const article = reactive<articleData>({
-    id: 0,
-    user_id: 0,
-    nickname: '',
-    avatar: '',
-    content: 'Loading...',
-    type: 0, is_top: false,
-    is_ad: false, isLiked: false,
-    like_count: 0,
-    comment_count: 0,
-    location: '',
-    created_at: '',
-    user: {
-        id: '',
-        username: '',
-        nickname: '',
-        avatar: '',
-    },
-    article_images: [],
-    article_videos: []
-})
-
+const articleStore = useArticleStore()
 const route = useRoute()
 const articleId = Number(route.params.articleId)
-
-const fetchArticle = async (articleId: number) => {
-    try {
-        const res = await getArticleDetails(articleId)
-        if (res.data) { 
-            Object.assign(article, res.data)
-            console.log(res, '\n', article);
-        }
-    } catch (error) {
-        console.error("Failed to fetch article details:", error);
-    }
+const isLoading = ref(true)
+const article = ref<articleData | null>(null);
+const isShowInput = ref(false)
+function toggleComment() {
+    isShowInput.value = !isShowInput.value
 }
-onMounted(() => {
+
+onMounted(async() => {
     if (articleId) {
-        console.log('@articleId存在');
-        fetchArticle(articleId)
+        try {
+            // 直接等待 API 调用返回的文章对象
+            await articleStore.fetchArticle(articleId);
+            // 将文章赋值给本地的 ref 变量
+            article.value = articleStore.article;
+            await articleStore.fetchLikers(articleId);
+            await articleStore.fetchComments(articleId);
+        } catch (error) {
+            console.error('Failed to load article details:', error);
+        } finally {
+            isLoading.value = false;
+        }
     }
 })
 </script>
@@ -65,8 +49,21 @@ onMounted(() => {
         </div>
         <!-- 文章展示 -->
         <div class="body">
-            <ArticleItem v-if="article.id !== 0" :article="article" />
-            <span v-if="article.id === 0">正在加载中...</span>
+            <span v-if="!article">正在加载中...</span>
+            <ArticleItem 
+                v-if="article"
+                :article="article"
+                :likers="articleStore.likers || []"
+                :comments="articleStore.comments || []"
+                :is-show-input="!!isShowInput"
+                :has-more-comments= false
+                :remaining-comments= 0
+                :is-loading-comments= false
+                @like="() => articleStore.toggleLike(articleId)"
+                @comment="() => toggleComment()"
+                @send-reply="(payload) => articleStore.createComment(payload)"
+                @load-more-comments="() => console.log('点击了load-more-comments')"
+            />
         </div>
     </div>
 </template>
