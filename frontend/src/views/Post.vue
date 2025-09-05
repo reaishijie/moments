@@ -204,10 +204,8 @@ const adjustHeight = (event: Event) => {
 .container {
   display: flex;
   flex-direction: column;
-  min-width: 375px;
-  width: 520px;
+  width: 100%;
   background: #ffffff;
-  min-height: 100vh;
 }
 
 /* 头部栏 */

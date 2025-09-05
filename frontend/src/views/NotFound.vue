@@ -1,4 +1,3 @@
-
 <script setup lang="ts" name="NotFound">
 </script>
 
@@ -17,13 +16,12 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100vh;
+  min-height: 100vh;
+  width: 100%;
   text-align: center;
   background: linear-gradient(to bottom, #e0f7fa, #ffffff);
   color: #0077b6;
   font-family: 'Segoe UI', sans-serif;
-  min-width: 375px;
-  width: 520px;
 }
 
 .not-found h1 {

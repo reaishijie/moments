@@ -223,8 +223,7 @@ function handleLogout() {
 .container {
   display: flex;
   flex-direction: column;
-  min-width: 375px;
-  width: 520px;
+  width: 100%;
 }
 
 /* 头部栏 */
@@ -299,6 +298,7 @@ function handleLogout() {
   align-items: center;
   justify-content: center;
   box-shadow: 0 -10px 0 0 #cccccc62;
+  border-bottom: 1px solid #cccccc62;
   margin-top: 10px;
   padding: 5px;
   font: small;

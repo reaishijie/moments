@@ -71,8 +71,7 @@ onMounted(async() => {
 .container {
     display: flex;
     flex-direction: column;
-    min-width: 375px;
-    width: 520px;
+    width: 100%;
 }
 
 /* 头部栏 */

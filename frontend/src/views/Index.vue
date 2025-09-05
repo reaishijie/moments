@@ -18,12 +18,7 @@ import ArticleList from '@/components/article/ArticleList.vue';
 .main {
     display: flex;
     flex-direction: column;
+    width: 100%;
     background-color: #ffffff;
-    border-radius: 5px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    min-width: 375px;     /* 内容最小宽度 */
-    width: auto;
-    max-width: 520px;     /* 内容最大宽度 */
-    min-height: 100vh;
 }
 </style>

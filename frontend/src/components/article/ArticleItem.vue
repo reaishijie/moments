@@ -6,6 +6,8 @@ import { Thumbtack, Ad } from '@vicons/fa';
 import { Icon } from '@vicons/utils';
 import router from '@/router';
 import { type articleData } from '@/types/article';
+import { useMessageStore } from '@/store/message';
+const messageStore = useMessageStore()
 
 const props = defineProps<{
     article: articleData,
@@ -39,18 +41,18 @@ async function showLocation() {
         <!-- 内容 -->
         <div class="article-context">
             <!-- 用户昵称 -->
-            <div class="nickname" @click="router.push(`/home/${props.article.user.username}`)">
-                <div>
+            <div class="nickname">
+                <div @click="router.push(`/home/${props.article.user.username}`)">
                     <p>{{ props.article.user?.nickname || props.article.user.username }}</p>
                 </div>
                 <div class="tags">
-                    <div class="tag-item" v-if="props.article.is_top">
+                    <div class="tag-item" v-if="props.article.is_top" @click="messageStore.show('该内容为置顶内容', 'info', 2000)">
                         <Icon class="tag-icon">
                             <Thumbtack />
                         </Icon>
                         <span>置顶</span>
                     </div>
-                    <div class="tag-item" v-if="props.article.is_ad">
+                    <div class="tag-item" v-if="props.article.is_ad" @click="messageStore.show('该内容为广告内容', 'info', 2000)">
                         <Icon class="tag-icon">
                             <Ad />
                         </Icon>
@@ -136,7 +138,7 @@ async function showLocation() {
     justify-content: space-between;
 }
 
-.nickname:hover {
+.nickname div:hover {
     cursor: pointer;
 }
 

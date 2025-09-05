@@ -132,9 +132,7 @@ onMounted(async () => {
 .container {
   display: flex;
   flex-direction: column;
-  min-width: 375px;
-  width: 520px;
-  min-height: 100vh;
+  width: 100%;
   background: rgb(255, 255, 255);
 }
 .brief span {
