@@ -54,7 +54,7 @@ export const useFeedStore = defineStore('feed', () => {
 
     // 加载初始文章
     const fetchInitialArticles = async () => {
-        if (articles.value.length > 0) return //防止重复加载文章
+        // if (articles.value.length > 0) return //防止重复加载文章
         isLoading.value = true
         try {
             const guestId = !userStore.token ? getOrCreateGuestId() : undefined;

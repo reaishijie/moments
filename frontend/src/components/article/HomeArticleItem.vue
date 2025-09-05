@@ -2,6 +2,7 @@
 import { type PropType } from 'vue'
 import { type articleData } from '@/types/article';
 import { formatTime } from '@/utils/time';
+import router from '@/router';
 
 const props = defineProps({
   article: {
@@ -17,7 +18,7 @@ const time = formatTime(timestamp)
 <template>
   <div class="article-item">
     <div class="time">
-      <div class="day">{{  time.data }}</div>
+      <div class="day">{{ time.data }}</div>
       <div class="divider">/</div>
       <div class="month">{{ time.month }}月</div>
     </div>
@@ -28,7 +29,10 @@ const time = formatTime(timestamp)
           <img :src="props.article.article_images[0].image_url" alt="image1">
         </div>
       </div>
-      <div class="text">{{ article.content }}</div>
+      <div class="content-text" @click="router.push(`/article/${props.article.id}`)">
+        <div class="text">{{ article.content }}</div>
+      <div></div>
+      </div>
     </div>
   </div>
 </template>
@@ -43,6 +47,7 @@ const time = formatTime(timestamp)
   box-sizing: border-box;
   border-bottom: 1px solid #f0f2f5;
 }
+
 .time {
   display: flex;
   align-items: center;
@@ -50,25 +55,37 @@ const time = formatTime(timestamp)
   margin-right: 20px;
   gap: 8px;
 }
+
 .day {
   font-size: 24px;
   line-height: 1;
 }
+
 .month {
   font-size: 13px;
   color: #7e6565;
 }
+
 .image {
   display: flex;
   width: 80px;
 }
+
 .image img {
   width: 100%;
 }
+
 .content {
   display: flex;
   flex-direction: row;
   gap: 8px;
   font-size: small;
+}
+.content {
+  display: flex;
+}
+.text {
+  padding: 5px;
+  border-radius: 5px;
 }
 </style>

@@ -7,14 +7,12 @@ import { ChevronLeft, Cog, AngleDown } from '@vicons/fa';
 import { Icon } from '@vicons/utils';
 import router from '@/router';
 import { useRoute } from 'vue-router';
-import { useUserStore } from '@/store/user';
 import { useMessageStore } from '@/store/message';
 import { getUserIdByUsername } from '@/api/users';
 import { getArticle } from '@/api/articles';
 import type { articleData } from '@/types/article';
 
 
-const userStore = useUserStore()
 const messageStore = useMessageStore()
 const route = useRoute()
 const username = route.params.username
@@ -55,12 +53,6 @@ const fetchArticles = async (userId: number) => {
 }
 
 onMounted(async () => {
-  if (!userStore.token) {
-    userStore.handleLogout()
-    messageStore.show('请先登录账号', 'info', 2000)
-    router.replace({ name: 'index'})
-    return
-  }
   try {
     const res = await getUserIdByUsername(username)
     userId.value = res.data.id
@@ -71,6 +63,7 @@ onMounted(async () => {
     if (userId.value) {
       await fetchArticles(userId.value)
     }
+    document.title = `${displayName.value}的主页 - ${import.meta.env.VITE_APP_TITLE}`
   } catch (error) {
     console.error('获取用户文章失败', error);
     messageStore.show('加载用户文章失败', 'error', 2000)

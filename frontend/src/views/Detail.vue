@@ -62,7 +62,7 @@ onMounted(async() => {
                 @like="() => articleStore.toggleLike(articleId)"
                 @comment="() => toggleComment()"
                 @send-reply="(payload) => articleStore.createComment(payload)"
-                @load-more-comments="() => console.log('点击了load-more-comments')"
+                @load-more-comments="() => console.warn('点击了load-more-comments, 暂时不支持加载更多')"
             />
         </div>
     </div>

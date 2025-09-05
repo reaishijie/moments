@@ -33,13 +33,13 @@ async function showLocation() {
 <template>
     <div class="article-item" v-if="props.article">
         <!-- 左侧头像 -->
-        <div class="article-avatar">
+        <div class="article-avatar" @click="router.push(`/home/${props.article.user.username}`)">
             <img :src="props.article.user?.avatar" alt="avatar">
         </div>
         <!-- 内容 -->
         <div class="article-context">
             <!-- 用户昵称 -->
-            <div class="nickname">
+            <div class="nickname" @click="router.push(`/home/${props.article.user.username}`)">
                 <div>
                     <p>{{ props.article.user?.nickname || props.article.user.username }}</p>
                 </div>
@@ -66,12 +66,15 @@ async function showLocation() {
                 <p>{{ props.article.location }}</p>
             </div>
             <!-- 时间、点赞评论按钮 -->
-            <ArticleActions :article="props.article" @like="emit('like', props.article.id)" @comment="emit('comment')" />
+            <ArticleActions :article="props.article" @like="emit('like', props.article.id)"
+                @comment="emit('comment')" />
             <!-- 评论 -->
             <div class="review">
-                <Review :article="props.article" :likers="props.likers" :comments="props.comments" :is-show-input="props.isShowInput"
-                    :has-more="props.hasMoreComments" :is-loading="props.isLoadingComments" :remaining-comments="props.remainingComments"
-                    :load-more="() => emit('load-more-comments')" @send-reply="(payload) => emit('send-reply', payload)" />
+                <Review :article="props.article" :likers="props.likers" :comments="props.comments"
+                    :is-show-input="props.isShowInput" :has-more="props.hasMoreComments"
+                    :is-loading="props.isLoadingComments" :remaining-comments="props.remainingComments"
+                    :load-more="() => emit('load-more-comments')"
+                    @send-reply="(payload) => emit('send-reply', payload)" />
             </div>
         </div>
     </div>
@@ -105,6 +108,10 @@ async function showLocation() {
     margin-right: 15px;
 }
 
+.article-avatar:hover {
+    cursor: pointer;
+}
+
 .article-avatar img {
     width: 100%;
     height: 100%;
@@ -127,6 +134,10 @@ async function showLocation() {
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
+}
+
+.nickname:hover {
+    cursor: pointer;
 }
 
 .nickname p {

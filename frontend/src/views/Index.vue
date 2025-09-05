@@ -24,5 +24,6 @@ import ArticleList from '@/components/article/ArticleList.vue';
     min-width: 375px;     /* 内容最小宽度 */
     width: auto;
     max-width: 520px;     /* 内容最大宽度 */
+    min-height: 100vh;
 }
 </style>

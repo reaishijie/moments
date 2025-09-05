@@ -1,6 +1,6 @@
 <script setup lang="ts" name="ArticleList">
 import ArticleItem from './ArticleItem.vue';
-import { onMounted, onUnmounted, ref, watch } from 'vue';
+import { onMounted, onUnmounted, ref } from 'vue';
 import { useFeedStore } from '@/store/feed';
 import { useMessageStore } from '@/store/message'
 
@@ -12,11 +12,22 @@ const scrollTrigger = ref<HTMLElement | null>(null)
 let observer: IntersectionObserver | null = null
 const isShowInputMap = ref<Record<number, boolean>>({})
 
+const fetchNewArticleData = async (articlesToFetch: any[]) => {
+    for (const article of articlesToFetch) {
+        if (!feedStore.articleLikesMap[article.id]) {
+            await feedStore.fetchArticleLikers(article.id);
+        }
+        if (!feedStore.commentsMap[article.id]) {
+            await feedStore.fetchInitialComments(article.id);
+        }
+    }
+}
 // 组件挂载的时候执行
 onMounted(async () => {
     const id = messageStore.show('正在加载文章', 'loading')
     const isSuccess = await feedStore.fetchInitialArticles()
     if (isSuccess) {
+        await fetchNewArticleData(feedStore.articles);
         setTimeout(() => {
             messageStore.update(id, { type: 'success', text: '文章加载成功', duration: 2000 })
         }, 1000);
@@ -31,11 +42,14 @@ onMounted(async () => {
                 console.log('滚动到底部，加载更多...');
                 const id = messageStore.show('正在加载文章', 'loading')
 
-                const isSuccess = await feedStore.fetchMoreArticles();
+                const articlesBeforeFetch = feedStore.articles.length
+                const res = await feedStore.fetchMoreArticles()
                 // 消息通知
-                if (isSuccess?.status === 0) {
+                if (res?.status === 0) {
                     messageStore.update(id, { type: 'info', text: '没有更多文章了', duration: 2000 })
-                } else if (isSuccess?.status === 1) {
+                } else if (res?.status === 1) {
+                    const newArticles = feedStore.articles.slice(articlesBeforeFetch)
+                    await fetchNewArticleData(newArticles)
                     messageStore.update(id, { type: 'success', text: '文章加载成功', duration: 2000 })
                 } else {
                     messageStore.update(id, { type: 'error', text: '文章加载失败', duration: 2000 })
@@ -59,13 +73,12 @@ onUnmounted(() => {
 
 // ArticleItem事件处理
 function handleLike(articleId: number) {
-    console.log('调用了handleLike@ArticleList');
     feedStore.toggleLike(articleId)
 }
 function toggleComment(articleId: number) {
     isShowInputMap.value[articleId] = !isShowInputMap.value[articleId]
 }
-
+// 处理回复评论
 async function handleSendReply(payload: { articleId: number, content: string, parentId?: string }) {
     const success = await feedStore.createComment(payload)
     if (success) {
@@ -77,20 +90,6 @@ async function handleSendReply(payload: { articleId: number, content: string, pa
 function handleLoadMoreComments(articleId: number) {
     feedStore.fetchMoreComments(articleId)
 }
-// 侦听文章列表，当文章数据加载或更新时，获取点赞人和评论数据
-watch(() => feedStore.articles, (newArticles) => {
-    if (newArticles.length > 0) {
-        newArticles.forEach(article => {
-            // 确保只为新加载的文章获取数据
-            if (!feedStore.articleLikesMap[article.id]) {
-                feedStore.fetchArticleLikers(article.id);
-            }
-            if (!feedStore.commentsMap[article.id]) {
-                feedStore.fetchInitialComments(article.id);
-            }
-        });
-    }
-}, { immediate: true });
 </script>
 
 <template>
@@ -98,19 +97,13 @@ watch(() => feedStore.articles, (newArticles) => {
     <div class="article-container">
         <ul>
             <li v-for="article in feedStore.articles" :key="article.id">
-                <ArticleItem 
-                    :article="article"
-                    :likers="feedStore.articleLikesMap[article.id] || []"
-                    :comments="feedStore.commentsMap[article.id] || []"
-                    :is-show-input="!!isShowInputMap[article.id]"
+                <ArticleItem :article="article" :likers="feedStore.articleLikesMap[article.id] || []"
+                    :comments="feedStore.commentsMap[article.id] || []" :is-show-input="!!isShowInputMap[article.id]"
                     :has-more-comments="feedStore.commentPagination[article.id]?.hasMore ?? false"
                     :remaining-comments="feedStore.commentPagination[article.id]?.remaining ?? 0"
                     :is-loading-comments="feedStore.commentPagination[article.id]?.isLoading ?? false"
-                    @like="handleLike"
-                    @comment="() => toggleComment(article.id)"
-                    @send-reply="handleSendReply"
-                    @load-more-comments="() => handleLoadMoreComments(article.id)"
-                />
+                    @like="handleLike" @comment="() => toggleComment(article.id)" @send-reply="handleSendReply"
+                    @load-more-comments="() => handleLoadMoreComments(article.id)" />
             </li>
         </ul>
         <div ref="scrollTrigger" class="scroll-trigger"></div>

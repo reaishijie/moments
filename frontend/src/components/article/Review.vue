@@ -4,6 +4,9 @@ import { HeartRegular, AngleDown } from '@vicons/fa';
 import { Icon } from '@vicons/utils';
 import { useMessageStore } from '@/store/message'
 import { type articleData } from '@/types/article';
+import { useRoute } from 'vue-router';
+import { computed } from 'vue';
+import router from '@/router';
 
 const messageStore = useMessageStore()
 
@@ -11,6 +14,7 @@ const messageStore = useMessageStore()
 interface Liker {
   id: string;
   displayName: string;
+  username:string;
   avatar: string
 }
 interface Comment {
@@ -98,6 +102,9 @@ const handleSendReply = () => {
   replyContent.value = ''
   activeReplyId.value = null
 }
+
+const route = useRoute()
+const isDetailPage = computed(() => route.name === 'articleDetail')
 </script>
 
 <template>
@@ -106,8 +113,10 @@ const handleSendReply = () => {
       <Icon class="users-icon">
         <HeartRegular />
       </Icon>
-      <span v-for="(liker, index) in likers" :key="index">{{ liker.displayName }}<span
-          v-if="index < likers.length - 1">，</span>
+      <span v-for="(liker, index) in likers" :key="index">
+        <span  v-if="!isDetailPage">{{ liker.displayName }}</span>
+        <img  v-if="isDetailPage" :src="liker.avatar" alt="" style="width: 25px; height: 25px;" @click="router.push(`/home/${liker.username}`)"/>
+      <span v-if="index < likers.length - 1">，</span>
       </span>
       <span v-if="likers.length !== 0">...共</span>
       <span v-if="article.like_count !== 0">{{ article.like_count }}人喜欢</span>

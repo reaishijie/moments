@@ -5,7 +5,6 @@ const router = Router()
 router.get('/', async(req, res) => {
     try {
         const data = await location()
-        console.log(data);
         res.status(200).json({data})
     } catch(error){
         return res.status(500).json({error: `${error}`})

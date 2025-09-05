@@ -189,7 +189,7 @@ router.get('/', optionalAuthMiddleware, async (req: Request, res: Response) => {
 })
 
 // 查询单篇文章详情
-router.get('/:articleId', async (req: Request, res: Response) => {
+router.get('/:articleId', optionalAuthMiddleware, async (req: Request, res: Response) => {
     try {
         const { articleId } = req.params
         const article = await prisma.articles.findFirst({
@@ -704,7 +704,8 @@ router.get('/:articleId/like', optionalAuthMiddleware, async (req: Request, res:
         const responseData = likes.map(like => ({
             id: like.user_id.toString(),
             displayName: like.user.nickname || like.user.username,
-            avater: like.user.avatar
+            username: like.user.username,
+            avatar: like.user.avatar
         }))
         res.status(200).json(responseData)
     } catch (error) {
