@@ -194,8 +194,10 @@ const adjustHeight = (event: Event) => {
           </Icon>
         </span>
       </div>
+      <div class="media-input">
         <textarea v-model="imageData" placeholder=" 输入图片链接(使用“,”、空格、换行 区分图片)" @input="adjustHeight" class="imageArea" v-if="articleData.type === 1"></textarea>
         <textarea v-model="videoData" placeholder=" 输入视频链接" @input="adjustHeight" class="imageArea" v-if="articleData.type === 2"></textarea>
+      </div>
     </div>
   </div>
 </template>
@@ -284,7 +286,6 @@ const adjustHeight = (event: Event) => {
   resize: none;
   padding: 10px;
   font-size: smaller;
-  
   font-weight: 600;
   color: #6cadf1;
   background: rgba(77, 76, 76, 0.075);

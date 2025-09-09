@@ -2,15 +2,14 @@
 import { RouterView } from 'vue-router';
 import MessageList from '@/components/MessageList.vue'
 import Auth from './components/user/Auth.vue';
-import '@/main.css';
 </script>
 
 <template>
   <div class="app-container">
     <RouterView />
+    <MessageList />
+    <Auth />
   </div>
-  <MessageList />
-  <Auth />
 </template>
 
 <style scoped>
@@ -18,7 +17,7 @@ import '@/main.css';
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  min-width: 375px;
+  min-width: 300px;
   max-width: 520px;
   width: 100%;
   margin: 0 auto;

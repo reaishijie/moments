@@ -6,7 +6,7 @@ import ArticleList from '@/components/article/ArticleList.vue';
 </script>
 
 <template>
-    <div class="main">
+    <div class="container">
         <Header> </Header>
         <Brief> </Brief>
         <ArticleList> </ArticleList>
@@ -15,7 +15,7 @@ import ArticleList from '@/components/article/ArticleList.vue';
 
 <style scoped>
 /* 主容器 */
-.main {
+.container {
     display: flex;
     flex-direction: column;
     width: 100%;

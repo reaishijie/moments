@@ -83,7 +83,7 @@ const isLogin = computed(() => !!userStore.token)
 
         <div class="top-bar-right">
           <slot name="right" :isBlurred="isBlurred">
-            <div class="addArticle" @click="router.push({name: 'post'})">
+            <div class="addArticle" @click="router.push({ name: 'post' })">
               <Icon :class="['icon', { blurred: isBlurred }]" v-if="isLogin">
                 <Camera />
               </Icon>
@@ -113,7 +113,7 @@ const isLogin = computed(() => !!userStore.token)
 .background {
   width: 100%;
   height: 100%;
-  overflow: hidden;
+  /* overflow: hidden; */
 }
 
 /* 顶部 图片/视频  */
@@ -132,7 +132,7 @@ video {
   left: 50%;
   transform: translateX(-50%);
   width: min(100%, 520px);
-  /* width: max(100%, 520px); */
+  /* width: 100%; */
   z-index: 10;
 }
 
