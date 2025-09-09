@@ -7,8 +7,9 @@ import { Icon } from '@vicons/utils';
 import router from '@/router';
 import { type articleData } from '@/types/article';
 import { useMessageStore } from '@/store/message';
-const messageStore = useMessageStore()
+import Media from './Media.vue';
 
+const messageStore = useMessageStore()
 const props = defineProps<{
     article: articleData,
     likers: any[], // 点赞人列表
@@ -46,13 +47,15 @@ async function showLocation() {
                     <p>{{ props.article.user?.nickname || props.article.user.username }}</p>
                 </div>
                 <div class="tags">
-                    <div class="tag-item" v-if="props.article.is_top" @click="messageStore.show('该内容为置顶内容', 'info', 2000)">
+                    <div class="tag-item" v-if="props.article.is_top"
+                        @click="messageStore.show('该内容为置顶内容', 'info', 2000)">
                         <Icon class="tag-icon">
                             <Thumbtack />
                         </Icon>
                         <span>置顶</span>
                     </div>
-                    <div class="tag-item" v-if="props.article.is_ad" @click="messageStore.show('该内容为广告内容', 'info', 2000)">
+                    <div class="tag-item" v-if="props.article.is_ad"
+                        @click="messageStore.show('该内容为广告内容', 'info', 2000)">
                         <Icon class="tag-icon">
                             <Ad />
                         </Icon>
@@ -61,8 +64,12 @@ async function showLocation() {
                 </div>
             </div>
             <!-- 文章内容 -->
-            <div class="main-context" @click="router.push(`/article/${props.article.id}`)">
+            <div v-if="article.content" class="main-context" @click="router.push(`/article/${props.article.id}`)">
                 <p>{{ props.article.content }}</p>
+            </div>
+            <div class="media">
+                <!-- 将article传递给组件 -->
+                <Media :article="props.article" />
             </div>
             <div class="location" @click="showLocation">
                 <p>{{ props.article.location }}</p>

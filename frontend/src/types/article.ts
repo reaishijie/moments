@@ -18,7 +18,13 @@ export interface articleData {
         nickname: string,
         avatar: string,
     },
-    article_images: any[],
+    article_images: {
+        id: string,
+        article_id: string,
+        image_url: string,
+        sort_order: number,
+        created_at: string
+    }[],
     article_videos: any[]
 }
 export interface createArticleData {

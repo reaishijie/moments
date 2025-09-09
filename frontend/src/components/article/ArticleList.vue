@@ -78,11 +78,12 @@ function toggleComment(articleId: number) {
 }
 // 处理回复评论
 async function handleSendReply(payload: { articleId: number, content: string, parentId?: string }) {
+    const id = messageStore.show('正在创建评论', 'loading')
     const success = await feedStore.createComment(payload)
     if (success) {
-        messageStore.show('评论成功', 'success', 2000)
+        messageStore.update(id, { type: 'success', text: '评论成功', duration: 2000})
     } else {
-        messageStore.show('评论失败', 'error', 2000)
+        messageStore.update(id, { type: 'error', text: '评论失败', duration: 2000})
     }
 }
 function handleLoadMoreComments(articleId: number) {

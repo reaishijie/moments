@@ -13,7 +13,7 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
     try {
         const userId = req.user?.userId;
         const { content, status, location, type, isTop, isAd, imageUrls, videoUrls } = req.body;
-        if (!content) {
+        if (!content && !imageUrls && !videoUrls) {
             return res.status(400).json({ error: '文章内容不能为空' });
         }
         //创建一篇文章

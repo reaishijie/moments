@@ -97,7 +97,8 @@ async function fetchLocation() {
   }
 }
 async function addArticle() {
-  if(!articleData.content) {
+  if(!articleData.content && (!articleData.imageUrls?.length || articleData.imageUrls.length === 0) &&
+    (!articleData.videoUrls?.length || articleData.videoUrls.length === 0)) {
     messageStore.show('文章内容不能为空', 'info', 2000)
     return
   }
@@ -111,13 +112,15 @@ async function addArticle() {
     await createArticle(articleData)
     messageStore.update(id, {type: 'success', text: '发表成功', duration: 2000 })
   } catch(error) {
-    console.log('创建文章失败', error)
+    console.log('发表文章失败', error)
     messageStore.update(id, {type: 'error', text: '发表失败', duration: 2000 })
   } finally {
     articleData.content = ''
     articleData.location = ''
     articleData.imageUrls = []
     articleData.videoUrls = []
+    imageData.value = '' // 清空图片输入框
+    videoData.value = '' // 清空视频输入框
     states.add = false
   }
 }
