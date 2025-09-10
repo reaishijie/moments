@@ -2,7 +2,7 @@ import { Router, Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
-import { logAction, logger } from "../services/log.service"
+import { logAction, logger } from "../services/log.service.js"
 
 
 const router = Router()

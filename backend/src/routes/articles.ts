@@ -1,8 +1,8 @@
 import { Router, Request, Response } from 'express';
 import { Prisma, PrismaClient, article_images, article_videos } from '@prisma/client';
-import { authMiddleware } from '../middleware/authMiddleware';
-import { optionalAuthMiddleware } from '../middleware/optionalAuthMiddleware';
-import { logAction, logger } from "../services/log.service"
+import { authMiddleware } from '../middleware/authMiddleware.js';
+import { optionalAuthMiddleware } from '../middleware/optionalAuthMiddleware.js';
+import { logAction, logger } from "../services/log.service.js"
 import { log } from 'console';
 
 const router = Router();

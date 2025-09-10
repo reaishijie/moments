@@ -1,16 +1,22 @@
 {
   "name": "moments-backend",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "src/index.ts",
+  "type": "module",
   "scripts": {
     "build": "tsc",
-    "dev": "nodemon src/index.ts",
+    "dev": "npx tsx watch src/index.ts",
     "start": "node dist/index.js",
-    "db:setup": "npx prisma migrate deploy && ts-node src/seed.ts"
+    "start:pm2": "pm2 start dist/index.js",
+    "db:install": "npx prisma generate && npx prisma migrate deploy && node dist/seed.js",
+    "db:setup": "npx prisma migrate deploy && tsx src/seed.ts"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "瞬刻",
+    "moments"
+  ],
+  "author": "486",
+  "license": "Apache-2.0",
   "description": "",
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
@@ -18,9 +24,8 @@
     "@types/express": "^5.0.3",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^24.1.0",
-    "nodemon": "^3.1.10",
     "prisma": "^6.13.0",
-    "ts-node": "^10.9.2",
+    "tsx": "^4.20.5",
     "typescript": "^5.8.3"
   },
   "dependencies": {

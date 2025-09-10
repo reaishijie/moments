@@ -1,7 +1,7 @@
 import { error } from "console"
 import { Request, Response, NextFunction } from "express"
 import jwt from 'jsonwebtoken'
-import { JwtPayload } from "../types/express"
+import { JwtPayload } from "../types/express.js"
 
 export const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
     // 获取token

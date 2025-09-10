@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { JwtPayload } from '../types/express'; // 确保这个类型定义已存在
+import { JwtPayload } from '../types/express.js'; // 确保这个类型定义已存在
 
 export const optionalAuthMiddleware = (req: Request, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;

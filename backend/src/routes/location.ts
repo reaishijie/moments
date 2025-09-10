@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { location } from '../services/location.service'
+import { location } from '../services/location.service.js'
 
 const router = Router()
 router.get('/', async(req, res) => {

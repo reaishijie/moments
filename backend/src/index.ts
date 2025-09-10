@@ -1,11 +1,16 @@
 import express from "express";
-import location from "./routes/location";
+import location from "./routes/location.js";
 import cors from 'cors'
 import dotenv from "dotenv";
-import authRouter from './routes/auth'
-import userRouter from './routes/user'
-import articlesRouter from './routes/articles'
-import commentsRouter from './routes/comments'
+import authRouter from './routes/auth.js'
+import userRouter from './routes/user.js'
+import articlesRouter from './routes/articles.js'
+import commentsRouter from './routes/comments.js'
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 // 载入env配置
 dotenv.config()
 
@@ -17,6 +22,8 @@ const app = express()
 //配置请求及路由
 app.use(cors())
 app.use(express.json())
+app.use(express.static(path.join(__dirname, '..',  'public'))); // 上级目录下的frontend
+
 // 测试路由
 app.get('/api', (req, res) => {
     res.status(200).json({
@@ -30,6 +37,9 @@ app.use('/api/auth', authRouter)
 app.use('/api/user', userRouter);
 app.use('/api/articles', articlesRouter)
 app.use('/api/comments', commentsRouter)
+app.get(/.*/, (req, res) => {
+  res.sendFile(path.join(__dirname, '../public', 'index.html'));
+});
 
 app.listen(port, () => {
     console.log(`【${date}】🚀 后端启动成功：http://${host}:${port}`);
