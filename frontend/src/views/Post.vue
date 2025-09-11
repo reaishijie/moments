@@ -32,16 +32,16 @@ const states = reactive({
 // 避免出现 过早优化（可以采用防抖）
 watch(imageData, (newImageDataValue) => {
   const urls = newImageDataValue
-  .split(/[\s,]+|[\n]+/)
-  .map(url => url.trim())
-  .filter(url => url)
+    .split(/[\s,]+|[\n]+/)
+    .map(url => url.trim())
+    .filter(url => url)
   articleData.imageUrls = urls
 })
 watch(videoData, (newVideoDataValue) => {
   const urls = newVideoDataValue
-  .split(/[\s,]+|[\n]+/)
-  .map(url => url.trim())
-  .filter(url => url)
+    .split(/[\s,]+|[\n]+/)
+    .map(url => url.trim())
+    .filter(url => url)
   articleData.videoUrls = urls
 })
 function toggleIsTop() {
@@ -88,16 +88,16 @@ async function fetchLocation() {
     states.location = true
     const res = await getLocation()
     articleData.location = res?.result.subdivisions + '省 · ' + res?.result.city
-    messageStore.update(id, { type: 'success', text: '获取位置信息成功', duration: 2000})
+    messageStore.update(id, { type: 'success', text: '获取位置信息成功', duration: 2000 })
   } catch (error) {
     console.log(error);
-    messageStore.update(id, { type: 'error', text: '获取位置信息失败', duration: 2000})
+    messageStore.update(id, { type: 'error', text: '获取位置信息失败', duration: 2000 })
   } finally {
     states.location = false
   }
 }
 async function addArticle() {
-  if(!articleData.content && (!articleData.imageUrls?.length || articleData.imageUrls.length === 0) &&
+  if (!articleData.content && (!articleData.imageUrls?.length || articleData.imageUrls.length === 0) &&
     (!articleData.videoUrls?.length || articleData.videoUrls.length === 0)) {
     messageStore.show('文章内容不能为空', 'info', 2000)
     return
@@ -110,10 +110,10 @@ async function addArticle() {
   try {
     states.add = true
     await createArticle(articleData)
-    messageStore.update(id, {type: 'success', text: '发表成功', duration: 2000 })
-  } catch(error) {
+    messageStore.update(id, { type: 'success', text: '发表成功', duration: 2000 })
+  } catch (error) {
     console.log('发表文章失败', error)
-    messageStore.update(id, {type: 'error', text: '发表失败', duration: 2000 })
+    messageStore.update(id, { type: 'error', text: '发表失败', duration: 2000 })
   } finally {
     articleData.content = ''
     articleData.location = ''
@@ -148,7 +148,8 @@ const adjustHeight = (event: Event) => {
     </div>
 
     <div class="body">
-      <textarea v-model="articleData.content" placeholder="这一刻的想法..." @input="adjustHeight" class="contentArea"></textarea>
+      <textarea v-model="articleData.content" placeholder="这一刻的想法..." @input="adjustHeight"
+        class="contentArea"></textarea>
       <div class="location">
         <div>
           <Icon @click="fetchLocation">
@@ -159,47 +160,56 @@ const adjustHeight = (event: Event) => {
       </div>
       <div class="func">
         <!-- 管理员正常操作 -->
-        <span :class="['func-item', { true: articleData.isTop }]" @click="toggleIsTop" v-if="Number(userStore.profile?.role) === 1">
+        <span :class="['func-item', { true: articleData.isTop }]" @click="toggleIsTop"
+          v-if="Number(userStore.profile?.role) === 1">
           <Icon>
             <Thumbtack />
           </Icon>
         </span>
-        <span :class="['func-item', { true: articleData.isAd }]" @click="toggleIsAd" v-if="Number(userStore.profile?.role) === 1">
+        <span :class="['func-item', { true: articleData.isAd }]" @click="toggleIsAd"
+          v-if="Number(userStore.profile?.role) === 1">
           <Icon>
             <Ad />
           </Icon>
         </span>
         <!-- 用户也显示，但提示权限不足 -->
-        <span :class="['func-item', { true: articleData.isTop }]" @click="messageStore.show('权限不足', 'info', 2000)" v-if="Number(userStore.profile?.role) !== 1">
+        <span :class="['func-item', { true: articleData.isTop }]" @click="messageStore.show('权限不足', 'info', 2000)"
+          v-if="Number(userStore.profile?.role) !== 1">
           <Icon>
             <Thumbtack />
           </Icon>
         </span>
-        <span :class="['func-item', { true: articleData.isAd }]" @click="messageStore.show('权限不足', 'info', 2000)" v-if="Number(userStore.profile?.role) !== 1">
+        <span :class="['func-item', { true: articleData.isAd }]" @click="messageStore.show('权限不足', 'info', 2000)"
+          v-if="Number(userStore.profile?.role) !== 1">
           <Icon>
             <Ad />
           </Icon>
         </span>
 
-        <span :class="['func-item', { true: articleData.type === 0 }]" @click="toggleType" v-if="articleData.type === 0">
+        <span :class="['func-item', { true: articleData.type === 0 }]" @click="toggleType"
+          v-if="articleData.type === 0">
           <Icon>
             <FileWord />
           </Icon>
         </span>
-        <span :class="['func-item', { true: articleData.type === 1 }]" @click="toggleType" v-if="articleData.type === 1">
+        <span :class="['func-item', { true: articleData.type === 1 }]" @click="toggleType"
+          v-if="articleData.type === 1">
           <Icon>
             <Image />
           </Icon>
         </span>
-        <span :class="['func-item', { true: articleData.type === 2 }]" @click="toggleType" v-if="articleData.type === 2">
+        <span :class="['func-item', { true: articleData.type === 2 }]" @click="toggleType"
+          v-if="articleData.type === 2">
           <Icon>
             <Video />
           </Icon>
         </span>
       </div>
       <div class="media-input">
-        <textarea v-model="imageData" placeholder=" 输入图片链接(使用“,”、空格、换行 区分图片)" @input="adjustHeight" class="imageArea" v-if="articleData.type === 1"></textarea>
-        <textarea v-model="videoData" placeholder=" 输入视频链接" @input="adjustHeight" class="imageArea" v-if="articleData.type === 2"></textarea>
+        <textarea v-model="imageData" placeholder=" 输入图片链接(使用“,”、空格、换行 区分图片)" @input="adjustHeight" class="mediaArea"
+          v-if="articleData.type === 1"></textarea>
+        <textarea v-model="videoData" placeholder=" 输入视频链接" @input="adjustHeight" class="mediaArea"
+          v-if="articleData.type === 2"></textarea>
       </div>
     </div>
   </div>
@@ -284,10 +294,11 @@ const adjustHeight = (event: Event) => {
   overflow-y: auto;
 }
 
-.imageArea {
+.mediaArea {
   border: none;
   resize: none;
   padding: 10px;
+  margin: 5px 2.5%;
   font-size: smaller;
   font-weight: 600;
   color: #6cadf1;
