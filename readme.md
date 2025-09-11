@@ -1,6 +1,6 @@
 # 瞬刻  - - *更简洁、更现代化的内容发布平台*
 
-使用vercle快速部署：[<img src="https://vercel.com/button" alt="Deploy on Zeabur" height="30">](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Freaishijie%2Fmoments&env=VITE_API_BASE_URL&project-name=moments&repository-name=moments)
+使用vercle快速部署：[<img src="https://vercel.com/button" alt="Deploy on Zeabur" height="30">](https://vercel.com/new/clone?repository-url=https://github.com/reaishijie/moments&root-directory=frontend&env=VITE_API_BASE_URL&project-name=moments&repository-name=moments)
 
 ## 项目概述
 
