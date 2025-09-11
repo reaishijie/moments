@@ -1,5 +1,7 @@
 # 瞬刻  - - *更简洁、更现代化的内容发布平台*
 
+使用vercle快速部署：[<img src="https://vercel.com/button" alt="Deploy on Zeabur" height="30">](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Freaishijie%2Fmoments&env=VITE_API_BASE_URL&project-name=moments&repository-name=moments)
+
 ## 项目概述
 
 瞬刻是一个现代化的社交媒体应用，专注于为用户提供简洁、流畅的内容分享体验。项目采用前后端分离架构，支持文字、图片、视频等多种内容类型的发布和交互。
