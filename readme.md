@@ -13,6 +13,8 @@
 - 📍 **位置服务**: 获取基础地理位置功能
 - 📊 **完整的日志系统**: 用户行为追踪和系统监控
 
+## 快速部署请查看：[doc/quickDeploy.md](https://github.com/reaishijie/moments/blob/main/doc/quickDeploy-readme.md)
+
 ## 程序开发
 
 ```bash
@@ -101,8 +103,6 @@ location / {
     try_files $uri $uri/ /index.html;
  }
 ```
-
-## 
 
 ## 开源协议
 
