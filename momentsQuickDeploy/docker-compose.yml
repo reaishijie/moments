@@ -1,0 +1,35 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: moments-db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: demo
+      MYSQL_USER: demo
+      MYSQL_PASSWORD: demo
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - moments-net
+
+  app:
+    build: .
+    container_name: moments-app
+    restart: always
+    ports:
+      - "9889:9889"
+    env_file:
+      - .env.docker
+    depends_on:
+      - db
+    networks:
+      - moments-net
+
+volumes:
+  db_data:
+
+networks:
+  moments-net:
