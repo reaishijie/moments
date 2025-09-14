@@ -1,6 +1,6 @@
-# 瞬刻  - - *更简洁、更现代化的内容发布平台*
+# 瞬刻  - - *更简洁、更现代化的内容发布平台
 
-使用vercle快速部署：[<img src="https://vercel.com/button" alt="Deploy on Zeabur" height="30">](https://vercel.com/new/clone?repository-url=https://github.com/reaishijie/moments&root-directory=frontend&env=VITE_API_BASE_URL&project-name=moments&repository-name=moments)
+使用vercle快速部署：[<img src="https://vercel.com/button" alt="Deploy on Vercel" height="30">](https://vercel.com/new/clone?repository-url=https://github.com/reaishijie/moments&root-directory=frontend&env=VITE_API_BASE_URL&project-name=moments&repository-name=moments)
 
 ## 项目概述
 
@@ -114,4 +114,6 @@ location / {
 
 感谢所有为本项目做出贡献的开发者和用户！
 
----
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=reaishijie/moments&type=Date)](https://www.star-history.com/#reaishijie/moments&Date)
