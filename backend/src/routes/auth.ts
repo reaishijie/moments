@@ -36,7 +36,8 @@ router.post('/register', async (req: Request, res: Response) => {
             data: {
                 username: username,
                 password: hashedPassword,
-                email: email
+                email: email,
+                status: 0 //默认注册后 0为未激活 | 1为正常用户 | 2为封禁
             }
         })
         // 将新用户信息除去密码后返回

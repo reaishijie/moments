@@ -6,6 +6,7 @@ import authRouter from './routes/auth.js'
 import userRouter from './routes/user.js'
 import articlesRouter from './routes/articles.js'
 import commentsRouter from './routes/comments.js'
+import noticeRouter from './routes/notice.js'
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -37,6 +38,7 @@ app.use('/api/auth', authRouter)
 app.use('/api/user', userRouter);
 app.use('/api/articles', articlesRouter)
 app.use('/api/comments', commentsRouter)
+app.use('/api/notice', noticeRouter)
 app.get(/.*/, (req, res) => {
   res.sendFile(path.join(__dirname, '../public', 'index.html'));
 });
