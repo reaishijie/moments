@@ -19,6 +19,8 @@ router.post('/sendEmail', async(req: Request, res: Response) => {
 
 router.post('/verifyEmail', (req: Request, res: Response) => {
     const data = req.body
+    console.log("req.body & req.body.data", req.body, req.body.data);
+    
     try {
         const result = verify(data)
         console.log('结果布尔值：', result);
