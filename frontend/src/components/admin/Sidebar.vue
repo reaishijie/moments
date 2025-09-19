@@ -22,6 +22,7 @@ function isShowChildren(name: string) {
 
 <template>
   <div class="admin-layout-container">
+    <!-- 侧边栏顶部文字 -->
     <div class="sidebar-top">
       瞬刻
     </div>
@@ -38,7 +39,8 @@ function isShowChildren(name: string) {
                 </Icon>
               </div>
               <div class="item-content" v-if="sidebarStore.isShowContent">{{ item.meta!.title }}</div>
-              <Icon v-if=" sidebarStore.isShowContent" style="margin-left: 30px;" :class="{'rotate-icon': openParentName === item.name}">
+              <Icon v-if="sidebarStore.isShowContent" style="margin-left: 30px;"
+                :class="{ 'rotate-icon': openParentName === item.name }">
                 <AngleDown />
               </Icon>
             </div>
@@ -52,30 +54,29 @@ function isShowChildren(name: string) {
                   </Icon>
                 </div>
                 <div class="item-content" v-if="sidebarStore.isShowContent">{{ item.meta!.title }}</div>
-                <Icon v-if="item.children">
-                  <AngleDown />
-                </Icon>
               </div>
             </router-link>
           </div>
 
           <!-- 如果还有子路由，再循环出子菜单 -->
-          <div v-if="item.children && openParentName === item.name">
-            <ul>
-              <li v-for="child in item.children" :key="child.path" class="children-list">
-                <router-link :to="{ name: child.name }">
-                  <div class="sidebar-main-item" :title="child.meta?.title as string || '其他页面'">
-                    <div class="item-icon">
-                      <Icon size="20px">
-                        <component :is="iconMap[child.name as string] || NodeJs" />
-                      </Icon>
+          <Transition name="fade">
+            <div v-if="item.children && openParentName === item.name">
+              <ul>
+                <li v-for="child in item.children" :key="child.path" class="children-list">
+                  <router-link :to="{ name: child.name }">
+                    <div class="sidebar-main-item" :title="child.meta?.title as string || '其他页面'">
+                      <div class="item-icon">
+                        <Icon size="20px">
+                          <component :is="iconMap[child.name as string] || NodeJs" />
+                        </Icon>
+                      </div>
+                      <div class="item-content" v-if="sidebarStore.isShowContent">{{ child.meta!.title }}</div>
                     </div>
-                    <div class="item-content" v-if="sidebarStore.isShowContent">{{ child.meta!.title }}</div>
-                  </div>
-                </router-link>
-              </li>
-            </ul>
-          </div>
+                  </router-link>
+                </li>
+              </ul>
+            </div>
+          </Transition>
 
         </li>
       </ul>
@@ -149,7 +150,24 @@ a {
 }
 
 .rotate-icon {
-    transition: transform 0.3s ease;
-    transform: rotate(180deg);
+  transition: transform 0.3s ease;
+  transform: rotate(180deg);
+}
+
+/* 子路由菜单的显示与隐藏过渡动画 */
+.fade-enter-active,
+.fade-leave-active {
+  transition: all 0.35s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+  /* transition: all 0.35s ease-in-out; */
+}
+
+.fade-enter-from {
+  opacity: 0;
+  transform: translateY(-20px);
+}
+
+.fade-leave-to {
+  transform: translateY(-10px);
+  opacity: 0;
 }
 </style>

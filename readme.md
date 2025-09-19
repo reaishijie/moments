@@ -63,7 +63,7 @@ npm run dev
 ### 程序运行
 
 ```bash
-# 1. 克隆项目
+ # 1. 克隆项目
 git clone https://github.com/reaishijie/moments.git
 cd moments
 
@@ -100,7 +100,7 @@ npm run build
 
 # 启动前端服务
 # 在nginx/OpenResty添加网站，目录选择frontend/dist
-伪静态规则： 
+#伪静态规则： 
 location / {
     try_files $uri $uri/ /index.html;
  }

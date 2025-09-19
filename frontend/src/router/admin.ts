@@ -6,6 +6,8 @@ const adminRoutes: RouteRecordRaw[] = [
         path: '/admin',
         name: 'admin',
         component: AdminLayout, // 前台布局组件
+        meta: { title: '后台' },
+        redirect: {name: 'dashboard'},
         children: [
             {
                 path: '',
@@ -17,19 +19,26 @@ const adminRoutes: RouteRecordRaw[] = [
                 path: 'setting',
                 name: 'admin-setting',
                 component: () => import('@/components/admin/Setting.vue'),
+                redirect:{name: 'admin-seeting-site'},
                 meta: { title: '系统设置' },
                 children: [
                     {
-                        path:'user',
+                        path:'basic',
                         name: 'admin-seeting-site',
-                        component: () => import('@/views/Post.vue'),
-                        meta: {title: '系统设置'}
+                        component: () => import('@/components/admin/Setting/Basic.vue'),
+                        meta: {title: '基础设置'}
                     },
                     {
                         path:'user',
                         name: 'admin-seeting-user',
-                        component: () => import('@/views/Demo.vue'),
+                        component: () => import('@/components/admin/Setting/User.vue'),
                         meta: {title: '用户设置'}
+                    },
+                    {
+                        path:'user',
+                        name: 'admin-seeting-email',
+                        component: () => import('@/components/admin/Setting/Email.vue'),
+                        meta: {title: '邮箱配置'}
                     },
                 ]
             },

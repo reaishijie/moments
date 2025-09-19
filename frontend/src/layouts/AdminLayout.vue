@@ -8,8 +8,12 @@ import HeaderBar from '@/components/admin/HeaderBar.vue';
     <div class="container">
         <sidebar />
         <div class="container-right">
-            <div class="container-right-top"><HeaderBar /></div>
-            <div class="container-right-bottom"><RouterView /></div>
+            <div class="container-right-top">
+                <HeaderBar />
+            </div>
+            <div class="container-right-bottom">
+                <RouterView />
+            </div>
         </div>
     </div>
 </template>
@@ -23,22 +27,27 @@ import HeaderBar from '@/components/admin/HeaderBar.vue';
     height: 100vh;
     background: #FFFFFF;
 }
+
 .container-right {
     display: flex;
     flex: 1;
     flex-direction: column;
 }
+
 .container-right-top {
     display: flex;
     justify-content: space-between;
     background: #FFFFFF;
-    padding: 15px 0;
+    padding: 10px 0;
 }
+
 .container-right-bottom {
     display: flex;
     flex: 1;
     flex-direction: column;
-    padding: 20px 20px 0 20px;
+    flex-wrap: wrap;
+    gap: 20px;
+    padding: 15px 20px 20px 20px;
     background: #f2f2f2;
 }
 </style>
