@@ -150,3 +150,9 @@ model users {
 
   @@index([status], map: "idx_status")
 }
+
+// 网站信息配置表
+model config {
+  k String @id @unique
+  v String @db.Text
+}

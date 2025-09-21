@@ -1,0 +1,17 @@
+export interface updateConfigData {
+    sitename?: string,
+    site_url?: string,
+    site_email?: string,
+    site_logo?: string,
+    site_keywords?: string,
+    site_header_background?: string,
+    site_description?: string,
+    site_brief?: string,
+    site_background?: string,
+    site_avatar?: string,
+    mail_user?: string,
+    mail_secure?: string,
+    mail_port?: string,
+    mail_pass?: string,
+    mail_host?: string,
+}
