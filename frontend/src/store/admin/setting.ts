@@ -9,7 +9,10 @@ import { getConfig } from '@/api/admin';
 export const useSettingStore = defineStore('setting', () => {
     // 使用 ref 存储原始数据，并明确其类型
     const originalData = ref<updateConfigData>({});
-
+    /**
+     * 每次数据库config增加键值必须增加此处值
+     * @example: keyname: ''
+     */
     // 使用 reactive 存储表单数据，并明确其类型
     const data = reactive<updateConfigData>({
         sitename: '',
@@ -27,6 +30,11 @@ export const useSettingStore = defineStore('setting', () => {
         mail_port: '',
         mail_pass: '',
         mail_host: '',
+        user_status: '',
+        user_auth: '',
+        user_captcha: '',
+        verify_hcaptcha_user: '',
+        verify_hcaptcha_app: '',
     });
 
     /**

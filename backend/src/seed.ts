@@ -93,6 +93,26 @@ async function main() {
       k: 'mail_pass',
       v: ''
     },
+    {
+      k: 'user_auth',
+      v: ''
+    },
+    {
+      k: 'user_captcha',
+      v: ''
+    },
+    {
+      k: 'user_status',
+      v: ''
+    },
+    {
+      k: 'verify_hcaptcha_user',
+      v: ''
+    },
+    {
+      k: 'verify_hcaptcha_app',
+      v: ''
+    },
   ]
   for (const config of configs) {
     await prisma.config.upsert({
