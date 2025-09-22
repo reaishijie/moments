@@ -11,35 +11,35 @@ const messageStore = useMessageStore();
 const settingStore = useSettingStore();
 
 onMounted(async () => {
-    const id = messageStore.show('正在加载信息中', 'loading');
-    const success = await settingStore.fetchConfig();
-    if (success) {
-        messageStore.update(id, { 'type': 'success', 'text': '加载成功', 'duration': 2000 });
-    } else {
-        messageStore.update(id, { 'type': 'error', 'text': '加载信息失败', 'duration': 2000 });
-        userStore.handleLogout();
-        router.replace({ name: 'index' });
-    }
+  const id = messageStore.show('正在加载信息中', 'loading');
+  const success = await settingStore.fetchConfig();
+  if (success) {
+    messageStore.update(id, { 'type': 'success', 'text': '加载成功', 'duration': 2000 });
+  } else {
+    messageStore.update(id, { 'type': 'error', 'text': '加载信息失败', 'duration': 2000 });
+    userStore.handleLogout();
+    router.replace({ name: 'index' });
+  }
 });
 
 const handleUpdate = async () => {
-    // 检查是否有改动
-    if (settingStore.hasChanged()) {
-        // 获取已修改的数据
-        const updateData = settingStore.getUpdateData();
-        const id = messageStore.show('正在更新中...', 'loading');
-        try {
-            await updateConfig(updateData);
-            messageStore.update(id, { 'type': 'success', 'text': '更新成功', 'duration': 2000 });
-            // 更新成功后，同步原始数据
-            Object.assign(settingStore.originalData, settingStore.data);
-        } catch (error) {
-            messageStore.update(id, { 'type': 'error', 'text': '更新失败', 'duration': 2000 });
-            console.error('更新失败:', error);
-        }
-    } else {
-        messageStore.show('数据未改动', 'info', 2000);
+  // 检查是否有改动
+  if (settingStore.hasChanged()) {
+    // 获取已修改的数据
+    const updateData = settingStore.getUpdateData();
+    const id = messageStore.show('正在更新中...', 'loading');
+    try {
+      await updateConfig(updateData);
+      messageStore.update(id, { 'type': 'success', 'text': '更新成功', 'duration': 2000 });
+      // 更新成功后，同步原始数据
+      Object.assign(settingStore.originalData, settingStore.data);
+    } catch (error) {
+      messageStore.update(id, { 'type': 'error', 'text': '更新失败', 'duration': 2000 });
+      console.error('更新失败:', error);
     }
+  } else {
+    messageStore.show('数据未改动', 'info', 2000);
+  }
 };
 </script>
 
@@ -61,7 +61,15 @@ const handleUpdate = async () => {
       <label for="mail_pass">SMTP用户密码：</label>
       <input v-model="settingStore.data.mail_pass" id="mail_pass" type="text" placeholder="SMTP授权码">
     </div>
-    
+    <div class="item">
+      <label for="mail_secure">邮箱SSL加密：</label>
+      <div>
+        <input type="checkbox" id="mail_secure" v-model="settingStore.data.mail_secure" true-value="true"
+          false-value="false" />
+        <label for="mail_secure">开启加密</label>
+      </div>
+    </div>
+
     <button @click="handleUpdate">更 新</button>
   </div>
 </template>
@@ -76,16 +84,19 @@ const handleUpdate = async () => {
   height: auto;
   padding: 20px 50px;
 }
+
 .item {
   margin-top: 10px;
   display: flex;
 }
+
 label {
   font-size: medium;
   padding: 5px;
   color: rgba(0, 0, 0, 0.811);
-  width: 100px;
+  width: 150px;
 }
+
 input {
   flex: 1;
   max-width: 500px;
@@ -95,8 +106,13 @@ input {
   padding: 5px;
   margin: 5px 0px 5px 5px;
 }
+
 input:focus {
   border-bottom: 2px solid rgba(0, 0, 255, 0.296);
+}
+#mail_secure {
+  padding: 5px;
+  margin: 10px 0px 5px 5px;
 }
 button {
   outline: none;
@@ -110,6 +126,7 @@ button {
   font-size: small;
   cursor: pointer;
 }
+
 button:hover {
   background: #F8BC99;
 }
