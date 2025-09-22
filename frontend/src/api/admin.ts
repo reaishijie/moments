@@ -26,7 +26,7 @@ export const getCommentCount = () => {
 // 获取公共设置
 export const getPublicConfig = () => {
     return service({
-        url: '/admin/admin/publicConfig',
+        url: '/admin/publicConfig',
         method: 'get',
     })
 }

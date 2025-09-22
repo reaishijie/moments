@@ -85,14 +85,15 @@ router.get('/publicConfig', async (req: Request, res: Response) => {
     try {
         // 定义返回的公共内容的key
         const publicKeys = [
-            'avatar',
-            'background',
-            'brief',
-            'description',
-            'header_background',
-            'keywords',
-            'logo',
-            'sitename'
+            'site_avatar',
+            'site_background',
+            'site_brief',
+            'site_description',
+            'site_header_background',
+            'site_keywords',
+            'site_logo',
+            'sitename',
+            'verify_hcaptcha_app'
         ];
         const configs = await prisma.config.findMany({
             where: {
