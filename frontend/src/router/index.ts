@@ -2,6 +2,8 @@ import { createRouter, createWebHistory } from "vue-router";
 import frontRoutes from "./frontend";
 import adminRoutes from "./admin";
 import { useUserStore } from "@/store/user";
+import { useMessageStore } from "@/store/message";
+
 const title = import.meta.env.VITE_APP_TITLE
 
 const routes = [
@@ -22,6 +24,7 @@ const router = createRouter({
 // 路由守卫
 router.beforeEach((to, _from, next) => {
     const userStore = useUserStore();
+    const messageStore = useMessageStore()
     document.title = to.meta.title || title;
     
     // 后台判断
@@ -37,6 +40,7 @@ router.beforeEach((to, _from, next) => {
         if (userStore.profile?.status == '1') {
             next();
         } else {
+            messageStore.show('请先登录账户', 'info', 2000)
             next({ name: 'index' });
         }
     } else {

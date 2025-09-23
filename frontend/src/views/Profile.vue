@@ -75,11 +75,6 @@ async function haldleUpdate(key: keyof updateUserInfoData, value: string) {
     }, 2000);
   }
 }
-if (!userStore.token) {
-  messageStore.show('请先登录账户', 'info', 2000)
-  userStore.handleLogout()
-  router.replace('/')
-}
 function handleLogout() {
   userStore.handleLogout()
   messageStore.show('已退出登录', 'success', 2000)
