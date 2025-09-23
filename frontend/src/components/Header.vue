@@ -7,13 +7,16 @@ import { useAuthStore } from '@/store/auth'
 import router from '@/router'
 const authStore = useAuthStore()
 const userStore = useUserStore()
+import { useDefaultStore } from '@/store/default'
+const defaultStore = useDefaultStore()
+
 
 // 默认背景图
 const defaultBackground = '/img/background.mp4'
 
 // 获取背景路径（优先使用用户配置）
 const backgroundPath = computed(() => {
-  return userStore.profile?.header_background || defaultBackground
+  return defaultStore.configs.site_header_background || defaultBackground
 })
 
 // 判断文件类型

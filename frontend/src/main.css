@@ -4,12 +4,6 @@
 body {
   margin: 0;
   padding: 0;
-  /* background: #f0f0f0; */
-  background-image: url("/img/background.avif");
-  background-size: cover; /* 覆盖整个容器 */
-  background-position: center; /* 图像居中显示 */
-  background-repeat: no-repeat; /* 不重复 */
-  background-attachment: fixed; /* 背景固定，内容滚动 */
   scroll-behavior: smooth;
 }
 ::-webkit-scrollbar {

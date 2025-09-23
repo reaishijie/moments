@@ -2,19 +2,21 @@
 import { computed } from 'vue';
 import { useUserStore } from '@/store/user'
 import router from '@/router';
+import { useDefaultStore } from '@/store/default'
+const defaultStore = useDefaultStore()
 
 const userStore = useUserStore()
 const defaultNickname = '瞬刻'
 const defaultAvatar = '/img/avatar.jpg'
 const defaultBrief = '更简洁、更现代化的内容发布平台'
 const nickname = computed(() => {
-    return userStore.profile?.nickname || userStore.profile?.username || defaultNickname
+    return defaultStore.configs.sitename || defaultNickname
 })
 const avatar = computed(() => {
-    return userStore.profile?.avatar || defaultAvatar
+    return defaultStore.configs.site_avatar || defaultAvatar
 })
 const brief = computed(() => {
-    return userStore.profile?.brief || defaultBrief
+    return defaultStore.configs.site_brief || defaultBrief
 })
 const routerName = computed(() => {
     return userStore.profile?.username ?? 'admin'
