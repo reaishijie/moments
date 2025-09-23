@@ -35,13 +35,13 @@ const frontRoutes: RouteRecordRaw[] = [
                 path: '/profile',
                 name: 'profile',
                 component: () => import('@/views/Profile.vue'),
-                meta: { title: '个人资料' }
+                meta: { title: '个人资料', login: true }
             },
             {
                 path: '/post',
                 name: 'post',
                 component: () => import('@/views/Post.vue'),
-                meta: { title: '发表文章' }
+                meta: { title: '发表文章', login: true }
             },
         ]
     }
