@@ -14,7 +14,8 @@ export interface userData {
 export interface registerData {
     username: string,
     password: string,
-    email? : string
+    email?: string,
+    status?: number
 }
 
 export interface loginData {

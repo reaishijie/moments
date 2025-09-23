@@ -11,7 +11,9 @@ const prisma = new PrismaClient()
 // 注册
 router.post('/register', async (req: Request, res: Response) => {
     try {
-        const { username, password: rawPassword, email } = req.body
+        const { username, password: rawPassword, email, status } = req.body
+        console.log('@register', req.body);
+        
         // 验证输入
         if (!username || !rawPassword) {
             return res.status(400).json({ error: '用户名、密码不能为空' })
@@ -37,7 +39,7 @@ router.post('/register', async (req: Request, res: Response) => {
                 username: username,
                 password: hashedPassword,
                 email: email,
-                status: 0 //默认注册后 0为未激活 | 1为正常用户 | 2为封禁
+                status: status || 0, //默认注册后 0为未激活 | 1为正常用户 | 2为封禁
             }
         })
         // 将新用户信息除去密码后返回

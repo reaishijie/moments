@@ -1,5 +1,5 @@
 <script setup lang="ts" name="Auth">
-import { ref } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import type { loginData, registerData } from '@/types/user'
 import { useUserStore } from '@/store/user'
 import { useMessageStore } from '@/store/message'
@@ -8,8 +8,15 @@ import router from '@/router'
 import { UserRegular, Fingerprint, EnvelopeRegular, Times } from '@vicons/fa'
 import { Icon } from '@vicons/utils'
 import { useAuthStore } from '@/store/auth'
+import HCaptcha from '../captcha/HCaptcha.vue'
+import { useDefaultStore } from '@/store/default'
+const defaultStore = useDefaultStore()
 
-
+onMounted(async () => {
+    await defaultStore.getPublicConfig()
+    userStatus.value = Number(defaultStore.configs.user_status)
+    console.log(defaultStore.configs.user_status,userStatus.value);
+})
 const authStore = useAuthStore()
 const messageStore = useMessageStore()
 const userStore = useUserStore()
@@ -23,66 +30,93 @@ const userLoginInput = ref<loginData>({
     password: ''
 })
 
-const userRegisterInput = ref<registerData>({
+const userStatus = ref<number | 0>(0)
+const userRegisterInput = computed<registerData>(() => ({
     username: '',
     password: '',
-    email: ''
-})
+    email: '',
+    status: userStatus.value
+}));
+
+
+// 从captcha组件传递过来的数据
+const verifiedData = ref<{ status: boolean, message: string } | null>(null)
+const onCaptchaVerified = (data: { status: boolean, message: string }) => {
+    verifiedData.value = data
+}
 // 处理登录
 const handleLogin = async () => {
-    if (!userLoginInput.value.identifier || !userLoginInput.value.password) {
-        messageStore.show('请输入登录信息', 'info', 2000)
-        return
-    }
-    if (userLoginInput.value.identifier !== 'admin' && userLoginInput.value.identifier.length < 6 || userLoginInput.value.password.length < 6) {
-        messageStore.show('信息不能小于 6 位', 'info', 2000)
-        return
-    }
+    /**
+     * @description: 0为不开启，1为hcaptcha验证
+     */
+    if (defaultStore.configs.user_captcha !== '0' && !verifiedData.value) {
+        messageStore.show('请先完成验证', 'info', 2000)
+    } else {
+        if (!userLoginInput.value.identifier || !userLoginInput.value.password) {
+            messageStore.show('请输入登录信息', 'info', 2000)
+            return
+        }
+        if (userLoginInput.value.identifier !== 'admin' && userLoginInput.value.identifier.length < 6 || userLoginInput.value.password.length < 6) {
+            messageStore.show('信息不能小于 6 位', 'info', 2000)
+            return
+        }
 
-    let id = messageStore.show('正在登录中', 'loading')
-    try {
-        const res = await userStore.handleLogin(userLoginInput.value)
-        // 如果请求成功
-        if (res.status === 0) {
-            messageStore.update(id, { type: 'success', text: '登陆成功', duration: 2000 })
-            authStore.closeAuth()
-            router.push('/')
+        let id = messageStore.show('正在登录中', 'loading')
+        try {
+            const res = await userStore.handleLogin(userLoginInput.value)
+            // 如果请求成功
+            if (res.status === 0) {
+                messageStore.update(id, { type: 'success', text: '登陆成功', duration: 2000 })
+                authStore.closeAuth()
+                router.push('/')
+            }
+            else {
+                messageStore.update(id, { type: 'error', text: `${res.error.response.data.error}`, duration: 2000 })
+            }
+        } catch (error) {
+            console.log(error);
+            messageStore.update(id, { type: 'error', text: `网络异常`, duration: 2000 })
         }
-        else {
-            messageStore.update(id, { type: 'error', text: `${res.error.response.data.error}`, duration: 2000 })
-        }
-    } catch (error) {
-        console.log(error);
-        messageStore.update(id, { type: 'error', text: `网络异常`, duration: 2000 })
     }
 }
 // 处理注册
 const handleRegister = async () => {
-    if (!userRegisterInput.value.username || !userRegisterInput.value.password) {
-        messageStore.show('请输入注册信息', 'info', 2000)
-        return
-    }
-    if (userRegisterInput.value.username.length < 6 || userRegisterInput.value.password.length < 6) {
-        messageStore.show('信息不能小于 6 位', 'info', 2000)
-        return
-    }
+    if (defaultStore.configs.user_captcha !== '0' && !verifiedData.value) {
+        messageStore.show('请先完成验证', 'info', 2000)
+    } else {
+        if (verifiedData.value?.status) {
+            if (!userRegisterInput.value.username || !userRegisterInput.value.password) {
+                messageStore.show('请输入注册信息', 'info', 2000)
+                return
+            }
+            if (userRegisterInput.value.username.length < 6 || userRegisterInput.value.password.length < 6) {
+                messageStore.show('信息不能小于 6 位', 'info', 2000)
+                return
+            }
 
-    let id = messageStore.show('正在注册中', 'loading')
-    try {
-        // 用注册函数等待结果
-        const response = await register(userRegisterInput.value)
-        // 判断是否成功
-        if (response) {
-            messageStore.update(id, { type: 'success', text: '注册成功', duration: 2000 })
-            show.value = 'showLogin'
+            let id = messageStore.show('正在注册中', 'loading')
+            try {
+                // 用注册函数等待结果
+                const response = await register(userRegisterInput.value)
+                // 判断是否成功
+                if (response) {
+                    messageStore.update(id, { type: 'success', text: '注册成功', duration: 2000 })
+                    show.value = 'showLogin'
+                    console.log('@register', userRegisterInput.value);
+                    
+                } else {
+                    messageStore.update(id, { type: 'error', text: '注册失败', duration: 2000 })
+                }
+            } catch (error: any) {
+                console.error('注册过程中发生错误:', error);
+                messageStore.update(id, { type: 'error', text: `${error.response.data.error}`, duration: 2000 });
+            }
         } else {
-            messageStore.update(id, { type: 'error', text: '注册失败', duration: 2000 })
+            messageStore.show('请先完成验证', 'info', 2000)
         }
-    } catch (error: any) {
-        console.error('注册过程中发生错误:', error);
-        messageStore.update(id, { type: 'error', text: `${error.response.data.error}`, duration: 2000 });
     }
 }
+
 </script>
 
 <template>
@@ -91,7 +125,7 @@ const handleRegister = async () => {
         <div class="container" v-if="show === 'showLogin'">
             <div class="header">
                 <span>用户登录</span>
-                <Icon class="icon" @click="authStore.closeAuth" >
+                <Icon class="icon" @click="authStore.closeAuth">
                     <Times class="close" />
                 </Icon>
             </div>
@@ -116,6 +150,9 @@ const handleRegister = async () => {
                     <input type="password" id="password" v-model="userLoginInput.password" placeholder="密码"
                         @keyup.enter="handleLogin">
                 </div>
+            </div>
+            <div v-if="defaultStore.configs.user_captcha !== '0'">
+                <HCaptcha @verified="onCaptchaVerified" />
             </div>
             <div class="button">
                 <button @click="handleLogin">登 录</button>
@@ -143,7 +180,7 @@ const handleRegister = async () => {
                         账号：
                     </label>
                     <input type="text" id="identifier" v-model="userRegisterInput.username" placeholder="用户名"
-                        @keyup.enter="handleLogin">
+                        @keyup.enter="handleRegister">
                 </div>
                 <div class="identifier">
                     <label for="email">
@@ -153,7 +190,7 @@ const handleRegister = async () => {
                         邮箱：
                     </label>
                     <input type="text" id="email" v-model="userRegisterInput.email" placeholder="邮箱"
-                        @keyup.enter="handleLogin">
+                        @keyup.enter="handleRegister">
                 </div>
                 <div class="password">
                     <label for="password">
@@ -163,8 +200,11 @@ const handleRegister = async () => {
                         密码：
                     </label>
                     <input type="password" id="password" v-model="userRegisterInput.password" placeholder="密码"
-                        @keyup.enter="handleLogin">
+                        @keyup.enter="handleRegister">
                 </div>
+            </div>
+            <div v-if="defaultStore.configs.user_captcha !== '0'">
+                <HCaptcha @verified="onCaptchaVerified" />
             </div>
             <div class="button">
                 <button @click="handleRegister">注 册</button>
@@ -247,11 +287,13 @@ const handleRegister = async () => {
     font-weight: 900;
     color: rgb(246, 201, 117);
 }
+
 .close:hover {
     cursor: pointer;
     color: rgb(237, 172, 51);
     font-size: x-large;
 }
+
 label {
     display: inline-block;
     width: 80px;

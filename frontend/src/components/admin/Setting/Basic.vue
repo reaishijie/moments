@@ -12,7 +12,8 @@ const settingStore = useSettingStore();
 
 onMounted(async () => {
     const id = messageStore.show('正在加载信息中', 'loading');
-    const success = await settingStore.fetchConfig();
+    const success = await settingStore.getAllConfig();
+    
     if (success) {
         messageStore.update(id, { 'type': 'success', 'text': '加载成功', 'duration': 2000 });
     } else {
@@ -32,7 +33,7 @@ const handleUpdate = async () => {
             await updateConfig(updateData);
             messageStore.update(id, { 'type': 'success', 'text': '更新成功', 'duration': 2000 });
             // 更新成功后，同步原始数据
-            Object.assign(settingStore.originalData, settingStore.data);
+            Object.assign(settingStore.originalData, settingStore.configs);
         } catch (error) {
             messageStore.update(id, { 'type': 'error', 'text': '更新失败', 'duration': 2000 });
             console.error('更新失败:', error);
@@ -47,43 +48,43 @@ const handleUpdate = async () => {
   <div class="basic-container">
     <div class="item">
       <label for="sitename">网站名称：</label>
-      <input v-model="settingStore.data.sitename" id="sitename" type="text" placeholder="在此输入网站名称">
+      <input v-model="settingStore.configs.sitename" id="sitename" type="text" placeholder="在此输入网站名称">
     </div>
     <div class="item">
       <label for="site_url">网站网址：</label>
-      <input v-model="settingStore.data.site_url" id="site_url" type="text" placeholder="网站网址">
+      <input v-model="settingStore.configs.site_url" id="site_url" type="text" placeholder="网站网址">
     </div>
     <div class="item">
       <label for="site_logo">站点图标：</label>
-      <input v-model="settingStore.data.site_logo" id="site_logo" type="text" placeholder="站点LOGO">
+      <input v-model="settingStore.configs.site_logo" id="site_logo" type="text" placeholder="站点LOGO">
     </div>
     <div class="item">
       <label for="site_keywords">关键字：</label>
-      <input v-model="settingStore.data.site_keywords" id="site_keywords" type="text" placeholder="关键字">
+      <input v-model="settingStore.configs.site_keywords" id="site_keywords" type="text" placeholder="关键字">
     </div>
     <div class="item">
       <label for="site_description">站点描述：</label>
-      <input v-model="settingStore.data.site_description" id="site_description" type="text" placeholder="站点描述">
+      <input v-model="settingStore.configs.site_description" id="site_description" type="text" placeholder="站点描述">
     </div>
     <div class="item">
       <label for="site_email">联系邮箱：</label>
-      <input v-model="settingStore.data.site_email" id="site_email" type="text" placeholder="管理员邮箱">
+      <input v-model="settingStore.configs.site_email" id="site_email" type="text" placeholder="管理员邮箱">
     </div>
     <div class="item">
       <label for="site_background">网站背景：</label>
-      <input v-model="settingStore.data.site_background" id="site_background" type="text" placeholder="网站背景">
+      <input v-model="settingStore.configs.site_background" id="site_background" type="text" placeholder="网站背景">
     </div>
     <div class="item">
       <label for="site_avatar">首页头像：</label>
-      <input v-model="settingStore.data.site_avatar" id="site_avatar" type="text" placeholder="首页头像">
+      <input v-model="settingStore.configs.site_avatar" id="site_avatar" type="text" placeholder="首页头像">
     </div>
     <div class="item">
       <label for="site_header_background">首页背景：</label>
-      <input v-model="settingStore.data.site_header_background" id="site_header_background" type="text" placeholder="首页背景">
+      <input v-model="settingStore.configs.site_header_background" id="site_header_background" type="text" placeholder="首页背景">
     </div>
     <div class="item">
       <label for="site_brief">首页简介：</label>
-      <input v-model="settingStore.data.site_brief" id="site_brief" type="text" placeholder="首页简介">
+      <input v-model="settingStore.configs.site_brief" id="site_brief" type="text" placeholder="首页简介">
     </div>
     <button @click="handleUpdate">更 新</button>
   </div>

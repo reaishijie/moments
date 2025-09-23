@@ -16,3 +16,12 @@ export const login = (data: loginData) => {
         data,
     })
 }
+
+// 验证hcaptcha
+export const verifyHcaptcha = (data: {captchaToken: string}) => {
+    return service({
+        url: 'notice/hcaptcha',
+        method: 'post',
+        data
+    })
+}

@@ -12,7 +12,7 @@ const settingStore = useSettingStore();
 
 onMounted(async () => {
   const id = messageStore.show('正在加载信息中', 'loading');
-  const success = await settingStore.fetchConfig();
+  const success = await settingStore.getAllConfig();
   if (success) {
     messageStore.update(id, { 'type': 'success', 'text': '加载成功', 'duration': 2000 });
   } else {
@@ -32,7 +32,7 @@ const handleUpdate = async () => {
       await updateConfig(updateData);
       messageStore.update(id, { 'type': 'success', 'text': '更新成功', 'duration': 2000 });
       // 更新成功后，同步原始数据
-      Object.assign(settingStore.originalData, settingStore.data);
+      Object.assign(settingStore.originalData, settingStore.configs);
     } catch (error) {
       messageStore.update(id, { 'type': 'error', 'text': '更新失败', 'duration': 2000 });
       console.error('更新失败:', error);
@@ -49,35 +49,35 @@ const handleUpdate = async () => {
     <div class="item">
       <label for="user_status">默认用户状态：</label>
       <div class="checkbox-item">
-        <input type="checkbox" id="user_status" v-model="settingStore.data.user_status" true-value="true"
-          false-value="false" />
-        <label for="user_status">{{ settingStore.data.user_status === 'true' ? '激活' : '未激活' }}</label>
+        <input type="checkbox" id="user_status" v-model="settingStore.configs.user_status" true-value="1"
+          false-value="0" />
+        <label for="user_status">{{ settingStore.configs.user_status === '1' ? '激活' : '未激活' }}</label>
       </div>
     </div>
     <div class="item">
       <label for="user_auth">邮箱验证：</label>
       <div class="checkbox-item">
-        <input type="checkbox" id="user_auth" v-model="settingStore.data.user_auth" true-value="true"
-          false-value="false" />
-        <label for="user_auth">{{ settingStore.data.user_auth === 'true' ? '已开启' : '已关闭' }} </label>
+        <input type="checkbox" id="user_auth" v-model="settingStore.configs.user_auth" true-value="1"
+          false-value="0" />
+        <label for="user_auth">{{ settingStore.configs.user_auth === '1' ? '已开启' : '已关闭' }} </label>
       </div>
     </div>
     <div class="item">
-      <label for="user_captcha">人机验证：</label>
+      <label for="user_captcha" title="hcaptcha接口">人机验证：</label>
       <div class="checkbox-item">
-        <input type="checkbox" id="user_captcha" v-model="settingStore.data.user_captcha" true-value="1"
+        <input type="checkbox" id="user_captcha" v-model="settingStore.configs.user_captcha" true-value="1"
           false-value="0" />
-        <label for="user_captcha">{{ settingStore.data.user_captcha === '0' ? '已关闭' : '已开启' }} </label>
+        <label for="user_captcha">{{ settingStore.configs.user_captcha === '0' ? '已关闭' : '已开启' }} </label>
       </div>
     </div>
-    <div v-if="settingStore.data.user_captcha === '1'">
+    <div v-if="settingStore.configs.user_captcha === '1'">
         <div class="item">
           <label for="verify_hcaptcha_app">app密钥：</label>
-          <input v-model="settingStore.data.verify_hcaptcha_app" id="verify_hcaptcha_app" type="text" placeholder="如52c4***-***-***-***">
+          <input v-model="settingStore.configs.verify_hcaptcha_app" id="verify_hcaptcha_app" type="text" placeholder="如52c4***-***-***-***">
         </div>
         <div class="item">
           <label for="verify_hcaptcha_user">用户密钥：</label>
-          <input v-model="settingStore.data.verify_hcaptcha_user" id="verify_hcaptcha_user" type="text" placeholder="如ES_***">
+          <input v-model="settingStore.configs.verify_hcaptcha_user" id="verify_hcaptcha_user" type="text" placeholder="如ES_***">
         </div>
       </div>
     <button @click="handleUpdate">更 新</button>

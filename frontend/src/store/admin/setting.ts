@@ -1,20 +1,17 @@
 /**
- * 让Ai把 Basic.vue 里的方法与数据全整合到 settingStore 了， 也方便 Email.vue 调用
+ * 让 Ai 把 Basic.vue 里的方法与数据全整合到 settingStore 了， 也方便 Email.vue 调用
  */
 import { defineStore } from "pinia";
-import { ref, reactive } from "vue";
+import { ref, type Ref } from "vue";
 import { type updateConfigData } from "@/types/admin";
-import { getConfig } from '@/api/admin';
+import { getConfig as apiGetConfig } from '@/api/admin';
 
 export const useSettingStore = defineStore('setting', () => {
     // 使用 ref 存储原始数据，并明确其类型
-    const originalData = ref<updateConfigData>({});
-    /**
-     * 每次数据库config增加键值必须增加此处值
-     * @example: keyname: ''
-     */
-    // 使用 reactive 存储表单数据，并明确其类型
-    const data = reactive<updateConfigData>({
+    const originalData: Ref<updateConfigData> = ref({});
+    
+    // 使用 ref 存储表单数据，并明确其类型
+    const configs: Ref<updateConfigData> = ref({
         sitename: '',
         site_url: '',
         site_logo: '',
@@ -40,11 +37,11 @@ export const useSettingStore = defineStore('setting', () => {
     /**
      * @description 从后端获取配置数据并更新 store
      */
-    const fetchConfig = async () => {
+    const getAllConfig = async () => {
         try {
-            const sqlData = await getConfig();
-            // 使用 Object.assign 赋值给 reactive 对象
-            Object.assign(data, sqlData.data);
+            const sqlData = await apiGetConfig();
+            // 直接替换 ref 的 .value
+            configs.value = sqlData.data;
             // 对 ref 的 .value 进行赋值，并确保深拷贝
             originalData.value = JSON.parse(JSON.stringify(sqlData.data));
             return true;
@@ -58,10 +55,10 @@ export const useSettingStore = defineStore('setting', () => {
      * @description 检查数据是否有改动
      */
     const hasChanged = () => {
-        for (const key in data) {
+        // 确保比较的是 ref 的 .value
+        for (const key in configs.value) {
             const typedKey = key as keyof updateConfigData;
-            // 访问 ref 的值需要使用 .value
-            if (data[typedKey] !== originalData.value[typedKey]) {
+            if (configs.value[typedKey] !== originalData.value[typedKey]) {
                 return true;
             }
         }
@@ -73,19 +70,22 @@ export const useSettingStore = defineStore('setting', () => {
      */
     const getUpdateData = (): updateConfigData => {
         const updateData: updateConfigData = {};
-        for (const key in data) {
+        // 确保遍历的是 ref 的 .value
+        for (const key in configs.value) {
             const typedKey = key as keyof updateConfigData;
-            if (data[typedKey] !== originalData.value[typedKey]) {
-                updateData[typedKey] = data[typedKey];
+            if (configs.value[typedKey] !== originalData.value[typedKey]) {
+                updateData[typedKey] = configs.value[typedKey];
             }
         }
+        // console.log('@', updateData);
+        
         return updateData;
     };
 
     return {
         originalData,
-        data,
-        fetchConfig,
+        configs,
+        getAllConfig,
         hasChanged,
         getUpdateData
     };
