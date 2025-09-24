@@ -4,7 +4,7 @@ import bcrypt from 'bcrypt';
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log(`开始网站创建管理员...`);
+  console.log(`⚡ 开始网站创建管理员...`);
   const adminUsername = 'admin';
   const email = '2900383833@qq.com'
   const existingAdmin = await prisma.users.findUnique({ where: { username: adminUsername } });
@@ -26,7 +26,7 @@ async function main() {
     console.log(`ℹ️ 管理员用户 "${adminUsername}" 已存在，跳过创建.`);
   }
 
-  console.log('开始创建网站信息...');
+  console.log('⚡ 开始创建网站信息...');
   const configs = [
     // 网站信息
     {
@@ -95,15 +95,15 @@ async function main() {
     },
     {
       k: 'user_auth',
-      v: ''
+      v: '0'
     },
     {
       k: 'user_captcha',
-      v: ''
+      v: '0'
     },
     {
       k: 'user_status',
-      v: ''
+      v: '1'
     },
     {
       k: 'verify_hcaptcha_user',
@@ -116,13 +116,13 @@ async function main() {
   ]
   for (const config of configs) {
     await prisma.config.upsert({
-      where: { k : config.k} ,
+      where: { k: config.k },
       update: {},
       create: config
     })
   }
 
-  console.log(`数据填充完成.`);
+  console.log(`✅数据填充完成.`);
 }
 
 main()
