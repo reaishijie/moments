@@ -5,8 +5,9 @@ import { Icon } from '@vicons/utils';
 import router from '@/router';
 import { useUserStore } from '@/store/user';
 import { useMessageStore } from '@/store/message';
-import { updateUserInfo } from '@/api/users';
-import type { updateUserInfoData } from '@/types/user';
+import { updateUserInfo, changePassword } from '@/api/users';
+import type { updateUserInfoData, updatePasswordData } from '@/types/user';
+import { isAxiosError } from 'axios';
 
 const userStore = useUserStore()
 const messageStore = useMessageStore()
@@ -19,6 +20,7 @@ const states = reactive({
   username: false,
   email: false,
   brief: false,
+  password: false
 })
 const userData = reactive({
   avatar: computed(() => userStore.profile?.avatar ?? '/img/avatar.jpg'),
@@ -35,7 +37,9 @@ const editData = reactive({
   header_background: '',
   nickname: '',
   email: '',
-  brief: ''
+  brief: '',
+  oldPassword: '',
+  newPassword: ''
 })
 const updatingStates = reactive({
   avatar: false,
@@ -73,6 +77,25 @@ async function haldleUpdate(key: keyof updateUserInfoData, value: string) {
     setTimeout(() => {
       messageStore.close(id)
     }, 2000);
+  }
+}
+const haldleUpdatePassword = async (data: updatePasswordData) => {
+  const id = messageStore.show('正在更新密码', 'loading')
+  try {
+    const res = await changePassword(data)
+    console.log(res);
+    if (res.data.status) {
+      messageStore.update(id, { 'text': '更新密码成功', 'type': 'success', 'duration': 2000 })
+    } else {
+      messageStore.update(id, { 'text': '更新密码失败', 'type': 'error', 'duration': 2000 })
+    }
+  } catch (error) {
+    console.log('@',error);
+    if (isAxiosError(error) && error.response) {
+        messageStore.update(id, { 'text': `${error.response.data.message}`, 'type': 'error', 'duration': 2000 });
+    } else {
+        messageStore.update(id, { 'text': '发生未知错误', 'type': 'error', 'duration': 2000 });
+    }
   }
 }
 function handleLogout() {
@@ -179,6 +202,22 @@ function handleLogout() {
         <button style="background: #00000098;">不可更改</button>
       </div>
 
+      <div class="body-item" @click="states.password = !states.password">
+        <div class="body-item-left">密码</div>
+        <div class="body-item-right">
+          <span>需提供新旧密码</span>
+          <Icon :class="['icon', { 'rotate-icon': states.password }]">
+            <ChevronRight />
+          </Icon>
+        </div>
+      </div>
+      <div v-if="states.password" class="input">
+        <input type="text" placeholder="请输入 旧密码" v-model="editData.oldPassword">
+        <input type="text" placeholder="请输入 新密码" v-model="editData.newPassword">
+        <button
+          @click="haldleUpdatePassword({ oldPassword: editData.oldPassword, newPassword: editData.newPassword })">更新</button>
+      </div>
+
       <div class="body-item" @click="editData.email = userData.email; states.email = !states.email">
         <div class="body-item-left">邮箱</div>
         <div class="body-item-right">
@@ -207,6 +246,9 @@ function handleLogout() {
         <button @click="haldleUpdate('brief', editData.brief)">更新</button>
       </div>
 
+      <div class="body-backend" v-if="userStore.profile?.role == '1'" @click="router.push({name: 'admin'})">
+        <div>进入后台</div>
+      </div>
       <div class="body-logout" @click="handleLogout">
         <div>退出登录</div>
       </div>
@@ -287,20 +329,22 @@ function handleLogout() {
   cursor: pointer;
 }
 
-.body-logout {
+.body-logout, .body-backend {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 -10px 0 0 #cccccc62;
-  border-bottom: 1px solid #cccccc62;
-  margin-top: 10px;
   padding: 5px;
   font: small;
   color: #000000bb;
 }
+.body-logout {
+  box-shadow: 0 -10px 0 0 #cccccc62;
+  border-bottom: 1px solid #cccccc62;
+  margin-top: 10px;
+}
 
-.body-logout:hover {
+.body-logout:hover, .body-backend:hover {
   color: #d0c2c2;
 }
 

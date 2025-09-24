@@ -16,7 +16,7 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
         if (!content && !imageUrls && !videoUrls) {
             return res.status(400).json({ error: '文章内容不能为空' });
         }
-        //创建一篇文章
+        //创建一篇文章 ⭐⭐⭐⭐
         const newArticle = await prisma.$transaction(async (tx) => {
             // 操作文章表
             const createdArticle = await tx.articles.create({

@@ -32,14 +32,10 @@ service.interceptors.response.use(
         return response
     },
     async (error) => {
-        const { useUserStore } = await import('@/store/user');
-        const userStore = useUserStore();
         if (error.response) {
             switch (error.response.status) {
                 case 401:
-                    console.error('认证失败，Token无效或已过期，请重新登录。')
-                    // 执行退出
-                    userStore.handleLogout()
+                    console.error('认证失败')
                     break
                 case 403:
                     console.error('权限不足，无法访问资源。', error)

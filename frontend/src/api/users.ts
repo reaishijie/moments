@@ -1,5 +1,5 @@
 import service from '@/api/request'
-import type { updateUserInfoData } from '@/types/user'
+import type { updateUserInfoData, updatePasswordData } from '@/types/user'
 
 // 获取用户信息
 export const getUserInfo = () => {
@@ -24,4 +24,11 @@ export const getUserIdByUsername = (username:any) => {
     })
 }
 
-// 更新密码（后面做）
+// 更新密码
+export const changePassword = (data: updatePasswordData) => {
+    return service({
+        url: `/user/password`,
+        method: 'patch',
+        data
+    })
+}
