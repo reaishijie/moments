@@ -5,6 +5,8 @@ async function getLocation() {
     const response = await fetch(`${api}/location`)
     // 双重解构并重命名
     const {data:{data: result}} =await response.json()
+    console.log(result);
+    
     if (response.status != 200) {
       throw new Error('获取 IP 地址服务响应失败');
     }

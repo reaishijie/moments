@@ -83,14 +83,12 @@ const haldleUpdatePassword = async (data: updatePasswordData) => {
   const id = messageStore.show('正在更新密码', 'loading')
   try {
     const res = await changePassword(data)
-    console.log(res);
     if (res.data.status) {
       messageStore.update(id, { 'text': '更新密码成功', 'type': 'success', 'duration': 2000 })
     } else {
       messageStore.update(id, { 'text': '更新密码失败', 'type': 'error', 'duration': 2000 })
     }
   } catch (error) {
-    console.log('@',error);
     if (isAxiosError(error) && error.response) {
         messageStore.update(id, { 'text': `${error.response.data.message}`, 'type': 'error', 'duration': 2000 });
     } else {

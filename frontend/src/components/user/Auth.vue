@@ -15,7 +15,6 @@ const defaultStore = useDefaultStore()
 onMounted(async () => {
     await defaultStore.getPublicConfig()
     userStatus.value = Number(defaultStore.configs.user_status)
-    console.log(defaultStore.configs.user_status,userStatus.value);
 })
 const authStore = useAuthStore()
 const messageStore = useMessageStore()
@@ -102,8 +101,6 @@ const handleRegister = async () => {
                 if (response) {
                     messageStore.update(id, { type: 'success', text: '注册成功', duration: 2000 })
                     show.value = 'showLogin'
-                    console.log('@register', userRegisterInput.value);
-                    
                 } else {
                     messageStore.update(id, { type: 'error', text: '注册失败', duration: 2000 })
                 }

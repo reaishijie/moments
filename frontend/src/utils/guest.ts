@@ -8,7 +8,7 @@ export function getOrCreateGuestId():string {
     if(!guestId) {
         guestId = nanoid()
         localStorage.setItem(GUEST_ID_KEY, guestId)
-        console.log('新游客访问，生成guestId：', guestId);
+        // console.log('新游客访问，生成guestId：', guestId);
     }
 
     return guestId

@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { getUserCount, getArticleCount, getCommentCount } from '@/api/admin';
 import { Icon } from '@vicons/utils';
-import { UserCircleRegular, Buffer, CommentRegular, Github } from '@vicons/fa';
+import { UserCircleRegular, Buffer, CommentRegular } from '@vicons/fa';
 
 // 后端返回数据类型
 interface countData {
@@ -36,13 +36,65 @@ async function getAllCount() {
         counts.value.articleCount = articleCount.data
         counts.value.commentCount = commentCount.data
     } catch (error) {
-        console.log('获取数据失败:', error);
+        // console.log('获取数据失败:', error);
         throw error;
     } finally {
         isLoading.value = false
     }
 }
 getAllCount()
+
+// 定义语言
+const languages = {
+    HTML: {
+        name: 'html',
+        icon: 'https://img.shields.io/badge/HTML-239120?style=for-the-badge&logo=html5&logoColor=white'
+    },
+    CSS: {
+        name: 'css',
+        icon: 'https://img.shields.io/badge/CSS-239120?&style=for-the-badge&logo=css3&logoColor=white'
+    },
+    JavaScript: {
+        name: 'javascript',
+        icon: 'https://img.shields.io/badge/JavaScript-2CA550?style=for-the-badge&logo=JavaScript&logoColor=white'
+    },
+    TypeScript: {
+        name: 'typescript',
+        icon: 'https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white',
+    },
+    Vue: {
+        name: 'vue',
+        icon: 'https://img.shields.io/badge/Vue.js-35495E?style=for-the-badge&logo=vue.js&logoColor=4FC08D'
+    },
+    Axios: {
+        name: 'axios',
+        icon: 'https://img.shields.io/badge/Axios-%23039BE5.svg?&style=for-the-badge&logo=Axios&logoColor=white'
+    },
+    Pinia: {
+        name: 'pinia',
+        icon: 'https://img.shields.io/badge/Pinia-43853D?style=for-the-badge&logo=pinia&logoColor=#FBCE4B'
+    },
+    Shell: {
+        name: 'shell',
+        icon: 'https://img.shields.io/badge/Powershell-2CA5E0?style=for-the-badge&logo=powershell&logoColor=white'
+    },
+    NodeJs: {
+        name: 'nodejs',
+        icon: 'https://img.shields.io/badge/Node.js-43853D?style=for-the-badge&logo=node.js&logoColor=white'
+    },
+    NPM: {
+        name: 'npm',
+        icon: 'https://img.shields.io/badge/npm-CB3837?style=for-the-badge&logo=npm&logoColor=white'
+    },
+    Docker: {
+        name: 'docker',
+        icon: 'https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white'
+    },
+    Vercel: {
+        name: 'vercel',
+        icon: 'https://img.shields.io/badge/Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white'
+    },
+}
 </script>
 
 <template>
@@ -89,12 +141,17 @@ getAllCount()
     <div class="bottom">
         <div class="bottom-left">
             <h1>瞬刻后台管理页面</h1>
-            仓库地址：<a target="_blank" rel="noopener noreferrer" href="https://github.com/reaishijie/moments">
-                <Icon size="40px" color="#000000">
-                    <Github />
-                </Icon>
+            <div>仓库地址：</div>
+            <a target="_blank" rel="noopener noreferrer" href="https://github.com/reaishijie/moments">
+                <img src="https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white"
+                    alt="GitHub">
             </a>
-            <p>其他内容计划施工中...</p>
+            <div>语言及工具：</div>
+            <span class="languages">
+                <span v-for="language in languages" class="language" :title="language.name">
+                    <img :src="language.icon" :alt="language.name">
+                </span>
+            </span>
         </div>
         <div class="bottom-right">
 
@@ -146,5 +203,15 @@ getAllCount()
 
 .bottom-left {
     padding: 10px;
+}
+
+.languages {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+.language {
+    margin: 5px 10px 5px 0;
 }
 </style>
