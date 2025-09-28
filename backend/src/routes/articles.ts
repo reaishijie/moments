@@ -72,24 +72,49 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
     }
 })
 
-// 获取文章列表
-router.get('/', optionalAuthMiddleware, async (req: Request, res: Response) => {
+// 获取文章列表 ⭐⭐⭐⭐
+router.get('/', async (req: Request, res: Response) => {
     try {
-        const { page: pageStr, pageSize: pageSizeStr, userId } = req.query
+        const { page: pageStr, pageSize: pageSizeStr, ...filters } = req.query
+
         const page = parseInt(pageStr as string) || 1
         const pageSize = parseInt(pageSizeStr as string) || 5
         const skip = (page - 1) * pageSize
 
+        const filterMappings: Record<string, { field: keyof Prisma.articlesWhereInput; type: 'exact' | 'fuzzy' | 'boolean' }> = {
+            articleId: { field: 'id', type: 'exact' },
+            userId: { field: 'user_id', type: 'exact' },
+            content: { field: 'content', type: 'fuzzy' },
+            location: { field: 'location', type: 'fuzzy' },
+            type: { field: 'type', type: 'exact' },
+            isTop: { field: 'is_top', type: 'boolean' },
+            isAd: { field: 'is_ad', type: 'boolean' },
+        };
+
         // 构建查询条件
         const where: Prisma.articlesWhereInput = {
             status: 1, //1为已发布
-            deleted_at: null // 未软删除的
+            deleted_at: null, // 未软删除的
+        };
+        for (const key in filters) {
+            if (filterMappings[key]) {
+                const { field, type } = filterMappings[key];
+                const value = filters[key];
+
+                if (type === 'exact') {
+                    (where as any)[field] = parseInt(value as string);
+                } else if (type === 'fuzzy') {
+                    (where as any)[field] = {
+                        contains: value as string,
+                        // MySQL大小写不敏感无需添加，否则需要设置字段 utf8mb4_unicode_ci
+                        // mode: 'insensitive',
+                    };
+                } else if (type === 'boolean') {
+                    (where as any)[field] = (value === 'true');
+                }
+            }
         }
-        // 如果提供了userId，将其加入到where条件中
-        if (userId) {
-            where.user_id = BigInt(userId as string)
-        }
-        // 查询已发布、未删除文章
+
         const articles = await prisma.articles.findMany({
             where: where,
             skip: skip,
@@ -271,9 +296,15 @@ router.get('/:articleId', optionalAuthMiddleware, async (req: Request, res: Resp
     }
 })
 
-// 更新一篇自己的文章（需要身份认证）
+// 更新一篇自己的文章（需要身份认证或管理员 role = 1）
 router.patch('/:articleId', authMiddleware, async (req: Request, res: Response) => {
     try {
+        if (!req.user) {
+            return res.status(401).json({ status: false, message: '请重新登录' })
+        }
+        if(req.body === undefined) {
+            return res.status(400).json({ status: false, message: '请求数据格式错误' })
+        }
         const userId = req.user?.userId
         const { articleId } = req.params
         const { content, status, location, type, isAd, isTop, imageUrls, videoUrls } = req.body
@@ -287,7 +318,7 @@ router.patch('/:articleId', authMiddleware, async (req: Request, res: Response) 
             return res.status(404).json({ error: '文章未找到' })
         }
         // 验证文章所属权
-        if (article.user_id.toString() !== userId) {
+        if (article.user_id.toString() !== userId && req.user.role !== 1) {
             logger.add({
                 userId: BigInt(userId!),
                 action: logAction.ARTICLE_UPDATE,
@@ -298,7 +329,7 @@ router.patch('/:articleId', authMiddleware, async (req: Request, res: Response) 
                 ipAddress: req.ip,
                 userAgent: req.headers['user-agent'] || '',
             })
-            return res.status(403).json({ error: '无权修改此文章' })
+            return res.status(403).json({ status: false, error: '无权修改此文章' })
         }
         // 构建更新数据
         const updateData: { content?: string, status?: number, location?: string, type?: number, isAd?: boolean, isTop?: boolean, imageUrls?: object, videoUrls?: object } = {}
@@ -332,17 +363,20 @@ router.patch('/:articleId', authMiddleware, async (req: Request, res: Response) 
             ipAddress: req.ip,
             userAgent: req.headers['user-agent'] || '',
         })
-        res.status(200).json(responseData)
+        res.status(200).json({ status: true, message: '更新成功', data: responseData})
     } catch (error) {
         console.error('更新文章失败:', error);
         res.status(500).json({ error: '服务器内部错误' });
     }
 })
 
-// 删除一篇自己的文章，需身份认证
+// 删除一篇自己的文章，（需要身份认证或管理员 role = 1）
 router.delete('/:articleId', authMiddleware, async (req: Request, res: Response) => {
     try {
-        const userId = req.user?.userId;
+        if (!req.user) {
+            return res.status(401).json({ status: false, message: '请重新登录' })
+        }
+        const userId = req.user.userId;
         const { articleId } = req.params;
 
         const article = await prisma.articles.findUnique({
@@ -353,7 +387,7 @@ router.delete('/:articleId', authMiddleware, async (req: Request, res: Response)
             return res.status(404).json({ error: '文章未找到' });
         }
 
-        if (article.user_id.toString() !== userId) {
+        if (article.user_id.toString() !== userId && req.user.role !== 1) {
             logger.add({
                 userId: BigInt(userId!),
                 action: logAction.ARTICLE_DELETE,
@@ -364,7 +398,7 @@ router.delete('/:articleId', authMiddleware, async (req: Request, res: Response)
                 ipAddress: req.ip,
                 userAgent: req.headers['user-agent'] || '',
             })
-            return res.status(403).json({ error: '无权删除此文章' });
+            return res.status(403).json({ status: false, error: '无权删除此文章' });
         }
         // 执行软删除
         await prisma.articles.update({

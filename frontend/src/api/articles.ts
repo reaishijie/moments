@@ -12,13 +12,13 @@ export const createArticle = (data: createArticleData) => {
     })
 }
 // 获取文章列表
-export const getArticle = (params?: { page?: number, pageSize?: number, userId?: number}, guestId?: string) => {
-    return service({
-        url: '/articles',
-        method: 'get',
-        params,
-        headers: guestId ? { 'X-Guest-ID': guestId } : {},
-    })
+export const getArticle = (params?: Record<string, any>, guestId?: string) => {
+  return service({
+    url: '/articles',
+    method: 'get',
+    params,
+    headers: guestId ? { 'X-Guest-ID': guestId } : {},
+  })
 }
 // 根据文章id获取单篇文章详情
 export const getArticleDetails = (articleId : number, guestId?: string) => {

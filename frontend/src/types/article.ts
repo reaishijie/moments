@@ -39,7 +39,22 @@ export interface createArticleData {
 }
 
 export interface updateArticleData {
-    content: string,
-    status: number,
-    location?: string
+    content?: string,
+    status?: number,
+    location?: string,
+    type?: number,
+    isAd?: boolean,
+    isTop?: boolean,
+    imageUrls?: string[],
+    videoUrls?: string[]
+}
+
+export interface articleFilter {
+    articleId?: string,
+    userId?: string,
+    content?: string,
+    location?: string,
+    type?: number,
+    isTop?: boolean,
+    isAd?: boolean
 }

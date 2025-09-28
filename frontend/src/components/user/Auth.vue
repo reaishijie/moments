@@ -180,13 +180,14 @@ const handleRegister = async () => {
                         @keyup.enter="handleRegister">
                 </div>
                 <div class="identifier">
+                    <form action=""></form>
                     <label for="email">
                         <Icon class="icon">
                             <EnvelopeRegular />
                         </Icon>
                         邮箱：
                     </label>
-                    <input type="text" id="email" v-model="userRegisterInput.email" placeholder="邮箱"
+                    <input type="email" id="email" v-model="userRegisterInput.email" placeholder="邮箱"
                         @keyup.enter="handleRegister">
                 </div>
                 <div class="password">

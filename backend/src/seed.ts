@@ -66,7 +66,7 @@ async function main() {
     },
     {
       k: 'site_avatar',
-      v: ''
+      v: '/img/avatar.jpg'
     },
     {
       k: 'site_brief',

@@ -1,7 +1,7 @@
 <script setup lang="ts" name="HeaderBar">
-import { ref } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { Icon } from '@vicons/utils';
-import { AngleDoubleRight, AngleDown} from '@vicons/fa';
+import { AngleDoubleRight, AngleDown, Bars} from '@vicons/fa';
 import { useSidebarStore } from '@/store/admin/sidebar';
 import router from '@/router';
 import { useUserStore } from '@/store/user';
@@ -13,6 +13,33 @@ const messageStore = useMessageStore()
 const userStore = useUserStore()
 const sidebarStore = useSidebarStore()
 const isShowSetting = ref(false)
+const isMobile = ref(false)
+
+// 接收父组件传递的 sidebar ref
+const props = defineProps<{
+  sidebarRef?: any
+}>()
+
+// 移动端检测
+function checkMobile() {
+  isMobile.value = window.innerWidth <= 768
+}
+
+// 切换移动端侧边栏
+function toggleMobileSidebar() {
+  if (props.sidebarRef) {
+    props.sidebarRef.toggleDrawer()
+  }
+}
+
+onMounted(() => {
+  checkMobile()
+  window.addEventListener('resize', checkMobile)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', checkMobile)
+})
 
 // 退出登录函数
 function handleLogout() {
@@ -30,8 +57,14 @@ function handleLogout() {
 
 <template>
     <div class="bar-left">
-        <!-- 侧边栏折叠、展开 -->
-        <Icon @click="sidebarStore.isShowContent = !sidebarStore.isShowContent"
+        <!-- 移动端菜单按钮 -->
+        <Icon v-if="isMobile" @click="toggleMobileSidebar"
+            title="菜单"
+            class="icon mobile-menu-btn">
+            <Bars />
+        </Icon>
+        <!-- 桌面端侧边栏折叠、展开 -->
+        <Icon v-else @click="sidebarStore.isShowContent = !sidebarStore.isShowContent"
             :title="sidebarStore.isShowContent ? '折叠' : '展开'"
             :class="['icon', { 'rotate-icon': sidebarStore.isShowContent }]">
             <AngleDoubleRight />
@@ -112,17 +145,43 @@ function handleLogout() {
     flex-direction: column;
     position: absolute;
     background: #ffffff;
-    margin-top: 10px;
-    border-radius: 5px;
-    box-shadow: 0 0 8px skyblue;
-    left: 20%
+    top: 100%;
+    right: 0;
+    margin-top: 8px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border: 1px solid #e1e1e1;
+    min-width: 120px;
+    z-index: 1000;
+}
+
+.userSetting::before {
+    content: '';
+    position: absolute;
+    top: -8px;
+    right: 20px;
+    width: 0;
+    height: 0;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-bottom: 8px solid #ffffff;
+    filter: drop-shadow(0 -2px 2px rgba(0, 0, 0, 0.1));
 }
 
 .userSetting-item {
-    padding: 2px 5px;
-    margin: 5px;
-    font-size: small;
-    /* margin-top: 5px; */
+    padding: 12px 16px;
+    font-size: 14px;
+    color: #333;
+    transition: background-color 0.2s;
+    white-space: nowrap;
+}
+
+.userSetting-item:first-child {
+    border-radius: 8px 8px 0 0;
+}
+
+.userSetting-item:last-child {
+    border-radius: 0 0 8px 8px;
 }
 
 a {
@@ -131,13 +190,14 @@ a {
 }
 
 .userSetting-item:nth-child(3) {
-    border-top: 5px solid #f2f2f2;
+    border-top: 1px solid #f0f0f0;
+    margin-top: 4px;
+    padding-top: 8px;
 }
 
 .userSetting-item:hover {
-    background: #f5f5f5;
+    background: #f8f9fa;
     cursor: pointer;
-    border-radius: 5px;
 }
 
 /* 菜单弹出动画 */
@@ -155,5 +215,49 @@ a {
 .fade-leave-to {
     transform: translateY(-10px);
     opacity: 0;
+}
+
+/* 移动端样式 */
+.mobile-menu-btn {
+    color: #000000c0 !important;
+}
+
+.mobile-menu-btn:hover {
+    color: #00000079 !important;
+}
+
+@media (max-width: 768px) {
+    .breadcrumb {
+        display: none;
+    }
+    
+    .bar-left {
+        justify-content: flex-start;
+    }
+    
+    .userSetting {
+        right: -10px;
+        min-width: 140px;
+    }
+    
+    .userSetting::before {
+        right: 25px;
+    }
+}
+
+@media (max-width: 480px) {
+    .userSetting {
+        right: -20px;
+        min-width: 130px;
+    }
+    
+    .userSetting::before {
+        right: 30px;
+    }
+    
+    .userSetting-item {
+        padding: 10px 14px;
+        font-size: 13px;
+    }
 }
 </style>

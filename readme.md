@@ -15,7 +15,9 @@
 - 📍 **位置服务**: 获取基础地理位置功能
 - 📊 **完整的日志系统**: 用户行为追踪和系统监控
 
-## 快速部署请查看：[doc/quickDeploy.md](https://github.com/reaishijie/moments/blob/main/doc/quickDeploy-readme.md)
+## 快速部署请查看：[doc/quickDeploy.md](doc/quickDeploy-readme.md)
+
+## 更新计划：[doc/update.md](doc/update.md)
 
 ## 程序开发
 

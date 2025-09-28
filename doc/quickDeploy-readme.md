@@ -10,8 +10,8 @@
 
    ```bash
    cd moments/momentsQuickDeploy # 切换到快速部署目录i
-   cp .env.example .env #复制一份环境变量
-   npm i # 安装依赖 npm install
+   cp .env.example .env #复制一份环境变量并修改数据库信息
+   npm i # 安装依赖 npm install 或只安装运行依赖 npm install --omit=dev
    npm run db:install #初始化数据库
    npm run start #运行程序
    # 推荐使用pm2 进行后台保活 安装pm2后执行 npm run start:pm2

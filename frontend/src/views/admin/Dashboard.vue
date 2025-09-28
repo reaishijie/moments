@@ -106,9 +106,9 @@ const languages = {
                 </Icon>
             </div>
             <div class="top-card-right">
-                <div style="font-size: medium; color: #000000c9;">已激活用户数</div>
-                <div style="font-size: xx-large; color: deepskyblue;">{{ counts.userCount?.activeCount }}</div>
-                <div style="font-size: xx-small;">总计：{{ counts.userCount?.totalCount }}</div>
+                <div class="card-title">已激活用户数</div>
+                <div class="card-value">{{ counts.userCount?.activeCount || 0 }}</div>
+                <div class="card-total">总计：{{ counts.userCount?.totalCount || 0 }}</div>
             </div>
         </div>
 
@@ -119,9 +119,9 @@ const languages = {
                 </Icon>
             </div>
             <div class="top-card-right">
-                <div style="font-size: medium; color: #000000c9;">已发表文章数</div>
-                <div style="font-size: xx-large; color: deepskyblue;">{{ counts.articleCount?.activeCount }}</div>
-                <div style="font-size: xx-small;">总计：{{ counts.articleCount?.totalCount }}</div>
+                <div class="card-title">已发表文章数</div>
+                <div class="card-value">{{ counts.articleCount?.activeCount || 0 }}</div>
+                <div class="card-total">总计：{{ counts.articleCount?.totalCount || 0 }}</div>
             </div>
         </div>
 
@@ -132,9 +132,9 @@ const languages = {
                 </Icon>
             </div>
             <div class="top-card-right">
-                <div style="font-size: medium; color: #000000c9;">已发表评论数</div>
-                <div style="font-size: xx-large; color: deepskyblue;">{{ counts.commentCount?.activeCount }}</div>
-                <div style="font-size: xx-small;">总计：{{ counts.commentCount?.totalCount }}</div>
+                <div class="card-title">已发表评论数</div>
+                <div class="card-value">{{ counts.commentCount?.activeCount || 0 }}</div>
+                <div class="card-total">总计：{{ counts.commentCount?.totalCount || 0 }}</div>
             </div>
         </div>
     </div>
@@ -164,10 +164,11 @@ const languages = {
     display: flex;
     flex-direction: row;
     width: 100%;
-    height: 20%;
+    height: auto;
+    min-height: 20%;
     gap: 20px;
-    overflow: hidden;
-    /* word-wrap: break-word; */
+    overflow: visible;
+    flex-wrap: wrap;
 }
 
 .top-card {
@@ -175,8 +176,9 @@ const languages = {
     flex-direction: row;
     justify-content: space-around;
     align-items: center;
-    padding: 5px;
-    width: 33%;
+    padding: 15px;
+    flex: 1;
+    min-width: 250px;
     background: #ffffff;
     border-radius: 5px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
@@ -209,9 +211,128 @@ const languages = {
     display: flex;
     flex-direction: row;
     align-items: center;
+    flex-wrap: wrap;
 }
 
 .language {
     margin: 5px 10px 5px 0;
+}
+
+.card-title {
+    font-size: medium; 
+    color: #000000c9;
+}
+
+.card-value {
+    font-size: xx-large; 
+    color: deepskyblue;
+}
+
+.card-total {
+    font-size: xx-small;
+}
+
+/* 移动端响应式优化 */
+@media (max-width: 768px) {
+    .top {
+        flex-direction: column;
+        gap: 15px;
+        height: auto;
+        overflow: visible;
+    }
+    
+    .top-card {
+        min-width: auto;
+        width: 100%;
+        padding: 15px 20px;
+        justify-content: space-between;
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+    }
+    
+    .top-card-left {
+        font-size: 35px;
+        flex-shrink: 0;
+    }
+    
+    .top-card-right {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        text-align: right;
+    }
+    
+    .bottom {
+        flex-direction: column;
+        gap: 20px;
+    }
+    
+    .bottom-left {
+        padding: 20px;
+    }
+    
+    .languages {
+        gap: 5px;
+        justify-content: flex-start;
+    }
+    
+    .language {
+        margin: 2px 5px 2px 0;
+    }
+    
+    .language img {
+        height: auto;
+        max-width: 120px;
+    }
+}
+
+@media (max-width: 480px) {
+    .top-card {
+        padding: 12px 15px;
+        flex-direction: column;
+        text-align: center;
+        gap: 10px;
+        justify-content: center;
+        align-items: center;
+    }
+    
+    .top-card-left {
+        font-size: 30px;
+        order: 1;
+    }
+    
+    .top-card-right {
+        align-items: center;
+        text-align: center;
+        order: 2;
+    }
+    
+    .card-title {
+        font-size: 14px;
+        margin-bottom: 5px;
+    }
+    
+    .card-value {
+        font-size: 28px;
+        margin-bottom: 3px;
+    }
+    
+    .card-total {
+        font-size: 12px;
+    }
+    
+    .bottom-left {
+        padding: 15px;
+    }
+    
+    .bottom-left h1 {
+        font-size: 1.5em;
+        text-align: center;
+    }
+    
+    .language img {
+        max-width: 100px;
+    }
 }
 </style>

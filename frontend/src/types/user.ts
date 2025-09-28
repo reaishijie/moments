@@ -36,3 +36,14 @@ export interface updatePasswordData {
     oldPassword: string,
     newPassword: string
 }
+
+export interface updateUserData {
+    username?: string,
+    email?: string,
+    nickname?: string,
+    brief?: string,
+    status?: number,
+    role?: number,
+    avatar?: string,
+    header_background?: string
+}

@@ -1,0 +1,1 @@
+import{Z as t}from"./index-DC8TisQv.js";const r=e=>t({url:"/comments",method:"post",data:e}),n=e=>t({url:`/comments/${e}`,method:"delete"}),s=(e,m)=>t({url:`comments/${e}`,method:"get",params:m});export{r as c,n as d,s as g};

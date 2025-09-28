@@ -22,6 +22,8 @@ import { Router } from "express";
 import { PrismaClient } from "@prisma/client";
 import { authMiddleware } from "../middleware/authMiddleware.js";
 import { logAction, logger } from "../services/log.service.js";
+// import jwt from 'jsonwebtoken'
+import bcrypt from 'bcrypt';
 const router = Router();
 const prisma = new PrismaClient();
 // 获取用户信息
@@ -56,7 +58,7 @@ router.get('/', authMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, 
         }
         // 再次转换 BigInt 以便返回
         const responseUser = Object.assign(Object.assign({}, user), { id: user.id.toString() });
-        res.status(200).json(responseUser);
+        return res.status(200).json(responseUser);
     }
     catch (error) {
         console.error('获取个人信息失败:', error);
@@ -113,7 +115,7 @@ router.patch('/', authMiddleware, (req, res) => __awaiter(void 0, void 0, void 0
             ipAddress: req.ip,
             userAgent: req.headers['user-agent'] || '',
         });
-        res.status(200).json({ data: data });
+        return res.status(200).json({ data: data });
     }
     catch (error) {
         console.error('更新个人信息失败:', error);
@@ -128,7 +130,7 @@ router.patch('/', authMiddleware, (req, res) => __awaiter(void 0, void 0, void 0
         //     ipAddress: req.ip,
         //     userAgent: req.headers['user-agent'] || '',
         // })
-        res.status(500).json({ error: '服务器内部错误' });
+        return res.status(500).json({ error: '服务器内部错误' });
     }
 }));
 // 根据用户名查询一些用户信息，主要id
@@ -151,12 +153,62 @@ router.get('/:username', (req, res) => __awaiter(void 0, void 0, void 0, functio
             return res.status(404).json({ message: '用户未找到' });
         }
         const responseData = Object.assign(Object.assign({}, result), { id: result === null || result === void 0 ? void 0 : result.id.toString() });
-        res.status(200).json(responseData);
+        return res.status(200).json(responseData);
     }
     catch (error) {
         console.log('error:', error);
-        res.status(500).json({ error: '服务器错误' });
+        return res.status(500).json({ error: '服务器错误' });
     }
 }));
-// 修改密码 ···待添加
+// 修改密码
+router.patch('/password', authMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    // 再次判断用户是否存在
+    if (!((_a = req.user) === null || _a === void 0 ? void 0 : _a.userId)) {
+        return res.status(401).json({ status: false, message: '请登录后操作' });
+    }
+    // 判断是否提供信息
+    if (!req.body) {
+        return res.status(400).json({ status: false, message: '请提供密码信息' });
+    }
+    const { oldPassword, newPassword } = req.body;
+    // 判断是否提供新原密码
+    if (!oldPassword || !newPassword) {
+        return res.status(400).json({ status: false, message: '旧密码和新密码不能为空' });
+    }
+    // 判断新旧密码是否相同
+    if (oldPassword === newPassword) {
+        return res.status(400).json({ status: false, message: '旧密码和新密码不能相同' });
+    }
+    // 获取相应用户信息
+    const user = yield prisma.users.findFirst({
+        where: { id: BigInt(req.user.userId) },
+    });
+    if (!user) {
+        return res.status(404).json({ status: false, message: '用户不存在' });
+    }
+    // 验证原密码是否与用户密码相同
+    const isPasswordValid = yield bcrypt.compare(oldPassword, user.password);
+    if (!isPasswordValid) {
+        return res.status(401).json({ status: false, message: '原密码错误' });
+    }
+    // hash新密码
+    const hashedPassword = yield bcrypt.hash(newPassword, 10);
+    // 进行数据更新
+    yield prisma.users.update({
+        where: { id: BigInt(req.user.userId) },
+        data: { password: hashedPassword }
+    });
+    // 增加日志记录
+    logger.add({
+        userId: BigInt(req.user.userId),
+        action: logAction.USER_UPDATE_PROFILE,
+        targetType: 'users',
+        targetId: BigInt(req.user.userId),
+        details: { oldHashedPassword: user.password, newHashedPassword: hashedPassword },
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent'] || '',
+    });
+    return res.status(200).json({ status: true, message: '密码修改成功' });
+}));
 export default router;

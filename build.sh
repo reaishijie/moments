@@ -10,9 +10,16 @@ echo "============================"
 echo " 开始构建 "
 echo "============================"
 
-# 清理输出目录
-rm -rf $OUTPUT_DIR
+############################
+# 0. 清理输出目录（保留特定文件）
+############################
+echo "[0/3] 清理输出目录..."
 mkdir -p $OUTPUT_DIR
+find "$OUTPUT_DIR" -mindepth 1 \
+  ! -name '.env.docker' \
+  ! -name 'docker-compose.yml' \
+  ! -name 'Dockerfile' \
+  -exec rm -rf {} +
 
 ############################
 # 1. 构建前端

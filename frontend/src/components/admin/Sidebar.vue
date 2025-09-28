@@ -3,7 +3,7 @@ import { useSidebarStore } from '@/store/admin/sidebar';
 import { SunRegular, AddressCardRegular, CommentRegular, Buffer, NodeJs, GemRegular, AngleDown } from '@vicons/fa';
 import { Icon } from '@vicons/utils';
 import { RouterLink } from 'vue-router';
-import { ref, type Component } from 'vue';
+import { ref, type Component, onMounted, onUnmounted } from 'vue';
 
 const sidebarStore = useSidebarStore()
 const iconMap: Record<string, Component> = {
@@ -15,13 +15,51 @@ const iconMap: Record<string, Component> = {
   'admin-user': AddressCardRegular
 }
 const openParentName = ref<string | null>(null)
+const isMobile = ref(false)
+const isDrawerOpen = ref(false)
+
 function isShowChildren(name: string) {
   openParentName.value = openParentName.value === name ? null : name
 }
+
+function checkMobile() {
+  isMobile.value = window.innerWidth <= 768
+  if (!isMobile.value) {
+    isDrawerOpen.value = false
+  }
+}
+
+function toggleDrawer() {
+  isDrawerOpen.value = !isDrawerOpen.value
+}
+
+function closeDrawer() {
+  if (isMobile.value) {
+    isDrawerOpen.value = false
+  }
+}
+
+onMounted(() => {
+  checkMobile()
+  window.addEventListener('resize', checkMobile)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', checkMobile)
+})
+
+defineExpose({
+  toggleDrawer,
+  isMobile,
+  isDrawerOpen
+})
 </script>
 
 <template>
-  <div class="admin-layout-container">
+  <!-- 移动端遮罩层 -->
+  <div v-if="isMobile && isDrawerOpen" class="mobile-overlay" @click="closeDrawer"></div>
+  
+  <div class="admin-layout-container" :class="{ 'mobile-drawer': isMobile, 'drawer-open': isMobile && isDrawerOpen }">
     <!-- 侧边栏顶部文字 -->
     <div class="sidebar-top">
       瞬刻
@@ -46,7 +84,7 @@ function isShowChildren(name: string) {
             </div>
           </div>
           <div v-else>
-            <router-link :to="{ name: item.name }">
+            <router-link :to="{ name: item.name }" @click="closeDrawer">
               <div class="sidebar-main-item" :title="item.meta?.title as string || '其他页面'">
                 <div class="item-icon">
                   <Icon size="20px">
@@ -63,7 +101,7 @@ function isShowChildren(name: string) {
             <div v-if="item.children && openParentName === item.name">
               <ul>
                 <li v-for="child in item.children" :key="child.path" class="children-list">
-                  <router-link :to="{ name: child.name }">
+                  <router-link :to="{ name: child.name }" @click="closeDrawer">
                     <div class="sidebar-main-item" :title="child.meta?.title as string || '其他页面'">
                       <div class="item-icon">
                         <Icon size="20px">
@@ -169,5 +207,44 @@ a {
 .fade-leave-to {
   transform: translateY(-10px);
   opacity: 0;
+}
+
+/* 移动端抽屉样式 */
+.mobile-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 998;
+}
+
+.mobile-drawer {
+  position: fixed;
+  top: 0;
+  left: -280px;
+  width: 280px;
+  height: 100vh;
+  z-index: 999;
+  transition: left 0.3s ease;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
+}
+
+.mobile-drawer.drawer-open {
+  left: 0;
+}
+
+/* 桌面端保持原样 */
+@media (min-width: 769px) {
+  .admin-layout-container {
+    position: static !important;
+    width: auto !important;
+    left: auto !important;
+    height: auto !important;
+    z-index: auto !important;
+    transition: none !important;
+    box-shadow: 0 0 8px skyblue !important;
+  }
 }
 </style>
