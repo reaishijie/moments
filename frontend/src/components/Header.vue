@@ -21,7 +21,7 @@ const backgroundPath = computed(() => {
 
 // 判断文件类型
 const isImage = computed(() => {
-  const imageExtension = ['jpg', 'png', 'webp', 'svg', 'gif']
+  const imageExtension = ['jpg', 'png', 'webp', 'svg', 'gif', 'avif', 'jpeg']
   const ext = backgroundPath.value.split('.').pop()?.toLowerCase()
   return ext ? imageExtension.includes(ext) : false
 })
@@ -69,10 +69,14 @@ const isLogin = computed(() => !!userStore.token)
 <template>
   <div class="header">
     <div class="background">
+      <!-- 如果设置为图片 -->
       <img v-if="isImage" :src="backgroundPath" alt="顶部图片" />
+      <!-- 如果设置为视频 -->
       <video v-else-if="isVideo" :src="backgroundPath" autoplay muted loop playsinline />
+      <!-- 其他 -->
       <video v-else :src="defaultBackground" autoplay muted loop playsinline />
     </div>
+    <!-- 顶部导航栏 -->
     <div class="top-bar-wrapper">
       <div :class="['top-bar', { blurred: isBlurred }]">
 

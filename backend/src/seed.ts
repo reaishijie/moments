@@ -7,10 +7,11 @@ async function main() {
   console.log(`⚡ 开始网站创建管理员...`);
   const adminUsername = 'admin';
   const email = '2900383833@qq.com'
+  const password = '123456'
   const existingAdmin = await prisma.users.findUnique({ where: { username: adminUsername } });
 
   if (!existingAdmin) {
-    const hashedPassword = await bcrypt.hash('123456', 10)
+    const hashedPassword = await bcrypt.hash(password, 10)
     await prisma.users.create({
       data: {
         username: adminUsername,
@@ -19,6 +20,7 @@ async function main() {
         status: 1, // 正常
         role: 1,   // 管理员
         nickname: '超级管理员',
+        avatar: '/img/avatar.jpg'
       },
     });
     console.log(`✅ 管理员用户 "${adminUsername}" 已创建.`);
@@ -52,7 +54,7 @@ async function main() {
     // 网站背景图
     {
       k: 'site_background',
-      v: ''
+      v: '/img/background.avif'
     },
     // 网站LOGO
     {

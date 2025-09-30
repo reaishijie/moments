@@ -11,8 +11,11 @@ import { useMessageStore } from '@/store/message';
 import { getUserIdByUsername } from '@/api/users';
 import { getArticle } from '@/api/articles';
 import type { articleData } from '@/types/article';
+import { useDefaultStore } from '@/store/default';
+import { useUserStore } from '@/store/user';
 
-
+const userStore = useUserStore()
+const defaultStore = useDefaultStore()
 const messageStore = useMessageStore()
 const route = useRoute()
 const username = route.params.username
@@ -63,7 +66,7 @@ onMounted(async () => {
     if (userId.value) {
       await fetchArticles(userId.value)
     }
-    document.title = `${displayName.value}的主页 - ${import.meta.env.VITE_APP_TITLE}`
+    document.title = `${displayName.value}的主页 - ${defaultStore.configs.sitename}`
   } catch (error) {
     console.error('获取用户文章失败', error);
     messageStore.show('加载用户文章失败', 'error', 2000)
@@ -75,6 +78,7 @@ onMounted(async () => {
   <div class="container">
     <div class="top-bar">
       <Header>
+        <!-- 左插槽 -->
         <template #left="{ isBlurred }">
           <div class="top-bar-left">
             <Icon :class="['icon', { blurred: isBlurred }]" @click="router.back()">
@@ -82,10 +86,10 @@ onMounted(async () => {
             </Icon>
           </div>
         </template>
-
-        <template #right="{ isBlurred }">
+        <!-- 右插槽 -->
+        <template #right="{ isBlurred }" >
           <div class="profile">
-            <Icon :class="['icon', { blurred: isBlurred }]" @click="router.push({ name: 'profile' })">
+            <Icon :class="['icon', { blurred: isBlurred }]" @click="router.push({ name: 'profile' })" v-if="userStore.token">
               <Cog />
             </Icon>
           </div>
