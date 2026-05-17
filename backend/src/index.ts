@@ -51,7 +51,7 @@ app.get(/.*/, (req, res) => {
   res.sendFile(path.join(__dirname, '../public', 'index.html'));
 });
 app.listen(port, () => {
-    console.log(`【${date}】🚀 后端启动成功：http://${host}:${port}`);
+    console.log(`【${date}】🚀 后端启动成功：http://localhost:${port}`);
 
     process.on('SIGTERM', () => {
         console.log('SIGTERM received, closing resources...');
