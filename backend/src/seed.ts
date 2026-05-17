@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 async function main() {
   console.log(`⚡ 开始网站创建管理员...`);
   const adminUsername = 'admin';
-  const email = '2900383833@qq.com'
+  const email = 'supremexiaohui@gmail.com'
   const password = '123456'
   const existingAdmin = await prisma.users.findUnique({ where: { username: adminUsername } });
 
@@ -23,9 +23,9 @@ async function main() {
         avatar: '/img/avatar.jpg'
       },
     });
-    console.log(`✅ 管理员用户 "${adminUsername}" 已创建.`);
+    console.log(`✔ 管理员用户 "${adminUsername}" 已创建，默认密码: ${password}`);
   } else {
-    console.log(`ℹ️ 管理员用户 "${adminUsername}" 已存在，跳过创建.`);
+    console.log(`✗ 管理员用户 "${adminUsername}" 已存在，跳过创建.`);
   }
 
   console.log('⚡ 开始创建网站信息...');
@@ -199,7 +199,7 @@ async function main() {
     })
   }
 
-  console.log(`✅ 数据填充完成.`);
+  console.log(`✔ 数据填充完成.`);
 }
 
 main()
