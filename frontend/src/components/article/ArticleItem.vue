@@ -1,5 +1,4 @@
 <script setup lang="ts" name="ArticleItem">
-import { computed, ref, watch } from 'vue';
 import ArticleActions from './ArticleActions.vue';
 import Review from './Review.vue';
 import { getLocation } from '@/utils/location'
@@ -8,6 +7,7 @@ import { Icon } from '@vicons/utils';
 import router from '@/router';
 import { type articleData } from '@/types/article';
 import { useMessageStore } from '@/store/message';
+import AvatarImage from '@/components/utils/AvatarImage.vue';
 import Media from './Media.vue';
 
 const messageStore = useMessageStore()
@@ -22,19 +22,6 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits(['like', 'comment', 'send-reply', 'load-more-comments']);
-const defaultAvatar = '/img/avatar.jpg'
-const avatarLoadFailed = ref(false)
-const userAvatar = computed(() => props.article.user?.avatar?.trim())
-const avatarSrc = computed(() => {
-    if (avatarLoadFailed.value) {
-        return defaultAvatar
-    }
-    return userAvatar.value || defaultAvatar
-})
-
-watch(userAvatar, () => {
-    avatarLoadFailed.value = false
-})
 
 async function showLocation() {
     try {
@@ -54,7 +41,7 @@ function openAd(url: string) {
     <div class="article-item" v-if="props.article">
         <!-- 左侧头像 -->
         <div class="article-avatar" @click="router.push(`/home/${props.article.user.username}`)">
-            <img :src="avatarSrc" alt="avatar" @error="avatarLoadFailed = true">
+            <AvatarImage :src="props.article.user?.avatar" alt="avatar" />
         </div>
         <!-- 内容 -->
         <div class="article-context">

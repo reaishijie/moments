@@ -1,5 +1,6 @@
 <script setup lang="ts" name="AComment">
 import { ref, computed } from 'vue'
+import AvatarImage from '@/components/utils/AvatarImage.vue';
 import type { Comment } from '@/types/comments';
 import { getAllComment as getAdminComments, updateComment } from '@/api/admin';
 import { deleteComment } from '@/api/comments';
@@ -239,7 +240,7 @@ handleSearch()
             <td>{{ item.id }}</td>
             <td>
               <div class="user-cell" :title="'用户id：' + item.user.id">
-                <img :src="item.user.avatar" alt="" />
+                <AvatarImage :src="item.user.avatar" alt="" />
                 <i>@{{ item.user.username }}</i>
               </div>
             </td>
@@ -357,7 +358,7 @@ handleSearch()
               <div class="info-item">
                 <label>评论用户</label>
                 <div class="user-info">
-                  <img :src="editingComment.user.avatar" alt="头像" />
+                  <AvatarImage :src="editingComment.user.avatar" alt="头像" />
                   <span>@{{ editingComment.user.username }}</span>
                 </div>
               </div>

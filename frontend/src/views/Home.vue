@@ -3,6 +3,7 @@ import { onMounted, ref, reactive, computed } from 'vue'
 import Header from '@/components/Header.vue';
 import Brief from '@/components/Brief.vue';
 import HomeArticleItem from '@/components/article/HomeArticleItem.vue'
+import AvatarImage from '@/components/utils/AvatarImage.vue';
 import { ChevronLeft, Cog, AngleDown } from '@vicons/fa';
 import { Icon } from '@vicons/utils';
 import router from '@/router';
@@ -100,7 +101,7 @@ onMounted(async () => {
       <Brief>
         <template #brief-img>
           <span>{{ displayName }}</span>
-          <img :src="avatar" alt="avatar" @click="router.push({ name: 'profile'})">
+          <AvatarImage :src="avatar" alt="avatar" @click="router.push({ name: 'profile'})" />
         </template>
         <template #brief-content>
           {{ brief }}

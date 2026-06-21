@@ -1,5 +1,6 @@
 <script setup lang="ts" name="Review">
 import { ref, type PropType } from 'vue';
+import AvatarImage from '@/components/utils/AvatarImage.vue';
 import { HeartRegular, AngleDown } from '@vicons/fa';
 import { Icon } from '@vicons/utils';
 import { useMessageStore } from '@/store/message'
@@ -115,7 +116,7 @@ const isDetailPage = computed(() => route.name === 'articleDetail')
       </Icon>
       <span v-for="(liker, index) in likers" :key="index">
         <span  v-if="!isDetailPage">{{ liker.displayName }}</span>
-        <img  v-if="isDetailPage" :src="liker.avatar" alt="" style="width: 25px; height: 25px; margin-right: 5px; cursor: pointer;" @click="router.push(`/home/${liker.username}`)"/>
+        <AvatarImage v-if="isDetailPage" :src="liker.avatar" alt="" style="width: 25px; height: 25px; margin-right: 5px; cursor: pointer;" @click="router.push(`/home/${liker.username}`)" />
       </span>
       <span v-if="likers.length !== 0">...共</span>
       <span v-if="article.like_count !== 0">{{ article.like_count }}人喜欢</span>

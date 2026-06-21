@@ -1,5 +1,6 @@
 <script setup lang="ts" name="AArticle">
 import { ref, computed } from 'vue'
+import AvatarImage from '@/components/utils/AvatarImage.vue';
 import type { articleFilter, articleData, updateArticleData } from '@/types/article';
 import { getArticle, updateArticle, deleteArticle } from '@/api/articles';
 import { useMessageStore } from '@/store/message';
@@ -307,7 +308,7 @@ handleSearch()
           <td>{{ item.id }}</td>
           <td>
             <div class="user-cell" :title="'用户id：' + item.user.id">
-              <img :src="item.user.avatar" alt="" />
+              <AvatarImage :src="item.user.avatar" alt="" />
               <i>@{{ item.user.username }}</i>
             </div>
           </td>

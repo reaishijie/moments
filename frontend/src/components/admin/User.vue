@@ -1,5 +1,6 @@
 <script setup lang="ts" name="AUser">
 import { ref, computed } from 'vue'
+import AvatarImage from '@/components/utils/AvatarImage.vue';
 import type { userData, updateUserData } from '@/types/user';
 import { getAllUsers, deleteUser, updateUser } from '@/api/admin';
 import { useMessageStore } from '@/store/message';
@@ -285,7 +286,7 @@ handleSearch()
             <td>{{ item.id }}</td>
             <td>
               <div class="avatar-cell">
-                <img :src="item.avatar || '/default-avatar.png'" alt="头像" />
+                <AvatarImage :src="item.avatar" alt="头像" />
               </div>
             </td>
             <td class="username-cell">{{ item.username }}</td>
