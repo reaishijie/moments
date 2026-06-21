@@ -12,7 +12,8 @@ import uploadRouter from './routes/upload.js'
 import linkRouter from './routes/link.js'
 import path from "path";
 import { fileURLToPath } from "url";
-import { CONFIG_CACHE, disconnectPrisma } from "./services/config.service.js";
+import { CONFIG_CACHE } from "./services/config.service.js";
+import { disconnectPrisma } from "./lib/prisma.js";
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)

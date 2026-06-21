@@ -1,12 +1,11 @@
 import { Router, Request, Response } from "express";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../lib/prisma.js";
 import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
 import { logAction, logger } from "../services/log.service.js"
 
 
 const router = Router()
-const prisma = new PrismaClient()
 
 // 注册
 router.post('/register', async (req: Request, res: Response) => {

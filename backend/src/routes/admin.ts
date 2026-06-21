@@ -1,11 +1,11 @@
 import { Router, Request, Response } from "express";
-import { Prisma, PrismaClient } from '@prisma/client';
+import { Prisma } from '@prisma/client';
+import { prisma } from '../lib/prisma.js';
 import { adminMiddleware } from "../middleware/adminMiddleware.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
 import { buildConfigWhere, formatConfigResponse, parseConfigQuery, type ConfigAccessLevel } from "../services/config-query.service.js";
 
 const router = Router()
-const prisma = new PrismaClient()
 
 // 获取（未删除）用户数：用户总数、已激活用户数、未激活用户数
 router.get('/user', authMiddleware, adminMiddleware, async (req: Request, res: Response) => {

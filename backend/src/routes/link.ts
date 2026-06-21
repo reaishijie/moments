@@ -1,11 +1,10 @@
 import { Router } from "express";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../lib/prisma.js";
 import { Request, Response } from "express";
 import { authMiddleware } from "../middleware/authMiddleware.js";
 import { adminMiddleware } from "../middleware/adminMiddleware.js";
 
 const router = Router()
-const prisma = new PrismaClient()
 
 // 添加友情链接
 router.post('', authMiddleware, async (req: Request, res: Response) => {

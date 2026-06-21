@@ -1,12 +1,12 @@
 import { Router, Request, Response } from 'express';
-import { Prisma, PrismaClient, article_images, article_videos } from '@prisma/client';
+import { Prisma, article_images, article_videos } from '@prisma/client';
+import { prisma } from '../lib/prisma.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 import { optionalAuthMiddleware } from '../middleware/optionalAuthMiddleware.js';
 import { logAction, logger } from "../services/log.service.js"
 import { log } from 'console';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 // 创建一篇文章
 router.post('/', authMiddleware, async (req: Request, res: Response) => {

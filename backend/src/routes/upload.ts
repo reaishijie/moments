@@ -6,12 +6,11 @@ import path from "path"
 import { nanoid } from "nanoid"
 import { FileService, publicRootPath } from "../services/file.service.js"
 import { authMiddleware } from "../middleware/authMiddleware.js"
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../lib/prisma.js";
 import { CONFIG_CACHE } from "../services/config.service.js"
 import { error } from "console"
 
 const configs = CONFIG_CACHE
-const prisma = new PrismaClient()
 const router = Router()
 
 /**

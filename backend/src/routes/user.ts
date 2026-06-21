@@ -1,12 +1,11 @@
 import { Router, Request, Response } from "express"
-import { PrismaClient } from "@prisma/client"
+import { prisma } from "../lib/prisma.js"
 import { authMiddleware } from "../middleware/authMiddleware.js"
 import { logAction, logger } from "../services/log.service.js"
 // import jwt from 'jsonwebtoken'
 import bcrypt from 'bcrypt'
 
 const router = Router()
-const prisma = new PrismaClient()
 
 // 获取用户信息
 router.get('/', authMiddleware, async (req: Request, res: Response) => {

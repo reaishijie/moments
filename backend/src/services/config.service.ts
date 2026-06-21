@@ -1,5 +1,4 @@
-import { PrismaClient } from "@prisma/client";
-const prisma = new PrismaClient()
+import { prisma } from "../lib/prisma.js";
 
 interface AppConfig {
     // 假设你的 key/value 都是字符串，如果不是，需要更复杂的类型定义
@@ -18,12 +17,7 @@ async function fetchConfigs(): Promise<AppConfig> {
     } catch (error) {
         console.error('从数据库加载配置信息失败', error)
         throw new Error('Critical: Application failed to load configuration.');
-    } finally {
-        prisma.$disconnect();
     }
 }
 export const CONFIG_CACHE: AppConfig = await fetchConfigs();
 
-export function disconnectPrisma() {
-    prisma.$disconnect();
-}

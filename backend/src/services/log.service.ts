@@ -1,5 +1,4 @@
-import { PrismaClient } from "@prisma/client"
-const prisma = new PrismaClient()
+import { prisma } from "../lib/prisma.js"
 
 export const logAction = {
     USER_REGISTER_SUCCESS: 'USER_REGISTER_SUCCESS',
