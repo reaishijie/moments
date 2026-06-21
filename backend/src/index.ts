@@ -22,8 +22,8 @@ dotenv.config()
 
 // 配置变量
 const date = new Date().toLocaleString()
-const port = process.env.PORT || 9889
-const host = process.env.DB_HOST || '127.0.0.1'
+const port = Number(process.env.PORT) || 9889
+const listenHost = process.env.HOST || '0.0.0.0'
 const app = express()
 //配置请求及路由
 app.use(cors())
@@ -51,8 +51,8 @@ app.use('/api/link', linkRouter)
 app.get(/.*/, (req, res) => {
   res.sendFile(path.join(__dirname, '../public', 'index.html'));
 });
-app.listen(port, () => {
-    console.log(`【${date}】🚀 后端启动成功：http://localhost:${port}`);
+app.listen(port, listenHost, () => {
+    console.log(`【${date}】🚀 后端启动成功：http://${listenHost}:${port}`);
 
     process.on('SIGTERM', () => {
         console.log('SIGTERM received, closing resources...');
