@@ -116,9 +116,10 @@ const isDetailPage = computed(() => route.name === 'articleDetail')
       </Icon>
       <span v-for="(liker, index) in likers" :key="index" class="liker-item">
         <span v-if="!isDetailPage">{{ liker.displayName }}</span>
+        <span v-if="!isDetailPage && index < likers.length - 1">、</span>
         <AvatarImage v-if="isDetailPage" :src="liker.avatar" alt="" class="liker-avatar" @click="router.push(`/home/${liker.username}`)" />
       </span>
-      <span v-if="likers.length !== 0" class="like-summary">...共</span>
+      <span v-if="likers.length !== 0">...共</span>
       <span v-if="article.like_count !== 0">{{ article.like_count }}人喜欢</span>
     </div>
 
@@ -166,10 +167,6 @@ const isDetailPage = computed(() => route.name === 'articleDetail')
 }
 
 .users {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 4px;
   padding: 5px 5px 5px 10px;
   color: var(--color-text-other);
   border-bottom: 1px solid var(--color-review-border);
@@ -187,11 +184,8 @@ const isDetailPage = computed(() => route.name === 'articleDetail')
 .liker-avatar {
   width: 25px;
   height: 25px;
+  margin-right: 5px;
   cursor: pointer;
-}
-
-.like-summary {
-  margin-left: 2px;
 }
 
 .input {
