@@ -1,8 +1,9 @@
 <script setup lang="ts" name="Links">
-import { computed, onMounted, ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { ChevronLeft } from '@vicons/fa'
 import { Icon } from '@vicons/utils'
 import { getLink } from '@/api/link'
+import Brief from '@/components/Brief.vue'
 import Header from '@/components/Header.vue'
 import router from '@/router'
 import { useDefaultStore } from '@/store/default'
@@ -12,10 +13,6 @@ const defaultStore = useDefaultStore()
 const links = ref<linkData[]>([])
 const isLoading = ref(false)
 const loadFailed = ref(false)
-
-const siteLogo = computed(() => {
-  return defaultStore.configs.site_logo || defaultStore.configs.site_avatar || '/img/avatar.jpg'
-})
 
 function openUrl(url: string) {
   window.open(url, '_blank', 'noopener,noreferrer')
@@ -47,15 +44,13 @@ onMounted(async () => {
       </template>
     </Header>
 
-    <main class="links-page">
-      <section class="links-hero">
-        <img class="site-logo" :src="siteLogo" alt="站点LOGO">
-        <div class="site-info">
-          <h1>{{ defaultStore.configs.sitename || '友情链接' }}</h1>
-          <p>{{ defaultStore.configs.link_brief || '欢迎访问这些朋友的站点' }}</p>
-        </div>
-      </section>
+    <Brief>
+      <template #brief-content>
+        {{ defaultStore.configs.link_brief || '欢迎访问这些朋友的站点' }}
+      </template>
+    </Brief>
 
+    <main class="links-page">
       <section class="links-content">
         <h2>友情链接</h2>
 
@@ -108,44 +103,9 @@ onMounted(async () => {
 .links-page {
   display: flex;
   flex-direction: column;
-  gap: 18px;
   width: 100%;
   padding: 18px;
   box-sizing: border-box;
-}
-
-.links-hero {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 18px 0;
-  border-bottom: 1px solid rgba(128, 128, 128, 0.18);
-}
-
-.site-logo {
-  width: 54px;
-  height: 54px;
-  border-radius: 8px;
-  object-fit: cover;
-  flex: 0 0 auto;
-}
-
-.site-info {
-  min-width: 0;
-}
-
-.site-info h1 {
-  margin: 0;
-  font-size: 20px;
-  line-height: 1.3;
-}
-
-.site-info p {
-  margin: 6px 0 0;
-  color: var(--color-text-other);
-  font-size: 14px;
-  line-height: 1.6;
-  word-break: break-word;
 }
 
 .links-content h2 {
