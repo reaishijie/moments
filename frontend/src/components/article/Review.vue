@@ -114,11 +114,11 @@ const isDetailPage = computed(() => route.name === 'articleDetail')
       <Icon class="users-icon">
         <HeartRegular />
       </Icon>
-      <span v-for="(liker, index) in likers" :key="index">
-        <span  v-if="!isDetailPage">{{ liker.displayName }}</span>
-        <AvatarImage v-if="isDetailPage" :src="liker.avatar" alt="" style="width: 25px; height: 25px; margin-right: 5px; cursor: pointer;" @click="router.push(`/home/${liker.username}`)" />
+      <span v-for="(liker, index) in likers" :key="index" class="liker-item">
+        <span v-if="!isDetailPage">{{ liker.displayName }}</span>
+        <AvatarImage v-if="isDetailPage" :src="liker.avatar" alt="" class="liker-avatar" @click="router.push(`/home/${liker.username}`)" />
       </span>
-      <span v-if="likers.length !== 0">...共</span>
+      <span v-if="likers.length !== 0" class="like-summary">...共</span>
       <span v-if="article.like_count !== 0">{{ article.like_count }}人喜欢</span>
     </div>
 
@@ -166,6 +166,10 @@ const isDetailPage = computed(() => route.name === 'articleDetail')
 }
 
 .users {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
   padding: 5px 5px 5px 10px;
   color: var(--color-text-other);
   border-bottom: 1px solid var(--color-review-border);
@@ -173,6 +177,21 @@ const isDetailPage = computed(() => route.name === 'articleDetail')
 
 .users-icon {
   margin-right: 6px;
+}
+
+.liker-item {
+  display: inline-flex;
+  align-items: center;
+}
+
+.liker-avatar {
+  width: 25px;
+  height: 25px;
+  cursor: pointer;
+}
+
+.like-summary {
+  margin-left: 2px;
 }
 
 .input {
