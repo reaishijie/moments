@@ -45,6 +45,6 @@
     "multer": "^2.0.2",
     "multer-s3": "^3.0.1",
     "nanoid": "^5.1.5",
-    "nodemailer": "^8.0.5"
+    "nodemailer": "^9.0.1"
   }
 }
