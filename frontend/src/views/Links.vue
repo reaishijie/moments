@@ -103,7 +103,7 @@ onMounted(async () => {
 
 .site-info p {
   margin: 6px 0 0;
-  color: var(--color-text-secondary);
+  color: var(--color-text-other);
   font-size: 14px;
   line-height: 1.6;
   word-break: break-word;
@@ -116,7 +116,7 @@ onMounted(async () => {
 
 .state-text {
   padding: 24px 0;
-  color: var(--color-text-secondary);
+  color: var(--color-text-other);
   text-align: center;
 }
 
@@ -168,7 +168,7 @@ onMounted(async () => {
 }
 
 .link-brief {
-  color: var(--color-text-secondary);
+  color: var(--color-text-other);
   font-size: 13px;
   line-height: 1.5;
   word-break: break-word;
