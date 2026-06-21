@@ -171,7 +171,7 @@ const s3 = new S3Client({
 const s3Upload = multer({
     storage: multerS3({
         s3: s3,
-        bucket: configs.upload_s3_bucketname,
+        bucket: configs.upload_s3_bucketname || "defaultName",
         contentType: multerS3.AUTO_CONTENT_TYPE,
         key: function (req, file, cb) {
             try {

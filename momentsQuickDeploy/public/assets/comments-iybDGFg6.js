@@ -1,0 +1,1 @@
+import{s as t}from"./index-DotEKXAn.js";const r=e=>t({url:"/comments",method:"post",data:e}),s=e=>t({url:`/comments/${e}`,method:"delete"}),n=(e,m)=>t({url:`comments/${e}`,method:"get",params:m});export{r as c,s as d,n as g};

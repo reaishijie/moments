@@ -1,5 +1,5 @@
 import service from '@/api/request'
-import { type updateConfigData } from '@/types/admin'
+import { type ConfigQueryParams, type updateConfigData } from '@/types/admin'
 
 // 获取用户数
 export const getUserCount = () => {
@@ -33,17 +33,28 @@ export const getAllComment = (params?: Record<string, any>) => {
 }
 
 // 获取公共设置
-export const getPublicConfig = () => {
+export const getPublicConfig = (params?: ConfigQueryParams) => {
     return service({
         url: '/admin/publicConfig',
         method: 'get',
+        params,
+    })
+}
+
+// 获取登录用户可见设置
+export const getUserConfig = (params?: ConfigQueryParams) => {
+    return service({
+        url: '/admin/userConfig',
+        method: 'get',
+        params,
     })
 }
 // 获取全部设置（需admin）
-export const getConfig = () => {
+export const getConfig = (params?: ConfigQueryParams) => {
     return service({
         url: '/admin/config',
         method: 'get',
+        params,
     })
 }
 
