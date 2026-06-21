@@ -1,6 +1,10 @@
 <script setup lang="ts" name="Links">
 import { computed, onMounted, ref } from 'vue'
+import { ChevronLeft } from '@vicons/fa'
+import { Icon } from '@vicons/utils'
 import { getLink } from '@/api/link'
+import Header from '@/components/Header.vue'
+import router from '@/router'
 import { useDefaultStore } from '@/store/default'
 import type { linkData } from '@/types/link'
 
@@ -34,38 +38,73 @@ onMounted(async () => {
 </script>
 
 <template>
-  <main class="links-page">
-    <section class="links-hero">
-      <img class="site-logo" :src="siteLogo" alt="站点LOGO">
-      <div class="site-info">
-        <h1>{{ defaultStore.configs.sitename || '友情链接' }}</h1>
-        <p>{{ defaultStore.configs.link_brief || '欢迎访问这些朋友的站点' }}</p>
-      </div>
-    </section>
+  <div class="container">
+    <Header>
+      <template #left="{ isBlurred }">
+        <Icon :class="['back-icon', { blurred: isBlurred }]" title="返回" @click="router.back()">
+          <ChevronLeft />
+        </Icon>
+      </template>
+    </Header>
 
-    <section class="links-content">
-      <h2>友情链接</h2>
+    <main class="links-page">
+      <section class="links-hero">
+        <img class="site-logo" :src="siteLogo" alt="站点LOGO">
+        <div class="site-info">
+          <h1>{{ defaultStore.configs.sitename || '友情链接' }}</h1>
+          <p>{{ defaultStore.configs.link_brief || '欢迎访问这些朋友的站点' }}</p>
+        </div>
+      </section>
 
-      <div v-if="isLoading" class="state-text">正在加载友情链接...</div>
-      <div v-else-if="loadFailed" class="state-text">友情链接加载失败，请稍后重试</div>
-      <div v-else-if="links.length === 0" class="state-text">暂时还没有友情链接</div>
+      <section class="links-content">
+        <h2>友情链接</h2>
 
-      <ul v-else class="link-list">
-        <li v-for="link in links" :key="link.id">
-          <button class="link-item" type="button" @click="openUrl(link.url)">
-            <img :src="link.logo ? link.logo : '/img/avatar.jpg'" alt="友链LOGO">
-            <span class="link-text">
-              <span class="link-name">{{ link.sitename }}</span>
-              <span class="link-brief">{{ link.brief ? link.brief : '暂时未设置站点介绍' }}</span>
-            </span>
-          </button>
-        </li>
-      </ul>
-    </section>
-  </main>
+        <div v-if="isLoading" class="state-text">正在加载友情链接...</div>
+        <div v-else-if="loadFailed" class="state-text">友情链接加载失败，请稍后重试</div>
+        <div v-else-if="links.length === 0" class="state-text">暂时还没有友情链接</div>
+
+        <ul v-else class="link-list">
+          <li v-for="link in links" :key="link.id">
+            <button class="link-item" type="button" @click="openUrl(link.url)">
+              <img :src="link.logo ? link.logo : '/img/avatar.jpg'" alt="友链LOGO">
+              <span class="link-text">
+                <span class="link-name">{{ link.sitename }}</span>
+                <span class="link-brief">{{ link.brief ? link.brief : '暂时未设置站点介绍' }}</span>
+              </span>
+            </button>
+          </li>
+        </ul>
+      </section>
+    </main>
+  </div>
 </template>
 
 <style scoped>
+.container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.back-icon {
+  color: #EEE9E9;
+  font-size: 22px;
+  margin: 3px;
+}
+
+.back-icon:hover {
+  color: #C8C2C2;
+  cursor: pointer;
+}
+
+.back-icon.blurred {
+  color: #898888;
+}
+
+.back-icon.blurred:hover {
+  color: #5f5e5e;
+}
+
 .links-page {
   display: flex;
   flex-direction: column;
