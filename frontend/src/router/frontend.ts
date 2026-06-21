@@ -14,6 +14,12 @@ const frontRoutes: RouteRecordRaw[] = [
                 meta: { title: '瞬刻' }
             },
             {
+                path: '/links',
+                name: 'links',
+                component: () => import('@/views/Links.vue'),
+                meta: { title: '友情链接' }
+            },
+            {
                 path: '/demo',
                 name: 'demo',
                 component: () => import('@/views/Demo.vue'),

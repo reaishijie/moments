@@ -5,7 +5,6 @@ import { UserCircleRegular, Hive, Camera } from '@vicons/fa'
 import { Icon } from '@vicons/utils'
 import { useAuthStore } from '@/store/auth'
 import router from '@/router'
-import Link from '@/components/Link.vue';
 import { useDefaultStore } from '@/store/default'
 
 const authStore = useAuthStore()
@@ -37,13 +36,6 @@ const isVideo = computed(() => {
 // 模糊
 const isBlurred = ref(false)
 let observer: IntersectionObserver | null = null
-type ExposedApi = {
-  toggleShowLink: () => void
-}
-const linkRef = ref<ExposedApi | null>(null)
-const toggleShow = () => {
-  linkRef.value?.toggleShowLink()
-}
 // 挂载时
 onMounted(() => {
   const headerEl = document.querySelector('.header')
@@ -76,7 +68,6 @@ const isLogin = computed(() => !!userStore.token)
 <template>
   
   <div class="header">
-    <Link ref="linkRef" />
     <div class="background">
       <!-- 如果设置为图片 -->
       <img v-if="isImage" :src="backgroundPath" alt="顶部图片" />
@@ -104,7 +95,7 @@ const isLogin = computed(() => !!userStore.token)
                 <Camera />
               </Icon>
             </div>
-            <div class="link" @click="toggleShow">
+            <div class="link" @click="router.push({ name: 'links' })">
               <Icon :class="['icon', { blurred: isBlurred }]" title="友情链接">
                 <Hive />
               </Icon>
