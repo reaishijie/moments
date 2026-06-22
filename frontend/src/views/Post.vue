@@ -106,7 +106,12 @@ async function fetchLocation() {
   try {
     states.location = true
     const res = await getLocation()
-    articleData.location = res?.result.subdivisions + ' ' + (res?.result.city ? res?.result.city : '')
+    const locationText = res?.text || ''
+    if (!locationText) {
+      messageStore.update(id, { type: 'info', text: '未获取到位置信息', duration: 2000 })
+      return
+    }
+    articleData.location = locationText
     messageStore.update(id, { type: 'success', text: '获取位置信息成功', duration: 2000 })
   } catch (error) {
     console.log(error);
