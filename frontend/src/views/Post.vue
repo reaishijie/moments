@@ -1,6 +1,6 @@
 <script setup lang="ts" name="Post">
 import { ref, reactive, watch } from 'vue'
-import { ChevronLeft, MapMarkerAlt, Thumbtack, Ad, FileWord, Image, Video, ExchangeAlt } from '@vicons/fa';
+import { ChevronLeft, MapMarkerAlt, Thumbtack, Ad, FileWord, Image, Video, ExchangeAlt, Tags, Times } from '@vicons/fa';
 import { Icon } from '@vicons/utils';
 import router from '@/router';
 import { type createArticleData } from '@/types/article';
@@ -23,10 +23,12 @@ const articleData = reactive<createArticleData>({
   adUrl: '',
   imageUrls: [],
   videoUrls: [],
-  thumbnail_url: ''
+  thumbnail_url: '',
+  tags: []
 })
 const imageData = ref('')
 const videoData = ref('')
+const tagInput = ref('')
 const states = reactive({
   location: false,
   add: false
@@ -138,8 +140,10 @@ async function addArticle() {
     articleData.thumbnail_url = ''
     articleData.adTitle = ''
     articleData.adUrl = ''
+    articleData.tags = []
     imageData.value = ''
     videoData.value = ''
+    tagInput.value = ''
     messageStore.update(id, { type: 'success', text: '发表成功', duration: 2000 })
   } catch (error) {
     console.log('发表文章失败', error)
@@ -152,6 +156,28 @@ const adjustHeight = (event: Event) => {
   const textarea = event.target as HTMLTextAreaElement
   textarea.style.height = 'auto'
   textarea.style.height = textarea.scrollHeight + 'px'
+}
+function addTag(name: string) {
+  const tagName = name.trim().replace(/^#+/, '').slice(0, 50)
+  if (!tagName || articleData.tags?.includes(tagName)) return
+  if ((articleData.tags?.length || 0) >= 5) {
+    messageStore.show('最多添加5个标签', 'info', 2000)
+    return
+  }
+  articleData.tags = [...(articleData.tags || []), tagName]
+}
+function commitTagInput() {
+  const tags = tagInput.value.split(/[\s,，#]+/).filter(Boolean)
+  tags.forEach(addTag)
+  tagInput.value = ''
+}
+function handleTagInput() {
+  if (/[\s,，#]/.test(tagInput.value)) {
+    commitTagInput()
+  }
+}
+function removeTag(name: string) {
+  articleData.tags = (articleData.tags || []).filter(tag => tag !== name)
 }
 </script>
 
@@ -176,12 +202,25 @@ const adjustHeight = (event: Event) => {
         class="contentArea"></textarea>
       <!-- 上传文件 -->
       <Upload v-if="articleData.type !== 0 && !displayMethod" ref="uploadRef"></Upload>
-      <div class="location">
-        <div>
-          <Icon @click="fetchLocation" title="点击获取位置信息">
+      <div class="field-row location">
+        <Icon class="field-icon" @click="fetchLocation" title="点击获取位置信息">
             <MapMarkerAlt />
-          </Icon>
-          <input type="text" placeholder="输入位置信息（可为空）" v-model="articleData.location" style="background-color: inherit;">
+        </Icon>
+        <input type="text" placeholder="输入位置信息（可为空）" v-model="articleData.location">
+      </div>
+      <div class="field-row tag-input">
+        <Icon class="field-icon">
+          <Tags />
+        </Icon>
+        <div class="tag-editor">
+          <button type="button" class="tag-chip" v-for="tag in articleData.tags" :key="tag" @click="removeTag(tag)">
+            <span>#{{ tag }}</span>
+            <Icon class="tag-remove">
+              <Times />
+            </Icon>
+          </button>
+          <input type="text" placeholder="输入标签，空格或逗号生成" v-model="tagInput"
+            @input="handleTagInput" @keydown.enter.prevent="commitTagInput" @blur="commitTagInput">
         </div>
       </div>
       <div class="func">
@@ -378,17 +417,74 @@ input:focus {
   color: #6cadf1;
 }
 
-.location {
+.field-row {
+  display: flex;
+  align-items: center;
   width: 100%;
   padding: 5px 15px 5px 20px;
   color: #6cadf1;
+  box-sizing: border-box;
+}
+
+.field-icon {
+  width: 16px;
+  min-width: 16px;
+  display: inline-flex;
+  justify-content: center;
+  cursor: pointer;
 }
 
 .location input {
+  flex: 1;
   margin-left: 10px;
   outline: none;
   border: none;
   font-size: smaller;
-  color: #6cacf1c9
+  color: #6cacf1c9;
+  background-color: inherit;
+  min-width: 0;
+}
+
+.tag-editor {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-left: 10px;
+  min-width: 0;
+}
+
+.tag-editor input {
+  flex: 1;
+  outline: none;
+  border: none;
+  font-size: smaller;
+  color: #6cacf1c9;
+  background-color: inherit;
+  min-width: 120px;
+  padding: 2px 0;
+}
+
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  border-radius: 3px;
+  background-color: var(--color-ad);
+  color: #4E6086;
+  padding: 1px 5px;
+  font-size: 12px;
+  line-height: 20px;
+  cursor: pointer;
+}
+
+.tag-chip:hover {
+  background-color: var(--color-ad-hover);
+}
+
+.tag-remove {
+  font-size: 10px;
 }
 </style>

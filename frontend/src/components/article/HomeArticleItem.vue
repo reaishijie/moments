@@ -31,7 +31,9 @@ const time = formatTime(timestamp)
       </div>
       <div class="content-text" @click="router.push(`/article/${props.article.id}`)">
         <div class="text">{{ article.content }}</div>
-      <div></div>
+        <div class="tags" v-if="article.tags?.length">
+          <span v-for="tag in article.tags" :key="tag.id">#{{ tag.name }}</span>
+        </div>
       </div>
     </div>
   </div>
@@ -87,5 +89,14 @@ const time = formatTime(timestamp)
 .text {
   padding: 5px;
   border-radius: 5px;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 5px;
+  color: #6cadf1;
+  font-size: 12px;
 }
 </style>

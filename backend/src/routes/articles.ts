@@ -4,18 +4,161 @@ import { prisma } from '../lib/prisma.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 import { optionalAuthMiddleware } from '../middleware/optionalAuthMiddleware.js';
 import { logAction, logger } from "../services/log.service.js"
-import { log } from 'console';
 
 const router = Router();
+
+const MAX_ARTICLE_TAGS = 5;
+
+type ArticleTagInput = string | string[] | undefined;
+type ArticleMediaInput = string[] | undefined;
+
+type ArticleWithRelations = Prisma.articlesGetPayload<{
+    include: typeof articleInclude
+}> & {
+    isLiked?: boolean
+};
+
+const articleInclude = {
+    user: {
+        select: {
+            id: true,
+            username: true,
+            nickname: true,
+            avatar: true,
+            header_background: true
+        }
+    },
+    article_images: { orderBy: { sort_order: 'asc' } },
+    article_videos: { orderBy: { sort_order: 'asc' } },
+    tags: {
+        include: {
+            tag: true
+        },
+        orderBy: {
+            tag_id: 'asc'
+        }
+    }
+} satisfies Prisma.articlesInclude;
+
+function normalizeTagNames(input: ArticleTagInput) {
+    const rawTags = Array.isArray(input)
+        ? input
+        : typeof input === 'string'
+            ? input.split(/[\s,，#]+/)
+            : [];
+
+    return Array.from(new Set(
+        rawTags
+            .map(tag => tag.trim())
+            .filter(Boolean)
+            .map(tag => tag.slice(0, 50))
+    )).slice(0, MAX_ARTICLE_TAGS);
+}
+
+async function replaceArticleTags(
+    tx: Prisma.TransactionClient,
+    articleId: bigint,
+    tagNames: string[],
+    userId: bigint
+) {
+    await tx.article_tags.deleteMany({
+        where: { article_id: articleId }
+    });
+
+    if (tagNames.length === 0) return;
+
+    const tags = await Promise.all(tagNames.map(name => tx.tags.upsert({
+        where: { name },
+        update: {},
+        create: {
+            name,
+            created_by: userId
+        }
+    })));
+
+    await tx.article_tags.createMany({
+        data: tags.map(tag => ({
+            article_id: articleId,
+            tag_id: tag.id
+        })),
+        skipDuplicates: true
+    });
+}
+
+async function replaceArticleMedia(
+    tx: Prisma.TransactionClient,
+    articleId: bigint,
+    imageUrls: ArticleMediaInput,
+    videoUrls: ArticleMediaInput
+) {
+    if (imageUrls !== undefined) {
+        await tx.article_images.deleteMany({
+            where: { article_id: articleId }
+        });
+
+        if (Array.isArray(imageUrls) && imageUrls.length > 0) {
+            await tx.article_images.createMany({
+                data: imageUrls.map((url, index) => ({
+                    article_id: articleId,
+                    image_url: url,
+                    sort_order: index
+                }))
+            });
+        }
+    }
+
+    if (videoUrls !== undefined) {
+        await tx.article_videos.deleteMany({
+            where: { article_id: articleId }
+        });
+
+        if (Array.isArray(videoUrls) && videoUrls.length > 0) {
+            await tx.article_videos.createMany({
+                data: videoUrls.map((url, index) => ({
+                    article_id: articleId,
+                    video_url: url,
+                    sort_order: index
+                }))
+            });
+        }
+    }
+}
+
+function serializeArticle(article: ArticleWithRelations) {
+    return {
+        ...article,
+        id: article.id.toString(),
+        user_id: article.user_id.toString(),
+        user: {
+            ...article.user,
+            id: article.user.id.toString()
+        },
+        article_images: article.article_images.map((image: article_images) => ({
+            ...image,
+            id: image.id.toString(),
+            article_id: image.article_id?.toString()
+        })),
+        article_videos: article.article_videos.map((video: article_videos) => ({
+            ...video,
+            id: video.id.toString(),
+            article_id: video.article_id?.toString()
+        })),
+        tags: article.tags.map(articleTag => ({
+            id: articleTag.tag.id.toString(),
+            name: articleTag.tag.name
+        }))
+    };
+}
 
 // 创建一篇文章
 router.post('/', authMiddleware, async (req: Request, res: Response) => {
     try {
         const userId = req.user?.userId;
-        const { content, status, location, type, isTop, isAd, adTitle, adUrl, imageUrls, videoUrls, thumbnail_url } = req.body;
+        const { content, status, location, type, isTop, isAd, adTitle, adUrl, imageUrls, videoUrls, thumbnail_url, tags } = req.body;
         if (!content && !imageUrls && !videoUrls) {
             return res.status(400).json({ error: '文章内容不能为空' });
         }
+        const tagNames = normalizeTagNames(tags);
         //创建一篇文章 ⭐⭐⭐⭐
         const newArticle = await prisma.$transaction(async (tx) => {
             // 操作文章表
@@ -32,8 +175,10 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
                     user: {
                         connect: { id: BigInt(userId!), }
                     }
-                }
+                },
+                include: articleInclude
             })
+            await replaceArticleTags(tx, createdArticle.id, tagNames, BigInt(userId!));
             // 操作视频（填写外链）
             if (imageUrls && Array.isArray(imageUrls) && imageUrls.length > 0) {
                 const imageData = imageUrls.map((url: string, index: number) => ({
@@ -53,7 +198,10 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
                 }))
                 await tx.article_videos.createMany({ data: videoData })
             }
-            return createdArticle
+            return tx.articles.findUniqueOrThrow({
+                where: { id: createdArticle.id },
+                include: articleInclude
+            })
         })
         logger.add({
             userId: BigInt(userId!),
@@ -64,11 +212,7 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
             ipAddress: req.ip,
             userAgent: req.headers['user-agent'] || '',
         })
-        res.status(201).json({
-            ...newArticle,
-            id: newArticle.id.toString(), //将 BigInt 类型转换
-            user_id: newArticle.user_id.toString()
-        });
+        res.status(201).json(serializeArticle(newArticle));
     } catch (error) {
         console.error('创建文章失败:', error);
         res.status(500).json({ error: '服务器内部错误' });
@@ -117,6 +261,16 @@ router.get('/', optionalAuthMiddleware, async (req: Request, res: Response) => {
                 }
             }
         }
+        const tagFilter = typeof filters.tag === 'string' ? filters.tag.trim() : '';
+        if (tagFilter) {
+            where.tags = {
+                some: {
+                    tag: {
+                        name: tagFilter
+                    }
+                }
+            };
+        }
 
         const articles = await prisma.articles.findMany({
             where: where,
@@ -127,20 +281,8 @@ router.get('/', optionalAuthMiddleware, async (req: Request, res: Response) => {
                 { created_at: 'desc' }, //按时间发布降序排列
                 { id: 'desc' }
             ],
-            //同时查询作者部分信息、文章的相关图片/视频
-            include: {
-                user: {
-                    select: {
-                        id: true,
-                        username: true,
-                        nickname: true,
-                        avatar: true,
-                        header_background: true
-                    }
-                },
-                article_images: { orderBy: { sort_order: 'asc' } },
-                article_videos: { orderBy: { sort_order: 'asc' } },
-            }
+            //同时查询作者部分信息、文章的相关图片/视频/标签
+            include: articleInclude
         })
 
         // 动态计算用户对文章的喜欢状态
@@ -184,25 +326,7 @@ router.get('/', optionalAuthMiddleware, async (req: Request, res: Response) => {
             where: where
         });
         // 处理数据，转化BigInt
-        const responseArticles = articleWithLikeStatus.map(article => ({
-            ...article,
-            id: article.id.toString(),
-            user_id: article.user_id.toString(),
-            user: {
-                ...article.user,
-                id: article.user.id.toString()
-            },
-            article_images: article.article_images.map((image: article_images) => ({
-                ...image,
-                id: image.id.toString(),
-                article_id: image.article_id?.toString()
-            })),
-            article_videos: article.article_videos.map((video: article_videos) => ({
-                ...video,
-                id: video.id.toString(),
-                article_id: video.article_id?.toString()
-            })),
-        }));
+        const responseArticles = articleWithLikeStatus.map(serializeArticle);
 
         res.status(200).json({
             data: responseArticles,
@@ -226,19 +350,7 @@ router.get('/:articleId', optionalAuthMiddleware, async (req: Request, res: Resp
                 status: 1, //已发布
                 deleted_at: null //未删除
             },
-            include: {
-                user: {
-                    select: {
-                        id: true,
-                        username: true,
-                        nickname: true,
-                        avatar: true,
-                        header_background: true
-                    }
-                },
-                article_images: { orderBy: { sort_order: 'asc' } },
-                article_videos: { orderBy: { sort_order: 'asc' } }
-            }
+            include: articleInclude
         })
         if (!article) {
             return res.status(404).json({ error: '文章未找到或未发布' });
@@ -272,26 +384,7 @@ router.get('/:articleId', optionalAuthMiddleware, async (req: Request, res: Resp
             }
         }
         // 构建返回数据
-        const responseData = {
-            ...article,
-            id: article.id.toString(),
-            user_id: article.user_id.toString(),
-            user: {
-                ...article.user,
-                id: article.user.id.toString()
-            },
-            article_images: article.article_images.map(image => ({
-                ...image,
-                id: image.id.toString(),
-                article_id: image.article_id?.toString()
-            })),
-            article_videos: article.article_videos.map(video => ({
-                ...video,
-                id: video.id.toString(),
-                article_id: video.article_id?.toString()
-            })),
-            isLiked
-        }
+        const responseData = serializeArticle({ ...article, isLiked })
         res.status(200).json(responseData)
     } catch (error) {
         console.error('获取单篇文章失败:', error);
@@ -310,7 +403,7 @@ router.patch('/:articleId', authMiddleware, async (req: Request, res: Response) 
         }
         const userId = req.user?.userId
         const { articleId } = req.params
-        const { content, status, location, type, isAd, isTop, imageUrls, videoUrls } = req.body
+        const { content, status, location, type, isAd, isTop, imageUrls, videoUrls, tags } = req.body
         // 验证文章是否存在
         const article = await prisma.articles.findUnique({
             where: {
@@ -335,28 +428,32 @@ router.patch('/:articleId', authMiddleware, async (req: Request, res: Response) 
             return res.status(403).json({ status: false, error: '无权修改此文章' })
         }
         // 构建更新数据
-        const updateData: { content?: string, status?: number, location?: string, type?: number, isAd?: boolean, isTop?: boolean, imageUrls?: object, videoUrls?: object } = {}
+        const updateData: Prisma.articlesUpdateInput = {}
         // 数据不为空进行更新
         if (content) updateData.content = content
         if (status != undefined) updateData.status = status
         if (location) updateData.location = location
-        if (type) updateData.type = type
-        if (isAd) updateData.isAd = isAd
-        if (isTop) updateData.isTop = isTop
-        if (imageUrls) updateData.imageUrls = imageUrls
-        if (videoUrls) updateData.videoUrls = videoUrls
-        const updateArticle = await prisma.articles.update({
-            where: {
-                id: BigInt(articleId)
-            },
-            data: updateData
+        if (type !== undefined) updateData.type = type
+        if (isAd !== undefined) updateData.is_ad = isAd
+        if (isTop !== undefined) updateData.is_top = isTop
+        const updateArticle = await prisma.$transaction(async (tx) => {
+            await tx.articles.update({
+                where: {
+                    id: BigInt(articleId)
+                },
+                data: updateData
+            })
+            if (tags !== undefined) {
+                await replaceArticleTags(tx, BigInt(articleId), normalizeTagNames(tags), BigInt(userId))
+            }
+            await replaceArticleMedia(tx, BigInt(articleId), imageUrls, videoUrls)
+            return tx.articles.findUniqueOrThrow({
+                where: { id: BigInt(articleId) },
+                include: articleInclude
+            })
         })
         // 数据格式转换
-        const responseData = {
-            ...updateArticle,
-            id: updateArticle.id.toString(),
-            user_id: updateArticle.user_id.toString()
-        }
+        const responseData = serializeArticle(updateArticle)
         logger.add({
             userId: BigInt(userId),
             action: logAction.ARTICLE_UPDATE,

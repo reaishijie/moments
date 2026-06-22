@@ -27,30 +27,35 @@ const createdAtTimestamp = computed(() => {
 </script>
 
 <template>
-    <div class="timeAndAction">
+    <div class="action-block">
         <!-- 使用 article.created_at 来访问传递进来的数据 -->
         <p @click="isDetailTime = !isDetailTime">{{ isDetailTime ?showDetailTime(createdAtTimestamp) : showTime(createdAtTimestamp) }}</p>
-        <div class="action-wrapper" @click="togglePopup">
-            <div class="dots-button">
-                <p></p>
-                <p></p>
+        <div class="tagAndAction">
+            <div class="tag-slot">
+                <slot></slot>
             </div>
-            <div v-if="isPopupOpen" class="popup">
-                <div class="popup-item like" @click="emit('like')">
-                    <Icon v-if="!article.isLiked">
-                        <HeartRegular />
-                    </Icon>
-                    <Icon color="rgb(255,100,100)" v-else="article.isLiked">
-                        <Heart />
-                    </Icon>
-                    <span>{{ article.isLiked ? '取消喜欢' : '喜欢' }}</span>
+            <div class="action-wrapper" @click="togglePopup">
+                <div class="dots-button">
+                    <p></p>
+                    <p></p>
                 </div>
-                <div class="popup-divider"></div>
-                <div class="popup-item comment" @click.stop="emit('comment')" @click="isPopupOpen = !isPopupOpen">
-                    <Icon >
-                        <CommentAltRegular />
-                    </Icon>
-                    <span>评论</span>
+                <div v-if="isPopupOpen" class="popup">
+                    <div class="popup-item like" @click="emit('like')">
+                        <Icon v-if="!article.isLiked">
+                            <HeartRegular />
+                        </Icon>
+                        <Icon color="rgb(255,100,100)" v-else="article.isLiked">
+                            <Heart />
+                        </Icon>
+                        <span>{{ article.isLiked ? '取消喜欢' : '喜欢' }}</span>
+                    </div>
+                    <div class="popup-divider"></div>
+                    <div class="popup-item comment" @click.stop="emit('comment')" @click="isPopupOpen = !isPopupOpen">
+                        <Icon >
+                            <CommentAltRegular />
+                        </Icon>
+                        <span>评论</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -58,18 +63,30 @@ const createdAtTimestamp = computed(() => {
 </template>
 
 <style scoped>
-.timeAndAction {
+.action-block {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    flex-direction: column;
+    gap: 4px;
 }
-.timeAndAction p {
+.action-block > p {
     margin: 0;
     font-size: 12px;
     color: #B2B2B2;
 }
+.tagAndAction {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    min-height: 20px;
+}
+.tag-slot {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+}
 .action-wrapper {
     position: relative;
+    flex-shrink: 0;
 }
 .dots-button {
     display: inline-flex;

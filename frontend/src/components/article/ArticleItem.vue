@@ -21,7 +21,7 @@ const props = defineProps<{
     isLoadingComments: boolean,
 }>();
 
-const emit = defineEmits(['like', 'comment', 'send-reply', 'load-more-comments']);
+const emit = defineEmits(['like', 'comment', 'send-reply', 'load-more-comments', 'tag']);
 
 async function showLocation() {
     try {
@@ -87,7 +87,14 @@ function openAd(url: string) {
             </div>
             <!-- 时间、点赞评论按钮 -->
             <ArticleActions :article="props.article" @like="emit('like', props.article.id)"
-                @comment="emit('comment')" />
+                @comment="emit('comment')">
+                <div class="article-tags" v-if="props.article.tags?.length">
+                    <button type="button" v-for="tag in props.article.tags" :key="tag.id"
+                        @click.stop="emit('tag', tag.name)">
+                        #{{ tag.name }}
+                    </button>
+                </div>
+            </ArticleActions>
             <!-- 评论 -->
             <div class="review">
                 <Review :article="props.article" :likers="props.likers" :comments="props.comments"
@@ -201,6 +208,27 @@ function openAd(url: string) {
     /* Set icon size */
     color: #909399;
     /* Set icon color */
+}
+
+.article-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.article-tags button {
+    border: none;
+    background-color: var(--color-ad);
+    color: #6b7280;
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-size: 11px;
+    line-height: 18px;
+    cursor: pointer;
+}
+
+.article-tags button:hover {
+    background-color: var(--color-ad-hover);
 }
 
 /** 文章内容样式 */
