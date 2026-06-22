@@ -25,6 +25,7 @@ const date = new Date().toLocaleString()
 const port = Number(process.env.PORT) || 9889
 const listenHost = process.env.HOST || '0.0.0.0'
 const app = express()
+app.set('trust proxy', true)
 //配置请求及路由
 app.use(cors())
 app.use(express.json())

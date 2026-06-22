@@ -89,11 +89,38 @@ async function handleSendReply(payload: { articleId: number, content: string, pa
 function handleLoadMoreComments(articleId: number) {
     feedStore.fetchMoreComments(articleId)
 }
+async function loadArticleMeta() {
+    await fetchNewArticleData(feedStore.articles)
+}
+async function handleTagFilter(tag: string) {
+    const id = messageStore.show(`正在加载 #${tag}`, 'loading')
+    const isSuccess = await feedStore.setActiveTag(tag)
+    if (isSuccess) {
+        await loadArticleMeta()
+        messageStore.update(id, { type: 'success', text: `已筛选 #${tag}`, duration: 2000 })
+    } else {
+        messageStore.update(id, { type: 'error', text: '标签筛选失败', duration: 2000 })
+    }
+}
+async function clearTagFilter() {
+    const id = messageStore.show('正在加载文章', 'loading')
+    const isSuccess = await feedStore.clearActiveTag()
+    if (isSuccess) {
+        await loadArticleMeta()
+        messageStore.update(id, { type: 'success', text: '已显示全部文章', duration: 2000 })
+    } else {
+        messageStore.update(id, { type: 'error', text: '文章加载失败', duration: 2000 })
+    }
+}
 </script>
 
 <template>
     <!-- 展示内容 -->
     <div class="article-container" >
+        <div class="tag-filter" v-if="feedStore.activeTag">
+            <span>#{{ feedStore.activeTag }}</span>
+            <button type="button" @click="clearTagFilter">全部文章</button>
+        </div>
         <ul>
             <li v-for="article in feedStore.articles" :key="article.id">
                 <ArticleItem :article="article" :likers="feedStore.articleLikesMap[article.id] || []"
@@ -102,7 +129,8 @@ function handleLoadMoreComments(articleId: number) {
                     :remaining-comments="feedStore.commentPagination[article.id]?.remaining ?? 0"
                     :is-loading-comments="feedStore.commentPagination[article.id]?.isLoading ?? false"
                     @like="handleLike" @comment="() => toggleComment(article.id)" @send-reply="handleSendReply"
-                    @load-more-comments="() => handleLoadMoreComments(article.id)" />
+                    @load-more-comments="() => handleLoadMoreComments(article.id)"
+                    @tag="handleTagFilter" />
             </li>
         </ul>
         <div ref="scrollTrigger" class="scroll-trigger"></div>
@@ -125,6 +153,24 @@ function handleLoadMoreComments(articleId: number) {
     list-style: none;
     padding: 0;
     margin: 0;
+}
+
+.tag-filter {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    color: #4E6086;
+    border-bottom: 1px solid var(--color-border);
+    font-size: 13px;
+}
+
+.tag-filter button {
+    border: none;
+    background: transparent;
+    color: #6cadf1;
+    cursor: pointer;
+    padding: 4px 0;
 }
 
 .scroll-trigger {

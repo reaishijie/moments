@@ -13,6 +13,14 @@ if(apiUrl.startsWith('http')) {
 }
 
 
+const props = withDefaults(defineProps<{
+    articleType?: number
+    uploadRole?: 'media' | 'video' | 'cover'
+}>(), {
+    articleType: 0,
+    uploadRole: 'media'
+})
+
 const messageStore = useMessageStore()
 const defaultStore = useDefaultStore()
 
@@ -77,8 +85,9 @@ const handleFileChange = (event: Event) => {
     const merged = [...selectedFiles.value, ...newFiles];
 
     // 数量检查
-    if (merged.length > Number(defaultStore.configs.upload_number)) {
-        return messageStore.show(`最多只能选择 ${defaultStore.configs.upload_number} 个文件`, 'error', 4000)
+    const maxFileCount = props.uploadRole === 'media' ? Number(defaultStore.configs.upload_number) : 1
+    if (merged.length > maxFileCount) {
+        return messageStore.show(`最多只能选择 ${maxFileCount} 个文件`, 'error', 4000)
     }
 
     // 类型检查
@@ -88,6 +97,14 @@ const handleFileChange = (event: Event) => {
     if (invalidType) {
         selectedFiles.value = []
         return messageStore.show(`只能上传图片/视频`, 'error', 4000)
+    }
+    if (props.uploadRole === 'video' && merged.some(i => !i.file.type.startsWith('video/'))) {
+        selectedFiles.value = []
+        return messageStore.show('这里只能上传视频文件', 'error', 4000)
+    }
+    if (props.uploadRole === 'cover' && merged.some(i => !i.file.type.startsWith('image/'))) {
+        selectedFiles.value = []
+        return messageStore.show('这里只能上传封面图片', 'error', 4000)
     }
 
     // 大小检查
@@ -127,6 +144,8 @@ const performUpload = async (articleId: string) => {
     });
 
     formData.append('articleId', articleId)
+    formData.append('articleType', String(props.articleType))
+    formData.append('uploadRole', props.uploadRole)
 
     // 定义用于更新进度的回调函数
     const progressCallback = (progressEvent: any) => {
@@ -183,9 +202,14 @@ const previewVideos = computed<articleVideoItem[]>(() =>
         .map((i, idx) => ({
             id: String(idx),
             video_url: i.previewUrl,
-            thumbnail_url: '', // 没有缩略图可以先空着
+            thumbnail_url: '',
         }))
 )
+const inputAccept = computed(() => {
+    if (props.uploadRole === 'video') return 'video/*'
+    if (props.uploadRole === 'cover') return 'image/*'
+    return 'image/*,video/*'
+})
 
 function handleImagesUpdate(newOrderedImages: articleImageItem[]) {
     // `newOrderedImages` 是 Media 组件排序后返回的图片数组。
@@ -213,10 +237,19 @@ function clickAddFile() {
     }
 }
 function handleRemoveImage(index: number) {
-    selectedFiles.value.splice(index, 1);
+    const imageFiles = selectedFiles.value.filter(sf => sf.file.type.startsWith('image/'));
+    const target = imageFiles[index];
+    if (!target) return;
+    selectedFiles.value = selectedFiles.value.filter(sf => sf !== target);
+}
+function hasSelectedFiles() {
+    return selectedFiles.value.length > 0;
+}
+function hasSelectedVideo() {
+    return selectedFiles.value.some(sf => sf.file.type.startsWith('video/'));
 }
 
-defineExpose({ performUpload });
+defineExpose({ performUpload, hasSelectedFiles, hasSelectedVideo });
 </script>
 
 <template>
@@ -227,8 +260,8 @@ defineExpose({ performUpload });
             @update:articleImages="handleImagesUpdate" @add:file="clickAddFile">
         </Media>
 
-        <input type="file" multiple @change="handleFileChange" ref="fileInputRef" :disabled="isUploading"
-            class="file-input" accept="image/*,video/*" />
+        <input type="file" :multiple="props.uploadRole === 'media'" @change="handleFileChange" ref="fileInputRef"
+            :disabled="isUploading" class="file-input" :accept="inputAccept" />
 
         <!-- 上传按钮 -->
         <!-- <div class="upload-actions">

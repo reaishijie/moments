@@ -10,6 +10,7 @@ const initialArticleData = {
   userId: '',
   content: '',
   location: '',
+  tag: '',
   type: -1,
   is_top: false,
   is_ad: false,
@@ -38,6 +39,7 @@ const handleSearch = async () => {
   if (article.value.userId) params.userId = Number(article.value.userId)
   if (article.value.content) params.content = article.value.content
   if (article.value.location) params.location = article.value.location
+  if (article.value.tag) params.tag = article.value.tag
   if (article.value.type !== -1) params.type = article.value.type
   if (article.value.isTop) params.isTop = article.value.isTop
   if (article.value.isAd) params.isAd = article.value.isAd
@@ -113,6 +115,7 @@ const showEditModal = ref(false)
 const editForm = ref<updateArticleData>({})
 const imageData = ref('')
 const videoData = ref('')
+const tagData = ref('')
 const editStates = ref({
   saving: false
 })
@@ -186,7 +189,9 @@ const openEditModal = (item: articleData) => {
   } else {
     videoData.value = ''
   }
-  
+
+  tagData.value = item.tags?.map(tag => tag.name).join(' ') || ''
+
   showEditModal.value = true
 }
 
@@ -197,6 +202,7 @@ const closeEditModal = () => {
   editForm.value = {}
   imageData.value = ''
   videoData.value = ''
+  tagData.value = ''
   editStates.value.saving = false
 }
 
@@ -225,6 +231,13 @@ const handleEdit = async () => {
     if (editForm.value.location) updateData.location = editForm.value.location
     if (editForm.value.isTop !== undefined) updateData.isTop = editForm.value.isTop
     if (editForm.value.isAd !== undefined) updateData.isAd = editForm.value.isAd
+    updateData.tags = Array.from(new Set(
+      tagData.value
+        .split(/[\s,，#]+/)
+        .map(tag => tag.trim())
+        .filter(Boolean)
+        .map(tag => tag.slice(0, 50))
+    )).slice(0, 5)
     
     // 处理图片URL - 参考Post.vue的方式
     if (editForm.value.type == 1) {
@@ -274,6 +287,9 @@ handleSearch()
       <label for="location" title="位置">位置：
         <input type="text" id="location" placeholder="位置(支持模糊查询)" v-model="article.location">
       </label>
+      <label for="tag" title="标签">标签：
+        <input type="text" id="tag" placeholder="标签精确查询" v-model="article.tag">
+      </label>
       <label for="type" title="文章类型">文章类型：
         <select name="articleType" id="type" v-model="article.type">
           <option value="-1">请选择</option>
@@ -295,6 +311,7 @@ handleSearch()
           <th>ID</th>
           <th>用户</th>
           <th>内容</th>
+          <th>标签</th>
           <th>类型</th>
           <th>置顶</th>
           <th>广告</th>
@@ -313,6 +330,12 @@ handleSearch()
             </div>
           </td>
           <td>{{ item.content.slice(0, 50) }}{{ item.content.length > 50 ? '...' : '' }}</td>
+          <td>
+            <div class="tag-list" v-if="item.tags?.length">
+              <span v-for="tag in item.tags" :key="tag.id">#{{ tag.name }}</span>
+            </div>
+            <span v-else>-</span>
+          </td>
           <td>{{ ['普通', '图文', '视频'][item.type] }}</td>
           <td>
             <span :class="['badge', item.is_top ? 'badge-true' : 'badge-false']">
@@ -397,16 +420,25 @@ handleSearch()
             ></textarea>
           </div>
           
-          <div class="form-group full-width">
-            <label>位置信息</label>
+	          <div class="form-group full-width">
+	            <label>位置信息</label>
             <input 
               type="text" 
               v-model="editForm.location"
               placeholder="输入位置信息"
-            />
-          </div>
-          
-          <div class="form-row">
+	            />
+	          </div>
+
+	          <div class="form-group full-width">
+	            <label>文章标签</label>
+	            <input
+	              type="text"
+	              v-model="tagData"
+	              placeholder="输入标签，空格或逗号分隔，最多5个"
+	            />
+	          </div>
+
+	          <div class="form-row">
             <div class="form-group">
               <label>文章类型</label>
               <select v-model="editForm.type">
@@ -595,6 +627,21 @@ tbody tr:nth-child(even) {
 .user-cell i {
   font-size: xx-small;
   color: #888;
+}
+
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-width: 180px;
+}
+
+.tag-list span {
+  color: #4E6086;
+  background: #eef5ff;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 12px;
 }
 
 td button {
