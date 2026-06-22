@@ -20,16 +20,18 @@ const defaultBackground = '/img/background.mp4'
 const backgroundPath = computed(() => {
   return props.headerBackgroundUrl || defaultStore.configs.site_header_background || defaultBackground
 })
+const backgroundExtension = computed(() => {
+  const cleanPath = backgroundPath.value.split(/[?#]/)[0]
+  return cleanPath.split('.').pop()?.toLowerCase()
+})
 // 判断文件类型
 const isImage = computed(() => {
   const imageExtension = ['jpg', 'png', 'webp', 'svg', 'gif', 'avif', 'jpeg']
-  const ext = backgroundPath.value.split('.').pop()?.toLowerCase()
-  return ext ? imageExtension.includes(ext) : false
+  return backgroundExtension.value ? imageExtension.includes(backgroundExtension.value) : false
 })
 const isVideo = computed(() => {
   const videoExtension = ['mp4', 'webm', 'ogg', 'mov']
-  const ext = backgroundPath.value.split('.').pop()?.toLowerCase()
-  return ext ? videoExtension.includes(ext) : false
+  return backgroundExtension.value ? videoExtension.includes(backgroundExtension.value) : false
 })
 
 // 顶栏
