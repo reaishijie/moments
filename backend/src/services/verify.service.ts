@@ -1,7 +1,8 @@
 import axios from "axios"
 import { prisma } from "../lib/prisma.js"
+import { Logger } from "../utils/logger.js"
 
-
+const logger = new Logger('VerifyService')
 
 export const verifyHcaptcha = async (captchaToke: string) => {
     try {
@@ -25,10 +26,10 @@ export const verifyHcaptcha = async (captchaToke: string) => {
                 }
             }
         )
-        console.log(result.data);
+        logger.debug(`hCaptcha 验证结果：${result.data.success}`)
         return result.data.success
     } catch (error) {
-        console.error('hCaptcha 验证失败：', error);
+        logger.error('hCaptcha 验证失败', error instanceof Error ? error.stack : String(error))
         return false;
     }
 }
