@@ -106,21 +106,34 @@ const handleSendReply = () => {
 
 const route = useRoute()
 const isDetailPage = computed(() => route.name === 'articleDetail')
+const likeSummaryText = computed(() => {
+  const names = props.likers.map(liker => liker.displayName).join('、')
+  const prefix = names ? `${names}...共` : ''
+  return `${prefix}${props.article.like_count}人喜欢`
+})
+const hasReviewContent = computed(() => (
+  props.article.like_count !== 0 ||
+  props.isShowInput ||
+  props.comments.length > 0 ||
+  props.hasMore
+))
 </script>
 
 <template>
-  <div class="container">
+  <div class="container" v-if="hasReviewContent">
     <div class="users" v-if="article.like_count !== 0">
       <Icon class="users-icon">
         <HeartRegular />
       </Icon>
-      <span v-for="(liker, index) in likers" :key="index" class="liker-item">
-        <span v-if="!isDetailPage">{{ liker.displayName }}</span>
-        <span v-if="!isDetailPage && index < likers.length - 1">、</span>
-        <AvatarImage v-if="isDetailPage" :src="liker.avatar" alt="" class="liker-avatar" @click="router.push(`/home/${liker.username}`)" />
-      </span>
-      <span v-if="likers.length !== 0">...共</span>
-      <span v-if="article.like_count !== 0">{{ article.like_count }}人喜欢</span>
+      <div class="users-text">
+        <template v-if="isDetailPage">
+          <span v-for="(liker, index) in likers" :key="index" class="liker-item">
+          <AvatarImage v-if="isDetailPage" :src="liker.avatar" alt="" class="liker-avatar" @click="router.push(`/home/${liker.username}`)" />
+          </span>
+          <span>{{ article.like_count }}人喜欢</span>
+        </template>
+        <span v-else class="like-summary">{{ likeSummaryText }}</span>
+      </div>
     </div>
 
     <div class="input" v-if="props.isShowInput">
@@ -128,7 +141,7 @@ const isDetailPage = computed(() => route.name === 'articleDetail')
       <button @click="handleSendReply">发送</button>
     </div>
 
-    <div class="comments-container">
+    <div class="comments-container" v-if="comments.length > 0 || hasMore">
       <div class="comment" v-for="comment in comments" :key="comment.id" >
 
         <div @click="toggleReply(comment.id)">
@@ -167,13 +180,42 @@ const isDetailPage = computed(() => route.name === 'articleDetail')
 }
 
 .users {
-  padding: 5px 5px 5px 10px;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 4px 8px 4px 10px;
   color: var(--color-text-other);
   border-bottom: 1px solid var(--color-review-border);
+  line-height: 18px;
 }
 
 .users-icon {
-  margin-right: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 13px;
+  width: 14px;
+  height: 18px;
+}
+
+.users-icon :deep(svg) {
+  display: block;
+}
+
+.users-text {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.like-summary {
+  display: inline-block;
+  overflow-wrap: anywhere;
+  line-height: 18px;
 }
 
 .liker-item {
@@ -238,9 +280,10 @@ button:hover {
   display: flex;
   flex-direction: column;
   width: 100%;
+  padding: 4px 0 0 5px;
 }
+
 .comment-displayName {
-  padding: 5px 5px 5px 10px;
   color: #9ac3ef;
 }
 

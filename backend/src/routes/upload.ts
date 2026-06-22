@@ -97,6 +97,8 @@ router.post('/', authMiddleware, upload.array('files', fileNumber), async (req: 
     // 上传文件信息
     // console.log(req.files);
     const articleId = req.body.articleId;
+    const articleType = Number(req.body.articleType ?? 0);
+    const uploadRole = req.body.uploadRole as string | undefined;
     const files = req.files as Express.Multer.File[]
     try {
         if (!files || files.length === 0) {
@@ -116,12 +118,35 @@ router.post('/', authMiddleware, upload.array('files', fileNumber), async (req: 
         // )
         // const filePaths = await Promise.all(uploadPromises)
 
-        const processPromises = files.map(async (file, index) => { 
+        const fileUrlMap = new Map<Express.Multer.File, string>();
+        files.forEach(file => {
             const relativePath = path.relative(publicRootPath, file.path);
-            const urlPath = '/' + relativePath.split(path.sep).join('/');
+            fileUrlMap.set(file, '/' + relativePath.split(path.sep).join('/'));
+        });
+        const videoThumbnailUrl = articleType === 2
+            ? fileUrlMap.get(files.find(file => allowedImageTypes.includes(file.mimetype)) as Express.Multer.File) || ''
+            : '';
+        let videoSortOrder = 0;
 
-            // 检查文件类型，如果是图片则写入数据库
-            if (allowedImageTypes.includes(file.mimetype)) {
+        const processPromises = files.map(async (file, index) => {
+            const urlPath = fileUrlMap.get(file)!;
+
+            if (allowedImageTypes.includes(file.mimetype) && articleType === 2 && uploadRole === 'cover') {
+                try {
+                    const video = await prisma.article_videos.findFirst({
+                        where: { article_id: BigInt(articleId) },
+                        orderBy: { sort_order: 'asc' }
+                    });
+                    if (video) {
+                        await prisma.article_videos.update({
+                            where: { id: video.id },
+                            data: { thumbnail_url: urlPath }
+                        });
+                    }
+                } catch (error) {
+                    console.error(`数据库写入视频封面 ${urlPath} 失败:`, error);
+                }
+            } else if (allowedImageTypes.includes(file.mimetype) && articleType !== 2) {
                 try {
                     await prisma.article_images.create({
                         data: {
@@ -140,7 +165,9 @@ router.post('/', authMiddleware, upload.array('files', fileNumber), async (req: 
                     await prisma.article_videos.create({
                         data: {
                             video_url: urlPath,
-                            sort_order: index
+                            thumbnail_url: videoThumbnailUrl,
+                            sort_order: videoSortOrder++,
+                            article_id: BigInt(articleId)
                         }
                     });
                 } catch (error) {
@@ -217,6 +244,8 @@ router.post('/s3', authMiddleware, s3Upload.array('files', fileNumber), async (r
 
     const files = req.files as Express.Multer.File[];
     const articleId = req.body.articleId;
+    const articleType = Number(req.body.articleType ?? 0);
+    const uploadRole = req.body.uploadRole as string | undefined;
     console.log('@文章id',articleId);
     
     if (!files || files.length === 0) {
@@ -224,23 +253,35 @@ router.post('/s3', authMiddleware, s3Upload.array('files', fileNumber), async (r
     }
 
     try {
-        // 使用 map 创建一个 Promise 数组，处理数据库写入和 URL 格式化
-        const processPromises = files.map(async (file, index) => {
-
-            // 1. 获取上传信息
-            // 假设 Multer S3 存储引擎将 key 和 location 附加到 file 对象上
+        const getFileUrl = (file: Express.Multer.File) => {
             const fileKey = (file as any).key;
             const s3Location = (file as any).location;
-
-            // 2. 使用 CONFIG_CACHE 格式化 URL
-            // 访问已缓存的配置对象，这是瞬时内存读取
             const customDomain = CONFIG_CACHE.upload_s3_domain;
+            return customDomain ? `https://${customDomain}/${fileKey}` : s3Location;
+        };
+        const fileUrlMap = new Map<Express.Multer.File, string>();
+        files.forEach(file => fileUrlMap.set(file, getFileUrl(file)));
+        const videoThumbnailUrl = articleType === 2
+            ? fileUrlMap.get(files.find(file => allowedImageTypes.includes(file.mimetype)) as Express.Multer.File) || ''
+            : '';
+        let videoSortOrder = 0;
 
-            const fileUrl = customDomain
-                ? `https://${customDomain}/${fileKey}`
-                : s3Location;
+        // 使用 map 创建一个 Promise 数组，处理数据库写入和 URL 格式化
+        const processPromises = files.map(async (file, index) => {
+            const fileUrl = fileUrlMap.get(file)!;
 
-            if (allowedImageTypes.includes(file.mimetype)) {
+            if (allowedImageTypes.includes(file.mimetype) && articleType === 2 && uploadRole === 'cover') {
+                const video = await prisma.article_videos.findFirst({
+                    where: { article_id: BigInt(articleId) },
+                    orderBy: { sort_order: 'asc' }
+                });
+                if (video) {
+                    await prisma.article_videos.update({
+                        where: { id: video.id },
+                        data: { thumbnail_url: fileUrl }
+                    });
+                }
+            } else if (allowedImageTypes.includes(file.mimetype) && articleType !== 2) {
                 await prisma.article_images.create({
                     data: {
                         image_url: fileUrl,
@@ -253,7 +294,9 @@ router.post('/s3', authMiddleware, s3Upload.array('files', fileNumber), async (r
                 await prisma.article_videos.create({
                     data: {
                         video_url: fileUrl,
-                        sort_order: index
+                        thumbnail_url: videoThumbnailUrl,
+                        sort_order: videoSortOrder++,
+                        article_id: BigInt(articleId)
                     }
                 })
             }

@@ -121,10 +121,22 @@ async function fetchLocation() {
   }
 }
 const uploadRef = ref<InstanceType<typeof Upload> | null>();
+const videoUploadRef = ref<InstanceType<typeof Upload> | null>();
+const coverUploadRef = ref<InstanceType<typeof Upload> | null>();
 async function addArticle() {
+  const hasUploadFiles = !displayMethod.value && (
+    !!uploadRef.value?.hasSelectedFiles() ||
+    !!videoUploadRef.value?.hasSelectedFiles() ||
+    !!coverUploadRef.value?.hasSelectedFiles()
+  )
+  const hasUploadVideo = !displayMethod.value && !!videoUploadRef.value?.hasSelectedVideo()
   if (!articleData.content && (!articleData.imageUrls?.length || articleData.imageUrls.length === 0) &&
-    (!articleData.videoUrls?.length || articleData.videoUrls.length === 0)) {
+    (!articleData.videoUrls?.length || articleData.videoUrls.length === 0) && !hasUploadFiles) {
     messageStore.show('文章内容不能为空', 'info', 2000)
+    return
+  }
+  if (articleData.type === 2 && !articleData.videoUrls?.length && !hasUploadVideo) {
+    messageStore.show('请选择视频文件或填写视频链接', 'info', 2000)
     return
   }
   if (states.add) {
@@ -135,7 +147,14 @@ async function addArticle() {
   try {
     states.add = true
     const res = await createArticle(articleData)
-    await uploadRef.value?.performUpload(res.data.id)
+    if (articleData.type === 2 && !displayMethod.value) {
+      await videoUploadRef.value?.performUpload(res.data.id)
+      if (coverUploadRef.value?.hasSelectedFiles()) {
+        await coverUploadRef.value.performUpload(res.data.id)
+      }
+    } else {
+      await uploadRef.value?.performUpload(res.data.id)
+    }
     
     // 清空内容
     articleData.content = ''
@@ -206,15 +225,25 @@ function removeTag(name: string) {
       <textarea v-model="articleData.content" placeholder="这一刻的想法..." @input="adjustHeight"
         class="contentArea"></textarea>
       <!-- 上传文件 -->
-      <Upload v-if="articleData.type !== 0 && !displayMethod" ref="uploadRef"></Upload>
+      <Upload v-if="articleData.type === 1 && !displayMethod" ref="uploadRef" :article-type="articleData.type"></Upload>
+      <div v-if="articleData.type === 2 && !displayMethod" class="video-upload-section">
+        <div class="upload-field">
+          <div class="upload-label">视频文件</div>
+          <Upload ref="videoUploadRef" :article-type="articleData.type" upload-role="video"></Upload>
+        </div>
+        <div class="upload-field">
+          <div class="upload-label">封面图片</div>
+          <Upload ref="coverUploadRef" :article-type="articleData.type" upload-role="cover"></Upload>
+        </div>
+      </div>
       <div class="field-row location">
-        <Icon class="field-icon" @click="fetchLocation" title="点击获取位置信息">
-            <MapMarkerAlt />
+        <Icon class="field-icon" size="16px" @click="fetchLocation" title="点击获取位置信息">
+          <MapMarkerAlt />
         </Icon>
         <input type="text" placeholder="输入位置信息（可为空）" v-model="articleData.location">
       </div>
       <div class="field-row tag-input">
-        <Icon class="field-icon">
+        <Icon class="field-icon field-icon-tag" size="14px">
           <Tags />
         </Icon>
         <div class="tag-editor">
@@ -349,6 +378,50 @@ function removeTag(name: string) {
   width: 100%;
 }
 
+.video-upload-section {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 5px;
+}
+
+.upload-field {
+  width: 28%;
+  min-width: 0;
+}
+
+.upload-label {
+  color: #6cadf1;
+  font-size: 12px;
+  margin: 0 0 5px 0;
+}
+
+.upload-field :deep(.upload-container) {
+  width: 100%;
+  margin: 0;
+}
+
+.upload-field :deep(ul) {
+  width: 100%;
+}
+
+.upload-field :deep(.add-file),
+.upload-field :deep(li),
+.upload-field :deep(video) {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  margin: 0;
+}
+
+.upload-field :deep(video) {
+  background-color: var(--color-post-bar);
+  object-fit: cover;
+}
+
+.upload-field :deep(img) {
+  margin: 0;
+}
+
 .contentArea {
   border: none;
   resize: none;
@@ -426,6 +499,7 @@ input:focus {
   display: flex;
   align-items: center;
   width: 100%;
+  gap: 10px;
   padding: 5px 15px 5px 20px;
   color: #6cadf1;
   box-sizing: border-box;
@@ -433,18 +507,33 @@ input:focus {
 
 .field-icon {
   width: 16px;
+  height: 20px;
   min-width: 16px;
   display: inline-flex;
+  align-items: center;
   justify-content: center;
+  line-height: 1;
   cursor: pointer;
+}
+
+.field-icon :deep(svg) {
+  width: 16px;
+  height: 16px;
+}
+
+.field-icon-tag :deep(svg) {
+  width: 14px;
+  height: 14px;
 }
 
 .location input {
   flex: 1;
-  margin-left: 10px;
+  height: 20px;
+  padding: 0;
   outline: none;
   border: none;
   font-size: smaller;
+  line-height: 20px;
   color: #6cacf1c9;
   background-color: inherit;
   min-width: 0;
@@ -456,19 +545,21 @@ input:focus {
   align-items: center;
   flex-wrap: wrap;
   gap: 6px;
-  margin-left: 10px;
   min-width: 0;
+  min-height: 20px;
 }
 
 .tag-editor input {
   flex: 1;
+  height: 20px;
+  padding: 0;
   outline: none;
   border: none;
   font-size: smaller;
+  line-height: 20px;
   color: #6cacf1c9;
   background-color: inherit;
   min-width: 120px;
-  padding: 2px 0;
 }
 
 .tag-chip {
