@@ -1,14 +1,14 @@
 {
   "name": "moments-backend",
   "version": "2.0.0",
-  "main": "src/index.ts",
+  "main": "src/bootstrap.ts",
   "type": "module",
   "packageManager": "pnpm@11.8.0",
   "scripts": {
     "build": "prisma generate && tsc",
-    "dev": "tsx watch src/index.ts",
-    "start": "node dist/index.js",
-    "start:pm2": "pm2 start dist/index.js",
+    "dev": "tsx watch src/bootstrap.ts",
+    "start": "node dist/bootstrap.js",
+    "start:pm2": "pm2 start dist/bootstrap.js",
     "db:install": "prisma generate && prisma migrate deploy && node dist/seed.js",
     "db:setup": "prisma generate && prisma migrate deploy && tsx src/seed.ts",
     "db:install2": "prisma generate && PRISMA_SCHEMA_DISABLE_ADVISORY_LOCK=1 prisma migrate deploy && node dist/seed.js",

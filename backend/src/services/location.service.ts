@@ -1,5 +1,3 @@
-import axios from "axios"
-
 function normalizeIp(ip?: string) {
     if (!ip) return ''
     return ip.replace(/^::ffff:/, '')
@@ -28,6 +26,7 @@ export async function getLocation(ip?: string) {
     }
 
     try {
+        const { default: axios } = await import("axios")
         const location = await axios.get(`https://v.api.aa1.cn/api/chinaip/?ip=${encodeURIComponent(normalizedIp)}`, {
             timeout: 5000,
         })

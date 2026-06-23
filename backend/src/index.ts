@@ -1,7 +1,6 @@
 import express from "express";
 import location from "./routes/location.js";
 import cors from 'cors'
-import dotenv from "dotenv";
 import authRouter from './routes/auth.js'
 import userRouter from './routes/user.js'
 import articlesRouter from './routes/articles.js'
@@ -12,16 +11,12 @@ import uploadRouter from './routes/upload.js'
 import linkRouter from './routes/link.js'
 import path from "path";
 import { fileURLToPath } from "url";
-import { CONFIG_CACHE } from "./services/config.service.js";
 import { disconnectPrisma } from "./lib/prisma.js";
 import { Logger } from "./utils/logger.js";
 import { customLogger } from "./middleware/httpLogger.middleware.js";
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
-// 载入env配置
-dotenv.config()
-
 // 配置变量
 const port = Number(process.env.PORT) || 9889
 const listenHost = process.env.HOST || '0.0.0.0'

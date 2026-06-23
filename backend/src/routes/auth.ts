@@ -1,7 +1,5 @@
 import { Router, Request, Response } from "express";
 import { prisma } from "../lib/prisma.js";
-import bcrypt from 'bcrypt'
-import jwt from 'jsonwebtoken'
 import { logAction, logger } from "../services/log.service.js"
 
 
@@ -30,6 +28,7 @@ router.post('/register', async (req: Request, res: Response) => {
             return res.status(409).json({ error: '用户名或邮箱已被注册' })
         }
         // 哈希密码
+        const { default: bcrypt } = await import('bcrypt')
         const hashedPassword = await bcrypt.hash(rawPassword, 10)
 
         // 创建新用户
@@ -96,6 +95,7 @@ router.post('/login', async (req: Request, res: Response) => {
             return res.status(401).json({ error: '账号或密码错误' })
         }
         // 验证密码
+        const { default: bcrypt } = await import('bcrypt')
         const isPasswordValid = await bcrypt.compare(password, user.password)
         if (!isPasswordValid) {
             logger.add({
@@ -129,6 +129,7 @@ router.post('/login', async (req: Request, res: Response) => {
         if (!jwtSecret) {
             throw new Error('.env 文件中未定义 JWT_SECRET');
         }
+        const { default: jwt } = await import('jsonwebtoken')
         const token = jwt.sign(
             {
                 //user.id也是BigInt，需要转字符串处理一下
