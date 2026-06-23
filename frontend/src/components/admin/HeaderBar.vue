@@ -1,263 +1,236 @@
 <script setup lang="ts" name="HeaderBar">
-import { ref, onMounted, onUnmounted } from 'vue';
-import { Icon } from '@vicons/utils';
-import { AngleDoubleRight, AngleDown, Bars} from '@vicons/fa';
-import { useSidebarStore } from '@/store/admin/sidebar';
-import router from '@/router';
-import { useUserStore } from '@/store/user';
-import { useMessageStore } from '@/store/message';
-import { useRoute } from 'vue-router';
+import { ref, computed } from 'vue'
+import { Icon } from '@vicons/utils'
+import { AngleDown } from '@vicons/fa'
+import AvatarImage from '@/components/utils/AvatarImage.vue'
+import router from '@/router'
+import { useUserStore } from '@/store/user'
+import { useMessageStore } from '@/store/message'
+import { useRoute } from 'vue-router'
 
 const route = useRoute()
 const messageStore = useMessageStore()
 const userStore = useUserStore()
-const sidebarStore = useSidebarStore()
 const isShowSetting = ref(false)
-const isMobile = ref(false)
 
-// 接收父组件传递的 sidebar ref
-const props = defineProps<{
-  sidebarRef?: any
-}>()
+const pageTitle = computed(() => route.matched[route.matched.length - 1]?.meta.title || '控制台')
+const today = new Intl.DateTimeFormat('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' }).format(new Date())
 
-// 移动端检测
-function checkMobile() {
-  isMobile.value = window.innerWidth <= 768
-}
-
-// 切换移动端侧边栏
-function toggleMobileSidebar() {
-  if (props.sidebarRef) {
-    props.sidebarRef.toggleDrawer()
-  }
-}
-
-onMounted(() => {
-  checkMobile()
-  window.addEventListener('resize', checkMobile)
-})
-
-onUnmounted(() => {
-  window.removeEventListener('resize', checkMobile)
-})
-
-// 退出登录函数
 function handleLogout() {
-    const id = messageStore.show('正在退出登录', 'loading')
-    try {
-        userStore.handleLogout()
-        messageStore.update(id, { text: '退出登陆成功', type: 'success', duration: 2000 })
-        router.replace({ name: 'index' })
-    } catch (error) {
-        console.log('退出登陆失败：', error);
-        messageStore.update(id, { text: '退出登陆失败', type: 'error', duration: 2000 })
-    }
+  const id = messageStore.show('正在退出登录', 'loading')
+  try {
+    userStore.handleLogout()
+    messageStore.update(id, { text: '退出登录成功', type: 'success', duration: 2000 })
+    router.replace({ name: 'index' })
+  } catch (error) {
+    console.log('退出登录失败：', error)
+    messageStore.update(id, { text: '退出登录失败', type: 'error', duration: 2000 })
+  }
 }
 </script>
 
 <template>
-    <div class="bar-left">
-        <!-- 移动端菜单按钮 -->
-        <Icon v-if="isMobile" @click="toggleMobileSidebar"
-            title="菜单"
-            class="icon mobile-menu-btn">
-            <Bars />
-        </Icon>
-        <!-- 桌面端侧边栏折叠、展开 -->
-        <Icon v-else @click="sidebarStore.isShowContent = !sidebarStore.isShowContent"
-            :title="sidebarStore.isShowContent ? '折叠' : '展开'"
-            :class="['icon', { 'rotate-icon': sidebarStore.isShowContent }]">
-            <AngleDoubleRight />
-        </Icon>
-        <!-- 面包屑导航 -->
-        <div class="breadcrumb">
-            <span v-for="(item, index) in route.matched" :key="index">
-                <span @click="router.push(item.path)" class="breadcrumb-item">
-                    {{ item.meta.title }}
-                </span>
-                <span v-if="index < route.matched.length - 1">/</span>
-            </span>
-        </div>
+  <header class="admin-header">
+    <div class="header-left">
+      <h1>{{ pageTitle }}</h1>
+      <div class="breadcrumb" aria-label="面包屑导航">
+        <span v-for="(item, index) in route.matched" :key="index">
+          <button class="breadcrumb-item" @click="router.push(item.path)">{{ item.meta.title }}</button>
+          <span v-if="index < route.matched.length - 1" class="slash">/</span>
+        </span>
+      </div>
     </div>
-    <div class="bar-right" @click="isShowSetting = !isShowSetting">
-        <div class="icon">
-            <span style="font-size: medium; padding-right: 5px;">{{ userStore.profile?.username }}</span>
-            <Icon>
-                <AngleDown />
-            </Icon>
+
+    <div class="header-right">
+      <span class="today">{{ today }}</span>
+
+      <button class="user-trigger" @click="isShowSetting = !isShowSetting">
+        <AvatarImage class="avatar" :src="userStore.profile?.avatar" alt="用户头像" />
+        <span class="username">{{ userStore.profile?.username || '管理员' }}</span>
+        <Icon class="down"><AngleDown /></Icon>
+      </button>
+
+      <Transition name="fade">
+        <div v-if="isShowSetting" class="user-setting">
+          <button @click="router.push({ name: 'admin' }); isShowSetting = false">控制台</button>
+          <button @click="router.push({ name: 'admin-setting' }); isShowSetting = false">系统设置</button>
+          <button class="danger" @click="handleLogout">退出登录</button>
         </div>
-        <Transition name="fade">
-            <div class="userSetting" v-if="isShowSetting">
-                <div class="userSetting-item" @click="router.push({ name: 'admin' })">主页</div>
-                <div class="userSetting-item" @click="router.push({ name: 'admin-seeting-user' })">个人设置</div>
-                <div class="userSetting-item" @click="handleLogout">退出登录</div>
-            </div>
-        </Transition>
+      </Transition>
     </div>
+  </header>
 </template>
 
 <style scoped>
-.icon {
-    margin: 0px 20px;
-    font-size: 20px;
-    transition: transform 0.3s ease;
-    cursor: pointer;
-    /* color: #6ebdeaa9; */
-    color: #000000c0;
+.admin-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  min-height: 68px;
+  padding: 12px 28px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-app);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.025);
 }
 
-.icon:hover {
-    color: #00000079;
+.header-left {
+  min-width: 0;
 }
 
-.rotate-icon {
-    transition: transform 0.3s ease;
-    transform: rotate(180deg);
+.header-left h1 {
+  margin: 0 0 4px;
+  color: var(--color-text-primary);
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.15;
 }
 
-.bar-left {
-    display: flex;
-    flex-direction: row;
-    justify-content: center;
-    align-items: center;
+.breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  color: #787878;
+  font-size: 12px;
+}
+
+.breadcrumb-item,
+.user-trigger,
+.user-setting button {
+  border: 0;
+  outline: none;
+  font: inherit;
+  cursor: pointer;
 }
 
 .breadcrumb-item {
-    padding: 0 5px;
-    font-weight: 400;
-    color: #000000ab;
+  padding: 0;
+  color: inherit;
+  background: transparent;
 }
 
 .breadcrumb-item:hover {
-    cursor: pointer;
-    color: #00000043;
-
+  color: #6cadf1;
 }
 
-.bar-right {
-    position: relative;
-    display: inline-block;
+.slash {
+  color: #9ac3ef;
 }
 
-/* 点击图标弹出内容 */
-.userSetting {
-    display: flex;
-    flex-direction: column;
-    position: absolute;
-    background: #ffffff;
-    top: 100%;
-    right: 0;
-    margin-top: 8px;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    border: 1px solid #e1e1e1;
-    min-width: 120px;
-    z-index: 1000;
+.header-right {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
 }
 
-.userSetting::before {
-    content: '';
-    position: absolute;
-    top: -8px;
-    right: 20px;
-    width: 0;
-    height: 0;
-    border-left: 8px solid transparent;
-    border-right: 8px solid transparent;
-    border-bottom: 8px solid #ffffff;
-    filter: drop-shadow(0 -2px 2px rgba(0, 0, 0, 0.1));
+.today {
+  color: #787878;
+  font-size: 13px;
+  white-space: nowrap;
 }
 
-.userSetting-item {
-    padding: 12px 16px;
-    font-size: 14px;
-    color: #333;
-    transition: background-color 0.2s;
-    white-space: nowrap;
+.user-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 0 10px 0 5px;
+  border-radius: 0;
+  color: var(--color-text-primary);
+  background: var(--color-ad);
+  transition: background 0.2s ease, color 0.2s ease;
 }
 
-.userSetting-item:first-child {
-    border-radius: 8px 8px 0 0;
+.user-trigger:hover {
+  background: var(--color-ad-hover);
 }
 
-.userSetting-item:last-child {
-    border-radius: 0 0 8px 8px;
+.avatar {
+  display: block;
+  width: 24px;
+  height: 24px;
+  border-radius: 0;
+  object-fit: cover;
 }
 
-a {
-    text-decoration: none;
-    color: inherit;
+.username {
+  max-width: 120px;
+  overflow: hidden;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.userSetting-item:nth-child(3) {
-    border-top: 1px solid #f0f0f0;
-    margin-top: 4px;
-    padding-top: 8px;
+.down {
+  color: #787878;
 }
 
-.userSetting-item:hover {
-    background: #f8f9fa;
-    cursor: pointer;
+.user-setting {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  min-width: 140px;
+  padding: 6px;
+  border: 1px solid var(--color-border);
+  border-radius: 0;
+  background: var(--color-bg-app);
+  box-shadow: var(--color-shadow);
 }
 
-/* 菜单弹出动画 */
+.user-setting button {
+  padding: 10px 12px;
+  border-radius: 0;
+  color: var(--color-text-primary);
+  font-size: 14px;
+  text-align: left;
+  background: transparent;
+}
+
+.user-setting button:hover {
+  background: var(--color-ad);
+}
+
+.user-setting .danger {
+  color: #d95d6a;
+}
+
 .fade-enter-active,
 .fade-leave-active {
-    transition: all 0.35s cubic-bezier(0.68, -0.55, 0.27, 1.55);
-    /* transition: all 0.35s ease-in-out; */
+  transition: all 0.2s ease;
 }
 
-.fade-enter-from {
-    opacity: 0;
-    transform: translateY(-20px);
-}
-
+.fade-enter-from,
 .fade-leave-to {
-    transform: translateY(-10px);
-    opacity: 0;
+  opacity: 0;
+  transform: translateY(-8px);
 }
 
-/* 移动端样式 */
-.mobile-menu-btn {
-    color: #000000c0 !important;
-}
-
-.mobile-menu-btn:hover {
-    color: #00000079 !important;
+@media (max-width: 900px) {
+  .today {
+    display: none;
+  }
 }
 
 @media (max-width: 768px) {
-    .breadcrumb {
-        display: none;
-    }
-    
-    .bar-left {
-        justify-content: flex-start;
-    }
-    
-    .userSetting {
-        right: -10px;
-        min-width: 140px;
-    }
-    
-    .userSetting::before {
-        right: 25px;
-    }
-}
+  .admin-header {
+    min-height: 62px;
+    padding: 10px 16px;
+  }
 
-@media (max-width: 480px) {
-    .userSetting {
-        right: -20px;
-        min-width: 130px;
-    }
-    
-    .userSetting::before {
-        right: 30px;
-    }
-    
-    .userSetting-item {
-        padding: 10px 14px;
-        font-size: 13px;
-    }
+  .header-left h1 {
+    font-size: 20px;
+  }
+
+  .breadcrumb,
+  .username {
+    display: none;
+  }
 }
 </style>

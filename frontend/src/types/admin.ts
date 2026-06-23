@@ -8,6 +8,7 @@ export interface updateConfigData {
     site_url?: string,
     site_email?: string,
     site_logo?: string,
+    site_font?: string,
     site_keywords?: string,
     site_header_background?: string,
     site_description?: string,

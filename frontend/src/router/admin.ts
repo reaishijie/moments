@@ -35,10 +35,28 @@ const adminRoutes: RouteRecordRaw[] = [
                         meta: {title: '用户设置'}
                     },
                     {
-                        path:'user',
+                        path:'email',
                         name: 'admin-seeting-email',
                         component: () => import('@/components/admin/Setting/Email.vue'),
                         meta: {title: '邮箱配置'}
+                    },
+                    {
+                        path:'verify',
+                        name: 'admin-seeting-verify',
+                        component: () => import('@/components/admin/Setting/Verify.vue'),
+                        meta: {title: '验证设置'}
+                    },
+                    {
+                        path:'upload',
+                        name: 'admin-seeting-upload',
+                        component: () => import('@/components/admin/Setting/Upload.vue'),
+                        meta: {title: '上传设置'}
+                    },
+                    {
+                        path:'other',
+                        name: 'admin-seeting-other',
+                        component: () => import('@/components/admin/Setting/Other.vue'),
+                        meta: {title: '其他设置'}
                     },
                 ]
             },

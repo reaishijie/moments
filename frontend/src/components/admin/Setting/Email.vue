@@ -1,133 +1,21 @@
 <script setup lang="ts" name="Email">
-import { onMounted } from 'vue';
-import { updateConfig } from '@/api/admin';
-import { useSettingStore } from '@/store/admin/setting';
-import { useMessageStore } from '@/store/message';
-import { useUserStore } from '@/store/user';
-import router from '@/router';
+import ConfigForm from './ConfigForm.vue'
+import type { ConfigFieldSchema } from './types'
 
-const userStore = useUserStore();
-const messageStore = useMessageStore();
-const settingStore = useSettingStore();
-
-onMounted(async () => {
-  const id = messageStore.show('正在加载信息中', 'loading');
-  const success = await settingStore.getAllConfig();
-  if (success) {
-    messageStore.update(id, { 'type': 'success', 'text': '加载成功', 'duration': 2000 });
-  } else {
-    messageStore.update(id, { 'type': 'error', 'text': '加载信息失败', 'duration': 2000 });
-    userStore.handleLogout();
-    router.replace({ name: 'index' });
-  }
-});
-
-const handleUpdate = async () => {
-  // 检查是否有改动
-  if (settingStore.hasChanged()) {
-    // 获取已修改的数据
-    const updateData = settingStore.getUpdateData();
-    const id = messageStore.show('正在更新中...', 'loading');
-    try {
-      await updateConfig(updateData);
-      messageStore.update(id, { 'type': 'success', 'text': '更新成功', 'duration': 2000 });
-      // 更新成功后，同步原始数据
-      Object.assign(settingStore.originalData, settingStore.configs);
-    } catch (error) {
-      messageStore.update(id, { 'type': 'error', 'text': '更新失败', 'duration': 2000 });
-      console.error('更新失败:', error);
-    }
-  } else {
-    messageStore.show('数据未改动', 'info', 2000);
-  }
-};
+const fields: ConfigFieldSchema[] = [
+  { key: 'mail_host', placeholder: '示例：smtp.qq.com' },
+  { key: 'mail_port', placeholder: '服务端口，如 465、25' },
+  { key: 'mail_secure', type: 'switch' as const, trueValue: 'true', falseValue: 'false', trueText: '开启加密', falseText: '关闭加密' },
+  { key: 'mail_user', placeholder: '发件邮箱账号' },
+  { key: 'mail_pass', type: 'password' as const, placeholder: 'SMTP 授权码或密码' },
+]
 </script>
 
 <template>
-  <div class="basic-container">
-    <div class="item">
-      <label for="mail_host">SMTP服务器地址：</label>
-      <input v-model="settingStore.configs.mail_host" id="mail_host" type="text" placeholder="示例：smtp.qq.com">
-    </div>
-    <div class="item">
-      <label for="mail_port">SMTP服务器端口：</label>
-      <input v-model="settingStore.configs.mail_port" id="mail_port" type="text" placeholder="服务端口，如465、25">
-    </div>
-    <div class="item">
-      <label for="mail_user">SMTP用户邮箱：</label>
-      <input v-model="settingStore.configs.mail_user" id="mail_user" type="text" placeholder="如huihost@vip.qq.com">
-    </div>
-    <div class="item">
-      <label for="mail_pass">SMTP用户密码：</label>
-      <input v-model="settingStore.configs.mail_pass" id="mail_pass" type="text" placeholder="SMTP授权码">
-    </div>
-    <div class="item">
-      <label for="mail_secure">邮箱SSL加密：</label>
-      <div>
-        <input type="checkbox" id="mail_secure" v-model="settingStore.configs.mail_secure" true-value="true"
-          false-value="false" />
-        <label for="mail_secure">开启加密</label>
-      </div>
-    </div>
-
-    <button @click="handleUpdate">更 新</button>
-  </div>
+  <ConfigForm
+    title="邮箱配置"
+    description="发件邮箱 SMTP 服务配置，用于验证邮件和站点通知。"
+    category="email"
+    :fields="fields"
+  />
 </template>
-
-<style scoped>
-.basic-container {
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  background: #ffffff;
-  width: 100%;
-  height: auto;
-  padding: 20px 50px;
-}
-
-.item {
-  margin-top: 10px;
-  display: flex;
-}
-
-label {
-  font-size: medium;
-  padding: 5px;
-  color: rgba(0, 0, 0, 0.811);
-  width: 150px;
-}
-
-input {
-  flex: 1;
-  max-width: 500px;
-  border: none;
-  border-bottom: 1px solid skyblue;
-  outline: none;
-  padding: 5px;
-  margin: 5px 0px 5px 5px;
-}
-
-input:focus {
-  border-bottom: 2px solid rgba(0, 0, 255, 0.296);
-}
-#mail_secure {
-  padding: 5px;
-  margin: 10px 0px 5px 5px;
-}
-button {
-  outline: none;
-  border: none;
-  background: #09C362;
-  border-radius: 5px;
-  width: 80px;
-  padding: 5px;
-  margin-top: 10px;
-  color: #ffffff;
-  font-size: small;
-  cursor: pointer;
-}
-
-button:hover {
-  background: #F8BC99;
-}
-</style>
