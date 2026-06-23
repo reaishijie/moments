@@ -1,78 +1,75 @@
 <script setup lang="ts" name="AdminLayout">
-import { RouterView } from 'vue-router';
-import sidebar from '@/components/admin/Sidebar.vue';
-import HeaderBar from '@/components/admin/HeaderBar.vue';
-import { ref } from 'vue';
-
-const sidebarRef = ref()
+import { RouterView } from 'vue-router'
+import Sidebar from '@/components/admin/Sidebar.vue'
+import HeaderBar from '@/components/admin/HeaderBar.vue'
 </script>
 
 <template>
-    <div class="container">
-        <sidebar ref="sidebarRef" />
-        <div class="container-right">
-            <div class="container-right-top">
-                <HeaderBar :sidebar-ref="sidebarRef" />
-            </div>
-            <div class="container-right-bottom">
-                <RouterView />
-            </div>
-        </div>
+  <div class="admin-shell">
+    <div class="admin-workspace">
+      <HeaderBar />
+      <main class="admin-main" aria-label="后台内容区">
+        <RouterView />
+      </main>
     </div>
+    <Sidebar />
+  </div>
 </template>
 
 <style scoped>
-.container {
-    display: flex;
-    flex-direction: row;
-    min-height: 100vh;
-    height: 100vh;
-    background: #FFFFFF;
-    overflow-x: hidden;
-    width: 100%;
-    max-width: 100vw;
+.admin-shell {
+  --admin-ink: var(--color-text-primary);
+  --admin-muted: #787878;
+  --admin-soft: var(--color-ad);
+  --admin-line: var(--color-border);
+  --admin-card: color-mix(in srgb, var(--color-bg-app) 88%, transparent);
+  --admin-blue: #6cadf1;
+  --admin-cyan: #9ac3ef;
+  --admin-green: #53b16a;
+  --admin-amber: #f8a778;
+  --admin-red: #ec6f7d;
+  --admin-shadow: var(--color-shadow);
+
+  display: block;
+  min-height: 100vh;
+  width: 100%;
+  max-width: 100vw;
+  overflow: hidden;
+  color: var(--admin-ink);
+  background:
+    radial-gradient(circle at 12% 8%, rgba(248, 167, 120, 0.18), transparent 24%),
+    radial-gradient(circle at 88% 18%, rgba(108, 173, 241, 0.2), transparent 30%),
+    linear-gradient(135deg, color-mix(in srgb, var(--color-bg-outside) 96%, #ffffff), var(--color-bg-outside));
 }
 
-.container-right {
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    min-width: 0;
-    overflow: hidden;
+
+.admin-workspace {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  height: 100vh;
+  overflow: hidden;
 }
 
-.container-right-top {
-    display: flex;
-    justify-content: space-between;
-    background: #FFFFFF;
-    padding: 10px 20px;
+.admin-main {
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+  padding: 22px 22px 102px;
 }
 
-.container-right-bottom {
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    gap: 20px;
-    padding: 15px 20px 20px 20px;
-    background: #f2f2f2;
-    overflow-y: auto;
-    overflow-x: hidden;
-}
-
-/* 移动端响应式布局 */
 @media (max-width: 768px) {
-    .container {
-        flex-direction: column;
-        min-width: 100vw;
-    }
-    
-    .container-right-top {
-        padding: 10px 15px;
-    }
-    
-    .container-right-bottom {
-        padding: 15px;
-        gap: 15px;
-    }
+  .admin-shell {
+    min-width: 100vw;
+  }
+
+  .admin-workspace {
+    height: 100vh;
+  }
+
+  .admin-main {
+    padding: 16px 16px 96px;
+  }
 }
 </style>
