@@ -67,16 +67,16 @@ jobs:
           mkdir -p deploy-package/public
           cp -r frontend/dist/* deploy-package/public/
 
-          cat > deploy-package/.env <<'APP_ENV_EOF'
+          cat > deploy-package/app.env <<'APP_ENV_EOF'
           ${{ secrets.APP_ENV_FILE }}
           APP_ENV_EOF
 
-          cat > deploy-package/.env.compose <<EOF
+          cat > deploy-package/compose.env <<EOF
           APP_CONTAINER_NAME=${{ vars.APP_CONTAINER_NAME }}
           APP_PORT=${{ vars.APP_PORT }}
           EOF
 
-      - name: Prepare Server Directory
+      - name: Prepare Upload Directory
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_HOST }}
@@ -84,10 +84,9 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           script: |
             set -e
-            DEPLOY_PATH="${{ vars.DEPLOY_PATH }}"
-            test -n "$DEPLOY_PATH"
-            mkdir -p "$DEPLOY_PATH"
-            find "$DEPLOY_PATH" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+            UPLOAD_PATH="/tmp/moments-deploy-${{ github.run_id }}"
+            rm -rf "$UPLOAD_PATH"
+            mkdir -p "$UPLOAD_PATH"
 
       - name: Upload to Server
         uses: appleboy/scp-action@v0.1.7
@@ -95,8 +94,8 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_KEY }}
-          source: "deploy-package/*,deploy-package/.env,deploy-package/.env.compose"
-          target: ${{ vars.DEPLOY_PATH }}
+          source: "deploy-package/*"
+          target: /tmp/moments-deploy-${{ github.run_id }}
           strip_components: 1
           overwrite: true
 
@@ -108,7 +107,16 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           script: |
             set -e
-            cd "${{ vars.DEPLOY_PATH }}"
-            docker compose -f docker-compose.yml --env-file .env.compose build --pull app
-            docker compose -f docker-compose.yml --env-file .env.compose up -d app
+            UPLOAD_PATH="/tmp/moments-deploy-${{ github.run_id }}"
+            DEPLOY_PATH="$(printf '%s' '${{ vars.DEPLOY_PATH }}' | tr -d '\r' | xargs)"
+            test -n "$DEPLOY_PATH"
+
+            mkdir -p "$DEPLOY_PATH"
+            find "$DEPLOY_PATH" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+            cp -a "$UPLOAD_PATH"/. "$DEPLOY_PATH"/
+            rm -rf "$UPLOAD_PATH"
+
+            cd "$DEPLOY_PATH"
+            docker compose -f docker-compose.yml --env-file compose.env build --pull app
+            docker compose -f docker-compose.yml --env-file compose.env up -d app
             docker image prune -f
