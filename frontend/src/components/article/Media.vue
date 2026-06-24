@@ -26,18 +26,23 @@ const props = defineProps({
     }
 })
 const apiUrl = import.meta.env.VITE_API_BASE_URL as string
-const baseUrl = new URL(apiUrl).origin
-/**
- * const baseUrl = apiUrl.replace(/\/api.*$/, '') // 移除 /api 及其后面的内容
- * const baseUrl = apiUrl.match(/^https?:\/\/[^\/]+/)?.[0] || apiUrl
- */
+const baseUrl = computed(() => {
+    if (!apiUrl?.startsWith('http')) return ''
+
+    try {
+        return new URL(apiUrl).origin
+    } catch {
+        return ''
+    }
+})
+
 // 创建计算属性,而不是直接修改props
 const processedImages = computed(() => {
     if (!props.articleImages?.length) return []
     
     return props.articleImages.map((i) => {
-        if (i?.image_url?.startsWith('/') && apiUrl?.startsWith('http')) {
-            return { ...i, image_url: baseUrl + i.image_url }
+        if (i?.image_url?.startsWith('/') && baseUrl.value) {
+            return { ...i, image_url: baseUrl.value + i.image_url }
         }
         return i
     }).filter(Boolean) // 过滤掉 undefined/null
@@ -46,13 +51,14 @@ const processedVideos = computed(() => {
     if (!props.articleVideos?.length) return []
 
     return props.articleVideos.map((i) => {
-        if (i?.video_url?.startsWith('/') && apiUrl?.startsWith('http')) {
-            return { ...i, video_url: baseUrl + i.video_url }
+        const video = { ...i }
+        if (video.video_url?.startsWith('/') && baseUrl.value) {
+            video.video_url = baseUrl.value + video.video_url
         }
-        if (i?.thumbnail_url?.startsWith('/') && apiUrl?.startsWith('http')) {
-            return { ...i, thumbnail_url: baseUrl + i.thumbnail_url }
+        if (video.thumbnail_url?.startsWith('/') && baseUrl.value) {
+            video.thumbnail_url = baseUrl.value + video.thumbnail_url
         }
-        return i
+        return video
     }).filter(Boolean)
 })
 
@@ -125,14 +131,14 @@ onUnmounted(() => {
     <div class="container">
         <!-- 添加文件 -->
         <div class="add-file" @click="$emit('add:file')"
-            v-if="props.upload && articleImages.length === 0 && articleVideos.length === 0">
+            v-if="props.upload && processedImages.length === 0 && processedVideos.length === 0">
             <Icon>
                 <Plus />
             </Icon>
         </div>
 
         <!-- 文章的图片展示 -->
-        <ul v-if="articleImages.length !== 0">
+        <ul v-if="processedImages.length !== 0">
             <li v-for="(image, index) in processedImages" :key="image.id" @click="showImage(image.image_url)"
                 @dragstart="onDragStart(index)" @dragover="onDragOver" @drop="onDrop(index)" @dragend="onDragEnd">
                 <div class="image-wrapper">
@@ -144,7 +150,7 @@ onUnmounted(() => {
                 </div>
             </li>
             <div class="add-file" @click="$emit('add:file')"
-                v-if="props.upload && articleImages.length < Number(props.uploadNumber)">
+                v-if="props.upload && processedImages.length < Number(props.uploadNumber)">
                 <Icon>
                     <Plus />
                 </Icon>
