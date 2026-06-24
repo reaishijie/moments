@@ -1,140 +1,27 @@
 <script setup lang="ts" name="Basic">
-import { onMounted } from 'vue';
-import { updateConfig } from '@/api/admin';
-import { useSettingStore } from '@/store/admin/setting';
-import { useMessageStore } from '@/store/message';
-import { useUserStore } from '@/store/user';
-import router from '@/router';
+import ConfigForm from './ConfigForm.vue'
+import type { ConfigFieldSchema } from './types'
 
-const userStore = useUserStore();
-const messageStore = useMessageStore();
-const settingStore = useSettingStore();
-
-onMounted(async () => {
-    const id = messageStore.show('正在加载信息中', 'loading');
-    const success = await settingStore.getAllConfig();
-    
-    if (success) {
-        messageStore.update(id, { 'type': 'success', 'text': '加载成功', 'duration': 2000 });
-    } else {
-        messageStore.update(id, { 'type': 'error', 'text': '加载信息失败', 'duration': 2000 });
-        userStore.handleLogout();
-        router.replace({ name: 'index' });
-    }
-});
-
-const handleUpdate = async () => {
-    // 检查是否有改动
-    if (settingStore.hasChanged()) {
-        // 获取已修改的数据
-        const updateData = settingStore.getUpdateData();
-        const id = messageStore.show('正在更新中...', 'loading');
-        try {
-            await updateConfig(updateData);
-            messageStore.update(id, { 'type': 'success', 'text': '更新成功', 'duration': 2000 });
-            // 更新成功后，同步原始数据
-            Object.assign(settingStore.originalData, settingStore.configs);
-        } catch (error) {
-            messageStore.update(id, { 'type': 'error', 'text': '更新失败', 'duration': 2000 });
-            console.error('更新失败:', error);
-        }
-    } else {
-        messageStore.show('数据未改动', 'info', 2000);
-    }
-};
+const fields: ConfigFieldSchema[] = [
+  { key: 'sitename', placeholder: '在此输入网站名称' },
+  { key: 'site_url', placeholder: '网站公开访问地址' },
+  { key: 'site_email', placeholder: '管理员联系邮箱' },
+  { key: 'site_keywords', placeholder: '关键词，使用逗号分隔' },
+  { key: 'site_description', type: 'textarea' as const, placeholder: '站点描述' },
+  { key: 'site_background', placeholder: '公共页面背景图片地址' },
+  { key: 'site_logo', placeholder: '站点 Logo 图片地址' },
+  { key: 'site_font', placeholder: '公共页面自定义字体，如 "LXGW WenKai", sans-serif' },
+  { key: 'site_header_background', placeholder: '首页 Header 背景图片地址' },
+  { key: 'site_avatar', placeholder: '首页头像图片地址' },
+  { key: 'site_brief', type: 'textarea' as const, placeholder: '首页简介文案' },
+]
 </script>
 
 <template>
-  <div class="basic-container">
-    <div class="item">
-      <label for="sitename">网站名称：</label>
-      <input v-model="settingStore.configs.sitename" id="sitename" type="text" placeholder="在此输入网站名称">
-    </div>
-    <div class="item">
-      <label for="site_url">网站网址：</label>
-      <input v-model="settingStore.configs.site_url" id="site_url" type="text" placeholder="网站网址">
-    </div>
-    <div class="item">
-      <label for="site_logo">站点图标：</label>
-      <input v-model="settingStore.configs.site_logo" id="site_logo" type="text" placeholder="站点LOGO">
-    </div>
-    <div class="item">
-      <label for="site_keywords">关键字：</label>
-      <input v-model="settingStore.configs.site_keywords" id="site_keywords" type="text" placeholder="关键字">
-    </div>
-    <div class="item">
-      <label for="site_description">站点描述：</label>
-      <input v-model="settingStore.configs.site_description" id="site_description" type="text" placeholder="站点描述">
-    </div>
-    <div class="item">
-      <label for="site_email">联系邮箱：</label>
-      <input v-model="settingStore.configs.site_email" id="site_email" type="text" placeholder="管理员邮箱">
-    </div>
-    <div class="item">
-      <label for="site_background">网站背景：</label>
-      <input v-model="settingStore.configs.site_background" id="site_background" type="text" placeholder="网站背景">
-    </div>
-    <div class="item">
-      <label for="site_avatar">首页头像：</label>
-      <input v-model="settingStore.configs.site_avatar" id="site_avatar" type="text" placeholder="首页头像">
-    </div>
-    <div class="item">
-      <label for="site_header_background">首页背景：</label>
-      <input v-model="settingStore.configs.site_header_background" id="site_header_background" type="text" placeholder="首页背景">
-    </div>
-    <div class="item">
-      <label for="site_brief">首页简介：</label>
-      <input v-model="settingStore.configs.site_brief" id="site_brief" type="text" placeholder="首页简介">
-    </div>
-    <button @click="handleUpdate">更 新</button>
-  </div>
+  <ConfigForm
+    title="基础设置"
+    description="站点展示、SEO、首页资料等公共信息。字段名称、描述和值均来自后端配置元数据。"
+    category="site"
+    :fields="fields"
+  />
 </template>
-
-<style scoped>
-.basic-container {
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  background: #ffffff;
-  width: 100%;
-  height: auto;
-  padding: 20px 50px;
-}
-.item {
-  margin-top: 10px;
-  display: flex;
-}
-label {
-  font-size: medium;
-  padding: 5px;
-  color: rgba(0, 0, 0, 0.811);
-  width: 100px;
-}
-input {
-  flex: 1;
-  max-width: 500px;
-  border: none;
-  border-bottom: 1px solid skyblue;
-  outline: none;
-  padding: 5px;
-  margin: 5px 0px 5px 5px;
-}
-input:focus {
-  border-bottom: 2px solid rgba(0, 0, 255, 0.296);
-}
-button {
-  outline: none;
-  border: none;
-  background: #09C362;
-  border-radius: 5px;
-  width: 80px;
-  padding: 5px;
-  margin-top: 10px;
-  color: #ffffff;
-  font-size: small;
-  cursor: pointer;
-}
-button:hover {
-  background: #F8BC99;
-}
-</style>

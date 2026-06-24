@@ -14,6 +14,10 @@ export interface articleVideoItem {
     sort_order?: number,
     created_at?: string
 }
+export interface articleTagItem {
+    id: string,
+    name: string
+}
 export interface articleData {
     id: number,
     user_id: number,
@@ -37,7 +41,8 @@ export interface articleData {
         avatar: string,
     },
     article_images: articleImageItem[],
-    article_videos: articleVideoItem[]
+    article_videos: articleVideoItem[],
+    tags: articleTagItem[]
 }
 export interface createArticleData {
     content: string,
@@ -50,7 +55,8 @@ export interface createArticleData {
     type?: number,
     imageUrls?: string[],
     videoUrls?: string[],
-    thumbnail_url?: string
+    thumbnail_url?: string,
+    tags?: string[]
 }
 
 export interface updateArticleData {
@@ -61,7 +67,8 @@ export interface updateArticleData {
     isAd?: boolean,
     isTop?: boolean,
     imageUrls?: string[],
-    videoUrls?: string[]
+    videoUrls?: string[],
+    tags?: string[]
 }
 
 export interface articleFilter {
@@ -71,5 +78,6 @@ export interface articleFilter {
     location?: string,
     type?: number,
     isTop?: boolean,
-    isAd?: boolean
+    isAd?: boolean,
+    tag?: string
 }

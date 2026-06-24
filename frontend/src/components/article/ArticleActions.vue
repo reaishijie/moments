@@ -1,35 +1,32 @@
 <script setup lang="ts" name="ArticleActions">
-import { showTime, showDetailTime } from '@/utils/time';
-import { ref, computed } from 'vue';
+import { ref } from 'vue';
 import { HeartRegular, Heart, CommentAltRegular } from '@vicons/fa'
 import { Icon } from '@vicons/utils'
 
-const props = defineProps({
+defineProps({
     article: {
         type: Object,
         required: true
+    },
+    compact: {
+        type: Boolean,
+        default: false
     }
 });
 
-const isDetailTime = ref(false)
 const isPopupOpen = ref(false)
 function togglePopup() {
     isPopupOpen.value = !isPopupOpen.value
 }
 // 传递事件给父组件
 const emit = defineEmits(['like', 'comment'])
-
-const createdAtTimestamp = computed(() => {
-  // 增加一个检查，防止 created_at 无效时页面崩溃
-  const date = new Date(props.article.created_at);
-  return isNaN(date.getTime()) ? 0 : date.getTime();
-});
 </script>
 
 <template>
-    <div class="timeAndAction">
-        <!-- 使用 article.created_at 来访问传递进来的数据 -->
-        <p @click="isDetailTime = !isDetailTime">{{ isDetailTime ?showDetailTime(createdAtTimestamp) : showTime(createdAtTimestamp) }}</p>
+    <div :class="['tagAndAction', { compact }]">
+        <div class="tag-slot" v-if="!compact">
+            <slot></slot>
+        </div>
         <div class="action-wrapper" @click="togglePopup">
             <div class="dots-button">
                 <p></p>
@@ -58,18 +55,23 @@ const createdAtTimestamp = computed(() => {
 </template>
 
 <style scoped>
-.timeAndAction {
+.tagAndAction {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    min-height: 20px;
 }
-.timeAndAction p {
-    margin: 0;
-    font-size: 12px;
-    color: #B2B2B2;
+.tagAndAction.compact {
+    min-height: 0;
+}
+.tag-slot {
+    display: flex;
+    flex: 1;
+    min-width: 0;
 }
 .action-wrapper {
     position: relative;
+    flex-shrink: 0;
 }
 .dots-button {
     display: inline-flex;

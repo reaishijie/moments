@@ -1,5 +1,6 @@
 <script setup lang="ts" name="Profile">
 import { computed, reactive } from 'vue'
+import AvatarImage from '@/components/utils/AvatarImage.vue';
 import { ChevronLeft, ChevronRight } from '@vicons/fa';
 import { Icon } from '@vicons/utils';
 import router from '@/router';
@@ -118,7 +119,7 @@ function handleLogout() {
       <div class="body-item" @click="editData.avatar = userData.avatar; states.avatar = !states.avatar;">
         <div class="body-item-left">头像</div>
         <div class="body-item-right">
-          <img :src="userData.avatar" alt="avatar" style="width: 35px;">
+          <AvatarImage :src="userData.avatar" alt="avatar" style="width: 35px;" />
           <Icon :class="['icon', { 'rotate-icon': states.avatar }]">
             <ChevronRight />
           </Icon>

@@ -1,8 +1,5 @@
 import { customAlphabet } from 'nanoid'
 import nodemailer from "nodemailer"
-import dotenv from 'dotenv'
-import test from 'node:test'
-dotenv.config()
 // 验证码字符表
 const alphabet = '0123456789'
 // 生成4位验证码

@@ -1,15 +1,18 @@
 {
   "name": "moments-backend",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "main": "src/index.ts",
   "type": "module",
+  "packageManager": "pnpm@11.8.0",
   "scripts": {
-    "build": "tsc",
-    "dev": "npx tsx watch src/index.ts",
+    "build": "prisma generate && tsc",
+    "dev": "tsx watch src/index.ts",
     "start": "node dist/index.js",
     "start:pm2": "pm2 start dist/index.js",
-    "db:install": "npx prisma generate && npx prisma migrate deploy && node dist/seed.js",
-    "db:setup": "npx prisma generate && npx prisma migrate deploy && tsx src/seed.ts"
+    "db:install": "prisma generate && prisma migrate deploy && node dist/seed.js",
+    "db:setup": "prisma generate && prisma migrate deploy && tsx src/seed.ts",
+    "db:install2": "prisma generate && PRISMA_SCHEMA_DISABLE_ADVISORY_LOCK=1 prisma migrate deploy && node dist/seed.js",
+    "db:setup2": "prisma generate && PRISMA_SCHEMA_DISABLE_ADVISORY_LOCK=1 prisma migrate deploy && tsx src/seed.ts"
   },
   "keywords": [
     "瞬刻",
@@ -27,13 +30,13 @@
     "@types/multer-s3": "^3.0.3",
     "@types/node": "^24.1.0",
     "@types/nodemailer": "^7.0.1",
-    "prisma": "^6.13.0",
+    "prisma": "6.19.3",
     "tsx": "^4.20.5",
     "typescript": "^5.8.3"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.899.0",
-    "@prisma/client": "^6.13.0",
+    "@prisma/client": "6.19.3",
     "axios": "^1.11.0",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
@@ -43,6 +46,6 @@
     "multer": "^2.0.2",
     "multer-s3": "^3.0.1",
     "nanoid": "^5.1.5",
-    "nodemailer": "^7.0.6"
+    "nodemailer": "^9.0.1"
   }
 }

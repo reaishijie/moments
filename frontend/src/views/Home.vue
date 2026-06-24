@@ -3,6 +3,7 @@ import { onMounted, ref, reactive, computed } from 'vue'
 import Header from '@/components/Header.vue';
 import Brief from '@/components/Brief.vue';
 import HomeArticleItem from '@/components/article/HomeArticleItem.vue'
+import AvatarImage from '@/components/utils/AvatarImage.vue';
 import { ChevronLeft, Cog, AngleDown } from '@vicons/fa';
 import { Icon } from '@vicons/utils';
 import router from '@/router';
@@ -18,7 +19,7 @@ const userStore = useUserStore()
 const defaultStore = useDefaultStore()
 const messageStore = useMessageStore()
 const route = useRoute()
-const username = route.params.username
+const username = Array.isArray(route.params.username) ? route.params.username[0] : route.params.username
 const userId = ref(1)
 const displayName = ref('')
 const avatar = ref('')
@@ -35,6 +36,23 @@ const pagination = reactive({
 
 const hasMore = computed(() => {
   return userArticle.length < pagination.total
+})
+const articleYearGroups = computed(() => {
+  const currentYear = new Date().getFullYear()
+  const groups = new Map<string, { label: string, articles: articleData[] }>()
+
+  userArticle.forEach((article) => {
+    const date = new Date(article.created_at)
+    const year = Number.isNaN(date.getTime()) ? null : date.getFullYear()
+    const key = year === null ? 'unknown' : String(year)
+    const label = year === null ? '未知年份' : year === currentYear ? '' : `${year}年`
+    const yearGroup = groups.get(key) ?? { label, articles: [] }
+
+    yearGroup.articles.push(article)
+    groups.set(key, yearGroup)
+  })
+
+  return Array.from(groups, ([year, group]) => ({ year, ...group }))
 })
 const fetchArticles = async (userId: number) => {
   if (pagination.isLoading) return
@@ -59,10 +77,10 @@ onMounted(async () => {
   try {
     const res = await getUserIdByUsername(username)
     userId.value = res.data.id
-    displayName.value = res.data.nickname ?? username
-    avatar.value = res.data.avatar ?? '/img/avatar.jpg'
-    header_background.value = res.data.header_background ?? '/img/background.avif'
-    avatar.value = res.data.avatar
+    displayName.value = res.data.nickname || username || '未命名用户'
+    avatar.value = res.data.avatar || '/img/avatar.jpg'
+    header_background.value = res.data.header_background || '/img/background.avif'
+    brief.value = res.data.brief || '这个人很懒，什么都没有留下。'
     if (userId.value) {
       await fetchArticles(userId.value)
     }
@@ -100,7 +118,7 @@ onMounted(async () => {
       <Brief>
         <template #brief-img>
           <span>{{ displayName }}</span>
-          <img :src="avatar" alt="avatar" @click="router.push({ name: 'profile'})">
+          <AvatarImage :src="avatar" alt="avatar" @click="router.push({ name: 'profile'})" />
         </template>
         <template #brief-content>
           {{ brief }}
@@ -110,12 +128,15 @@ onMounted(async () => {
     <div class="content-container">
       <!-- 简略文章展示 -->
       <div class="content-main">
-        <ul>
-          <li v-for="article in userArticle" :key="article.id">
-            <!-- 每篇文章都循环使用 template 进行展示 -->
-            <HomeArticleItem :article="article" />
-          </li>
-        </ul>
+        <div v-for="group in articleYearGroups" :key="group.year" class="year-block">
+          <div v-if="group.label" class="year-title">{{ group.label }}</div>
+          <ul class="year-articles">
+            <li v-for="article in group.articles" :key="article.id">
+              <!-- 每篇文章都循环使用 template 进行展示 -->
+              <HomeArticleItem :article="article" />
+            </li>
+          </ul>
+        </div>
       </div>
       <div class="content-footer">
         <div v-if="pagination.isLoading" class="status-indicator">正在加载中...</div>
@@ -206,10 +227,30 @@ onMounted(async () => {
   width: 100%;
 }
 
+.year-block {
+  margin: 12px 10px;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background-color: var(--color-bg-app);
+}
+
+.year-title {
+  padding: 12px 16px;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  border-bottom: 1px solid var(--color-border);
+}
+
 .content-main ul {
   list-style: none;
   padding: 0;
   margin: 0;
+}
+
+.year-articles :deep(.article-item:last-child) {
+  border-bottom: none;
 }
 
 .content-footer {

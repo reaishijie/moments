@@ -26,8 +26,8 @@ find "$OUTPUT_DIR" -mindepth 1 \
 ############################
 echo "[1/3] 构建前端..."
 cd $FRONTEND_DIR
-npm install
-npm run build
+pnpm install --frozen-lockfile
+pnpm run build
 cd ..
 
 # 把 dist 重命名为 public 并复制到 quickDeploy/public
@@ -39,12 +39,14 @@ cp -r $FRONTEND_DIR/dist/* $OUTPUT_DIR/public/
 ############################
 echo "[2/3] 构建后端..."
 cd $BACKEND_DIR
-npm install
-npm run build
+pnpm install --frozen-lockfile
+pnpm run build
 cd ..
 
 # 复制后端需要的文件到 quickDeploy 根目录
 cp $BACKEND_DIR/package.json $OUTPUT_DIR/
+cp $BACKEND_DIR/pnpm-lock.yaml $OUTPUT_DIR/
+cp $BACKEND_DIR/pnpm-workspace.yaml $OUTPUT_DIR/
 cp -r $BACKEND_DIR/dist $OUTPUT_DIR/
 cp -r $BACKEND_DIR/prisma $OUTPUT_DIR/
 cp $BACKEND_DIR/.env.example $OUTPUT_DIR/ || true   # 如果不存在就忽略

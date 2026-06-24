@@ -1,10 +1,11 @@
 import { Router, Request, Response } from "express";
-import { Prisma, PrismaClient } from '@prisma/client';
+import { Prisma } from '@prisma/client';
+import { prisma } from '../lib/prisma.js';
 import { adminMiddleware } from "../middleware/adminMiddleware.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
+import { buildConfigWhere, formatConfigResponse, parseConfigQuery, type ConfigAccessLevel } from "../services/config-query.service.js";
 
 const router = Router()
-const prisma = new PrismaClient()
 
 // 获取（未删除）用户数：用户总数、已激活用户数、未激活用户数
 router.get('/user', authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
@@ -77,75 +78,50 @@ router.get('/comment', authMiddleware, adminMiddleware, async (req: Request, res
 
 /**
  * 获取网站信息
- * 敏感（需 adminMiddleware 鉴权）
- * 非敏感（直接返回信息）
+ * publicConfig：游客可见配置
+ * userConfig：登录用户可见配置
+ * config：管理员可见配置
  */
-// 非敏感
-router.get('/publicConfig', async (req: Request, res: Response) => {
+async function sendConfigResponse(req: Request, res: Response, allowedAccessLevels: ConfigAccessLevel[]) {
     try {
-        // 定义返回的公共内容的key
-        const publicKeys = [
-            'site_avatar',
-            'site_background',
-            'site_brief',
-            'site_description',
-            'site_header_background',
-            'site_keywords',
-            'site_logo',
-            'sitename',
-            'verify_hcaptcha_app',
-            'user_captcha',
-            'user_status',
-            'user_captcha_article',
-            'user_captcha_comment',
-            'user_captcha_update',
-            'upload_method',
-            'upload_number',
-            'upload_size',
-            'location_method',
-            'link_brief'
-        ];
+        const parsedQuery = parseConfigQuery(req.query, allowedAccessLevels)
         const configs = await prisma.config.findMany({
-            where: {
-                // 进行条件筛选 ⭐⭐⭐
-                k: {
-                    in: publicKeys
-                }
+            where: buildConfigWhere(parsedQuery),
+            select: {
+                k: true,
+                v: true,
+                name: true,
+                description: true,
+                category: true,
+                sort: true,
+                access_level: true,
             },
-            select: {
-                k: true,
-                v: true
-            }
+            orderBy: [
+                { category: 'asc' },
+                { sort: 'asc' },
+                { k: 'asc' },
+            ],
         })
-        // 将数组转换为对象进行返回 ⭐⭐⭐⭐⭐
-        const resultObj = configs.reduce((acc, currentItem) => {
-            acc[currentItem.k] = currentItem.v
-            return acc;
-        }, {} as Record<string, string>)
-        return res.status(200).json(resultObj)
+        return res.status(200).json(formatConfigResponse(configs, parsedQuery.detail))
     } catch (error) {
         console.log('获取网站配置失败：', error);
-        return null
+        return res.status(500).json({ message: '获取网站配置失败', error })
     }
+}
+
+// 游客可见配置
+router.get('/publicConfig', async (req: Request, res: Response) => {
+    return sendConfigResponse(req, res, ['public'])
 })
-// 敏感
+
+// 登录用户可见配置
+router.get('/userConfig', authMiddleware, async (req: Request, res: Response) => {
+    return sendConfigResponse(req, res, ['public', 'user'])
+})
+
+// 管理员可见配置
 router.get('/config', authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
-    try {
-        const configs = await prisma.config.findMany({
-            select: {
-                k: true,
-                v: true
-            }
-        })
-        const resultObj = configs.reduce((acc, currentItem) => {
-            acc[currentItem.k] = currentItem.v
-            return acc;
-        }, {} as Record<string, string>)
-        return res.status(200).json(resultObj)
-    } catch (error) {
-        console.log('获取网站配置失败：', error);
-        return null
-    }
+    return sendConfigResponse(req, res, ['public', 'user', 'admin'])
 })
 // 修改配置信息（需要 adminMiddleware 鉴权）
 router.patch('/config', authMiddleware, adminMiddleware, async (req: Request, res: Response) => {

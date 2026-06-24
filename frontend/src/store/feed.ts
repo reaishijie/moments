@@ -21,6 +21,7 @@ export const useFeedStore = defineStore('feed', () => {
     const page = ref(0)
     const isLoading = ref(false)
     const hasMore = ref(true)
+    const activeTag = ref('')
     const commentPagination = ref<Record<string, {
         page: number
         pageSize: number
@@ -52,6 +53,12 @@ export const useFeedStore = defineStore('feed', () => {
         }
     }
 
+    const buildArticleParams = (targetPage: number) => {
+        const params: Record<string, any> = { page: targetPage, pageSize: 5 }
+        if (activeTag.value) params.tag = activeTag.value
+        return params
+    }
+
     // 加载初始文章
     const fetchInitialArticles = async () => {
         // if (articles.value.length > 0) return //防止重复加载文章
@@ -59,7 +66,7 @@ export const useFeedStore = defineStore('feed', () => {
         try {
             const guestId = !userStore.token ? getOrCreateGuestId() : undefined;
 
-            const response = await getArticle({ page: 1, pageSize: 5 }, guestId)
+            const response = await getArticle(buildArticleParams(1), guestId)
             articles.value = response.data.data
             page.value = 1
             hasMore.value = articles.value.length < response.data.total
@@ -80,7 +87,7 @@ export const useFeedStore = defineStore('feed', () => {
         try {
             const nextPage = page.value + 1
             const guestId = !userStore.token ? getOrCreateGuestId() : undefined;
-            const response = await getArticle({ page: nextPage, pageSize: 5 }, guestId)
+            const response = await getArticle(buildArticleParams(nextPage), guestId)
 
             // 将新文章数据放入articles数组中
             if (response.data.data.length > 0) {
@@ -101,6 +108,26 @@ export const useFeedStore = defineStore('feed', () => {
         } finally {
             isLoading.value = false
         }
+    }
+
+    const setActiveTag = async (tag: string) => {
+        activeTag.value = tag
+        page.value = 0
+        hasMore.value = true
+        commentsMap.value = {}
+        articleLikesMap.value = {}
+        commentPagination.value = {}
+        return fetchInitialArticles()
+    }
+
+    const clearActiveTag = async () => {
+        activeTag.value = ''
+        page.value = 0
+        hasMore.value = true
+        commentsMap.value = {}
+        articleLikesMap.value = {}
+        commentPagination.value = {}
+        return fetchInitialArticles()
     }
 
     // 点赞处理
@@ -273,6 +300,7 @@ export const useFeedStore = defineStore('feed', () => {
         articles,
         isLoading,
         hasMore,
+        activeTag,
         fetchInitialArticles,
         fetchMoreArticles,
         toggleLike,
@@ -283,6 +311,8 @@ export const useFeedStore = defineStore('feed', () => {
         createComment,
         fetchArticleLikers,
         articleLikesMap,
-        fetchSingleArticle
+        fetchSingleArticle,
+        setActiveTag,
+        clearActiveTag
     }
 })

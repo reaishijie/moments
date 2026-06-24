@@ -5,9 +5,12 @@ import { getLocation } from '@/utils/location'
 import { Thumbtack, Ad, Link } from '@vicons/fa';
 import { Icon } from '@vicons/utils';
 import router from '@/router';
+import { computed, ref } from 'vue';
 import { type articleData } from '@/types/article';
 import { useMessageStore } from '@/store/message';
+import AvatarImage from '@/components/utils/AvatarImage.vue';
 import Media from './Media.vue';
+import { showDetailTime, showTime } from '@/utils/time';
 
 const messageStore = useMessageStore()
 const props = defineProps<{
@@ -20,7 +23,13 @@ const props = defineProps<{
     isLoadingComments: boolean,
 }>();
 
-const emit = defineEmits(['like', 'comment', 'send-reply', 'load-more-comments']);
+const emit = defineEmits(['like', 'comment', 'send-reply', 'load-more-comments', 'tag']);
+const isDetailTime = ref(false)
+const createdAtTimestamp = computed(() => {
+    const date = new Date(props.article.created_at)
+    return isNaN(date.getTime()) ? 0 : date.getTime()
+})
+const hasArticleTags = computed(() => (props.article.tags?.length || 0) > 0)
 
 async function showLocation() {
     try {
@@ -40,7 +49,7 @@ function openAd(url: string) {
     <div class="article-item" v-if="props.article">
         <!-- 左侧头像 -->
         <div class="article-avatar" @click="router.push(`/home/${props.article.user.username}`)">
-            <img :src="props.article.user?.avatar" alt="avatar">
+            <AvatarImage :src="props.article.user?.avatar" alt="avatar" />
         </div>
         <!-- 内容 -->
         <div class="article-context">
@@ -81,12 +90,26 @@ function openAd(url: string) {
                 <!-- 将article传递给组件 -->
                 <Media :article-images="props.article.article_images" :article-videos="props.article.article_videos" />
             </div>
-            <div class="location" @click="showLocation">
-                <p>{{ props.article.location }}</p>
+            <div class="meta-row">
+                <div class="meta-text">
+                    <p class="article-time" @click="isDetailTime = !isDetailTime">
+                        {{ isDetailTime ? showDetailTime(createdAtTimestamp) : showTime(createdAtTimestamp) }}
+                    </p>
+                    <p class="location" v-if="props.article.location" @click="showLocation">{{ props.article.location }}</p>
+                </div>
+                <ArticleActions v-if="!hasArticleTags" :article="props.article" compact @like="emit('like', props.article.id)"
+                    @comment="emit('comment')" />
             </div>
-            <!-- 时间、点赞评论按钮 -->
-            <ArticleActions :article="props.article" @like="emit('like', props.article.id)"
-                @comment="emit('comment')" />
+            <!-- 标签、点赞评论按钮 -->
+            <ArticleActions v-if="hasArticleTags" :article="props.article" @like="emit('like', props.article.id)"
+                @comment="emit('comment')">
+                <div class="article-tags">
+                    <button type="button" v-for="tag in props.article.tags" :key="tag.id"
+                        @click.stop="emit('tag', tag.name)">
+                        #{{ tag.name }}
+                    </button>
+                </div>
+            </ArticleActions>
             <!-- 评论 -->
             <div class="review">
                 <Review :article="props.article" :likers="props.likers" :comments="props.comments"
@@ -202,6 +225,27 @@ function openAd(url: string) {
     /* Set icon color */
 }
 
+.article-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.article-tags button {
+    border: none;
+    background-color: var(--color-ad);
+    color: #6b7280;
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-size: 11px;
+    line-height: 18px;
+    cursor: pointer;
+}
+
+.article-tags button:hover {
+    background-color: var(--color-ad-hover);
+}
+
 /** 文章内容样式 */
 .main-context p {
     margin: 0;
@@ -213,15 +257,40 @@ function openAd(url: string) {
     /* 处理长单词或链接换行 */
 }
 
-.location {
+.meta-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
     margin-top: 5px;
-    color: #4E6086;
     font-size: 12px;
 }
 
-.location p {
+.meta-text {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+}
+
+.location,
+.article-time {
+    display: inline-flex;
+    align-items: center;
     margin: 2px 0 2px 0;
     padding: 0;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 18px;
+}
+
+.location {
+    color: #4E6086;
+}
+
+.article-time {
+    color: #B2B2B2;
+    cursor: pointer;
 }
 
 .main-context {

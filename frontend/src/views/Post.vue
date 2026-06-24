@@ -1,6 +1,6 @@
 <script setup lang="ts" name="Post">
 import { ref, reactive, watch } from 'vue'
-import { ChevronLeft, MapMarkerAlt, Thumbtack, Ad, FileWord, Image, Video, ExchangeAlt } from '@vicons/fa';
+import { ChevronLeft, MapMarkerAlt, Thumbtack, Ad, FileWord, Image, Video, ExchangeAlt, Tags, Times } from '@vicons/fa';
 import { Icon } from '@vicons/utils';
 import router from '@/router';
 import { type createArticleData } from '@/types/article';
@@ -23,10 +23,12 @@ const articleData = reactive<createArticleData>({
   adUrl: '',
   imageUrls: [],
   videoUrls: [],
-  thumbnail_url: ''
+  thumbnail_url: '',
+  tags: []
 })
 const imageData = ref('')
 const videoData = ref('')
+const tagInput = ref('')
 const states = reactive({
   location: false,
   add: false
@@ -104,7 +106,12 @@ async function fetchLocation() {
   try {
     states.location = true
     const res = await getLocation()
-    articleData.location = res?.result.subdivisions + ' ' + (res?.result.city ? res?.result.city : '')
+    const locationText = res?.text || ''
+    if (!locationText) {
+      messageStore.update(id, { type: 'info', text: '未获取到位置信息', duration: 2000 })
+      return
+    }
+    articleData.location = locationText
     messageStore.update(id, { type: 'success', text: '获取位置信息成功', duration: 2000 })
   } catch (error) {
     console.log(error);
@@ -114,10 +121,22 @@ async function fetchLocation() {
   }
 }
 const uploadRef = ref<InstanceType<typeof Upload> | null>();
+const videoUploadRef = ref<InstanceType<typeof Upload> | null>();
+const coverUploadRef = ref<InstanceType<typeof Upload> | null>();
 async function addArticle() {
+  const hasUploadFiles = !displayMethod.value && (
+    !!uploadRef.value?.hasSelectedFiles() ||
+    !!videoUploadRef.value?.hasSelectedFiles() ||
+    !!coverUploadRef.value?.hasSelectedFiles()
+  )
+  const hasUploadVideo = !displayMethod.value && !!videoUploadRef.value?.hasSelectedVideo()
   if (!articleData.content && (!articleData.imageUrls?.length || articleData.imageUrls.length === 0) &&
-    (!articleData.videoUrls?.length || articleData.videoUrls.length === 0)) {
+    (!articleData.videoUrls?.length || articleData.videoUrls.length === 0) && !hasUploadFiles) {
     messageStore.show('文章内容不能为空', 'info', 2000)
+    return
+  }
+  if (articleData.type === 2 && !articleData.videoUrls?.length && !hasUploadVideo) {
+    messageStore.show('请选择视频文件或填写视频链接', 'info', 2000)
     return
   }
   if (states.add) {
@@ -128,7 +147,14 @@ async function addArticle() {
   try {
     states.add = true
     const res = await createArticle(articleData)
-    await uploadRef.value?.performUpload(res.data.id)
+    if (articleData.type === 2 && !displayMethod.value) {
+      await videoUploadRef.value?.performUpload(res.data.id)
+      if (coverUploadRef.value?.hasSelectedFiles()) {
+        await coverUploadRef.value.performUpload(res.data.id)
+      }
+    } else {
+      await uploadRef.value?.performUpload(res.data.id)
+    }
     
     // 清空内容
     articleData.content = ''
@@ -138,8 +164,10 @@ async function addArticle() {
     articleData.thumbnail_url = ''
     articleData.adTitle = ''
     articleData.adUrl = ''
+    articleData.tags = []
     imageData.value = ''
     videoData.value = ''
+    tagInput.value = ''
     messageStore.update(id, { type: 'success', text: '发表成功', duration: 2000 })
   } catch (error) {
     console.log('发表文章失败', error)
@@ -152,6 +180,28 @@ const adjustHeight = (event: Event) => {
   const textarea = event.target as HTMLTextAreaElement
   textarea.style.height = 'auto'
   textarea.style.height = textarea.scrollHeight + 'px'
+}
+function addTag(name: string) {
+  const tagName = name.trim().replace(/^#+/, '').slice(0, 50)
+  if (!tagName || articleData.tags?.includes(tagName)) return
+  if ((articleData.tags?.length || 0) >= 5) {
+    messageStore.show('最多添加5个标签', 'info', 2000)
+    return
+  }
+  articleData.tags = [...(articleData.tags || []), tagName]
+}
+function commitTagInput() {
+  const tags = tagInput.value.split(/[\s,，#]+/).filter(Boolean)
+  tags.forEach(addTag)
+  tagInput.value = ''
+}
+function handleTagInput() {
+  if (/[\s,，#]/.test(tagInput.value)) {
+    commitTagInput()
+  }
+}
+function removeTag(name: string) {
+  articleData.tags = (articleData.tags || []).filter(tag => tag !== name)
 }
 </script>
 
@@ -175,13 +225,36 @@ const adjustHeight = (event: Event) => {
       <textarea v-model="articleData.content" placeholder="这一刻的想法..." @input="adjustHeight"
         class="contentArea"></textarea>
       <!-- 上传文件 -->
-      <Upload v-if="articleData.type !== 0 && !displayMethod" ref="uploadRef"></Upload>
-      <div class="location">
-        <div>
-          <Icon @click="fetchLocation" title="点击获取位置信息">
-            <MapMarkerAlt />
-          </Icon>
-          <input type="text" placeholder="输入位置信息（可为空）" v-model="articleData.location" style="background-color: inherit;">
+      <Upload v-if="articleData.type === 1 && !displayMethod" ref="uploadRef" :article-type="articleData.type"></Upload>
+      <div v-if="articleData.type === 2 && !displayMethod" class="video-upload-section">
+        <div class="upload-field">
+          <div class="upload-label">视频文件</div>
+          <Upload ref="videoUploadRef" :article-type="articleData.type" upload-role="video"></Upload>
+        </div>
+        <div class="upload-field">
+          <div class="upload-label">封面图片</div>
+          <Upload ref="coverUploadRef" :article-type="articleData.type" upload-role="cover"></Upload>
+        </div>
+      </div>
+      <div class="field-row location">
+        <Icon class="field-icon" size="16px" @click="fetchLocation" title="点击获取位置信息">
+          <MapMarkerAlt />
+        </Icon>
+        <input type="text" placeholder="输入位置信息（可为空）" v-model="articleData.location">
+      </div>
+      <div class="field-row tag-input">
+        <Icon class="field-icon field-icon-tag" size="14px">
+          <Tags />
+        </Icon>
+        <div class="tag-editor">
+          <button type="button" class="tag-chip" v-for="tag in articleData.tags" :key="tag" @click="removeTag(tag)">
+            <span>#{{ tag }}</span>
+            <Icon class="tag-remove">
+              <Times />
+            </Icon>
+          </button>
+          <input type="text" placeholder="输入标签，空格或逗号生成" v-model="tagInput"
+            @input="handleTagInput" @keydown.enter.prevent="commitTagInput" @blur="commitTagInput">
         </div>
       </div>
       <div class="func">
@@ -305,6 +378,50 @@ const adjustHeight = (event: Event) => {
   width: 100%;
 }
 
+.video-upload-section {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 5px;
+}
+
+.upload-field {
+  width: 28%;
+  min-width: 0;
+}
+
+.upload-label {
+  color: #6cadf1;
+  font-size: 12px;
+  margin: 0 0 5px 0;
+}
+
+.upload-field :deep(.upload-container) {
+  width: 100%;
+  margin: 0;
+}
+
+.upload-field :deep(ul) {
+  width: 100%;
+}
+
+.upload-field :deep(.add-file),
+.upload-field :deep(li),
+.upload-field :deep(video) {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  margin: 0;
+}
+
+.upload-field :deep(video) {
+  background-color: var(--color-post-bar);
+  object-fit: cover;
+}
+
+.upload-field :deep(img) {
+  margin: 0;
+}
+
 .contentArea {
   border: none;
   resize: none;
@@ -378,17 +495,92 @@ input:focus {
   color: #6cadf1;
 }
 
-.location {
+.field-row {
+  display: flex;
+  align-items: center;
   width: 100%;
+  gap: 10px;
   padding: 5px 15px 5px 20px;
   color: #6cadf1;
+  box-sizing: border-box;
+}
+
+.field-icon {
+  width: 16px;
+  height: 20px;
+  min-width: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.field-icon :deep(svg) {
+  width: 16px;
+  height: 16px;
+}
+
+.field-icon-tag :deep(svg) {
+  width: 14px;
+  height: 14px;
 }
 
 .location input {
-  margin-left: 10px;
+  flex: 1;
+  height: 20px;
+  padding: 0;
   outline: none;
   border: none;
   font-size: smaller;
-  color: #6cacf1c9
+  line-height: 20px;
+  color: #6cacf1c9;
+  background-color: inherit;
+  min-width: 0;
+}
+
+.tag-editor {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+  min-height: 20px;
+}
+
+.tag-editor input {
+  flex: 1;
+  height: 20px;
+  padding: 0;
+  outline: none;
+  border: none;
+  font-size: smaller;
+  line-height: 20px;
+  color: #6cacf1c9;
+  background-color: inherit;
+  min-width: 120px;
+}
+
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  border-radius: 3px;
+  background-color: var(--color-ad);
+  color: #4E6086;
+  padding: 1px 5px;
+  font-size: 12px;
+  line-height: 20px;
+  cursor: pointer;
+}
+
+.tag-chip:hover {
+  background-color: var(--color-ad-hover);
+}
+
+.tag-remove {
+  font-size: 10px;
 }
 </style>

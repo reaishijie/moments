@@ -1,5 +1,6 @@
 <script setup lang="ts" name="Brief">
 import { computed } from 'vue';
+import AvatarImage from '@/components/utils/AvatarImage.vue'
 import { useUserStore } from '@/store/user'
 import router from '@/router';
 import { useDefaultStore } from '@/store/default'
@@ -29,7 +30,7 @@ const routerName = computed(() => {
         <div class="brief-img">
             <slot name="brief-img">
                 <span>{{ nickname }}</span>
-                <img :src="avatar" alt="avatar" @click="router.push(`/home/${routerName}`)">
+                <AvatarImage :src="avatar" alt="avatar" @click="router.push(`/home/${routerName}`)" />
             </slot>
         </div>
         <p>

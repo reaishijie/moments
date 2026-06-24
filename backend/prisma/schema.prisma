@@ -160,8 +160,17 @@ model users {
 
 // 网站信息配置表
 model config {
-  k String @id @unique
-  v String @db.Text
+  k            String   @id @unique
+  v            String   @db.Text
+  name         String   @default("") @db.VarChar(100)
+  description  String   @default("") @db.VarChar(255)
+  category     String   @default("system") @db.VarChar(50)
+  sort         Int      @default(0)
+  access_level String   @default("admin") @db.VarChar(20)
+  created_at   DateTime @default(now()) @db.Timestamp(0)
+  updated_at   DateTime @default(now()) @updatedAt @db.Timestamp(0)
+
+  @@index([access_level, category, sort])
 }
 
 model link {

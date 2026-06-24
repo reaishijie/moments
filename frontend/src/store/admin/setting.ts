@@ -3,18 +3,20 @@
  */
 import { defineStore } from "pinia";
 import { ref, type Ref } from "vue";
-import { type updateConfigData } from "@/types/admin";
+import { type ConfigDetail, type updateConfigData } from "@/types/admin";
 import { getConfig as apiGetConfig } from '@/api/admin';
 
 export const useSettingStore = defineStore('setting', () => {
     // 使用 ref 存储原始数据，并明确其类型
     const originalData: Ref<updateConfigData> = ref({});
+    const configDetails: Ref<ConfigDetail[]> = ref([]);
     
     // 使用 ref 存储表单数据，并明确其类型
     const configs: Ref<updateConfigData> = ref({
         sitename: '',
         site_url: '',
         site_logo: '',
+        site_font: '',
         site_keywords: '',
         site_email: '',
         site_header_background: '',
@@ -30,25 +32,50 @@ export const useSettingStore = defineStore('setting', () => {
         user_status: '',
         user_auth: '',
         user_captcha: '',
+        user_captcha_article: '',
+        user_captcha_comment: '',
+        user_captcha_update: '',
         verify_hcaptcha_user: '',
         verify_hcaptcha_app: '',
+        location_method: '',
+        upload_method: '',
+        upload_number: '',
+        upload_size: '',
+        upload_s3_bucketname: '',
+        upload_s3_domain: '',
+        upload_s3_endpoint: '',
+        upload_s3_id: '',
+        upload_s3_region: '',
+        upload_s3_secret: '',
+        link_brief: '',
     });
 
     /**
      * @description 从后端获取配置数据并更新 store
      */
-    const getAllConfig = async () => {
+    const getAllConfig = async (detail = false) => {
         try {
-            const sqlData = await apiGetConfig();
-            // 直接替换 ref 的 .value
-            configs.value = sqlData.data;
+            const sqlData = await apiGetConfig(detail ? { detail: true } : undefined);
+            if (detail) {
+                configDetails.value = sqlData.data;
+                configs.value = sqlData.data.reduce((acc: updateConfigData, current: ConfigDetail) => {
+                    acc[current.key as keyof updateConfigData] = current.value;
+                    return acc;
+                }, {});
+            } else {
+                configs.value = sqlData.data;
+            }
             // 对 ref 的 .value 进行赋值，并确保深拷贝
-            originalData.value = JSON.parse(JSON.stringify(sqlData.data));
+            originalData.value = JSON.parse(JSON.stringify(configs.value));
             return true;
         } catch (error) {
             console.error('获取配置失败:', error);
             return false;
         }
+    };
+
+    const syncOriginalData = () => {
+        originalData.value = JSON.parse(JSON.stringify(configs.value));
     };
 
     /**
@@ -85,8 +112,10 @@ export const useSettingStore = defineStore('setting', () => {
     return {
         originalData,
         configs,
+        configDetails,
         getAllConfig,
         hasChanged,
-        getUpdateData
+        getUpdateData,
+        syncOriginalData
     };
 });

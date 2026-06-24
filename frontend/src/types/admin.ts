@@ -8,6 +8,7 @@ export interface updateConfigData {
     site_url?: string,
     site_email?: string,
     site_logo?: string,
+    site_font?: string,
     site_keywords?: string,
     site_header_background?: string,
     site_description?: string,
@@ -42,4 +43,25 @@ export interface updateConfigData {
     upload_s3_region?: string,
     upload_s3_secret?: string,
     link_brief?: string,
+}
+
+export type ConfigAccessLevel = 'public' | 'user' | 'admin';
+
+export interface ConfigQueryParams {
+    key?: string;
+    keys?: string;
+    category?: string;
+    categories?: string;
+    accessLevel?: ConfigAccessLevel | ConfigAccessLevel[];
+    detail?: boolean | 1 | '1' | 'true';
+}
+
+export interface ConfigDetail {
+    key: string;
+    value: string;
+    name: string;
+    description: string;
+    category: string;
+    sort: number;
+    accessLevel: ConfigAccessLevel;
 }
