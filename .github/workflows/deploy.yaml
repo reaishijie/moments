@@ -117,6 +117,13 @@ jobs:
             rm -rf "$UPLOAD_PATH"
 
             cd "$DEPLOY_PATH"
+            APP_CONTAINER_NAME="$(grep '^APP_CONTAINER_NAME=' compose.env | cut -d= -f2- | tr -d '\r' | xargs)"
+            test -n "$APP_CONTAINER_NAME"
+
             docker compose -f docker-compose.yml --env-file compose.env build --pull app
+            docker compose -f docker-compose.yml --env-file compose.env down --remove-orphans || true
+            if docker ps -a --format '{{.Names}}' | grep -Fx "$APP_CONTAINER_NAME" >/dev/null; then
+              docker rm -f "$APP_CONTAINER_NAME"
+            fi
             docker compose -f docker-compose.yml --env-file compose.env up -d app
             docker image prune -f
