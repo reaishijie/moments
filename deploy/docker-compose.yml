@@ -1,0 +1,19 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ${APP_CONTAINER_NAME}
+    restart: always
+    ports:
+      - "${APP_PORT}:9889"
+    env_file:
+      - .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - 1panel-network
+
+networks:
+  1panel-network:
+    external: true
