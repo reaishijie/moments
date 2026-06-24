@@ -6,8 +6,10 @@ import { FileService, publicRootPath } from "../services/file.service.js"
 import { authMiddleware } from "../middleware/authMiddleware.js"
 import { prisma } from "../lib/prisma.js";
 import { getConfigCache, type AppConfig } from "../services/config.service.js"
+import { Logger } from "../utils/logger.js"
 
 const router = Router()
+const logger = new Logger('UploadRoute')
 
 /**
  * @description：本地存储
@@ -208,11 +210,19 @@ async function createS3Upload(configs: AppConfig) {
     ])
     const multerS3 = multerS3Module.default
 
+    const endpoint = configs.upload_s3_endpoint?.trim() || undefined
+    const configuredRegion = configs.upload_s3_region?.trim()
+    const region = endpoint ? (configuredRegion || 'auto') : (configuredRegion && configuredRegion !== 'auto' ? configuredRegion : 'us-east-1')
+
+    if (!endpoint && configuredRegion === 'auto') {
+        logger.warn('S3 region "auto" requires a custom endpoint. Falling back to "us-east-1" for AWS S3.')
+    }
+
     const s3 = new S3Client({
         // aws可为空， r2等兼容服务必须填写
-        endpoint: configs.upload_s3_endpoint || undefined,
-        // 区域
-        region: configs.upload_s3_region || 'auto',
+        endpoint,
+        // 区域：R2 等兼容服务常用 auto；AWS S3 不能使用 auto
+        region,
         // 凭证
         credentials: {
             accessKeyId: configs.upload_s3_id,
@@ -276,7 +286,7 @@ router.post('/s3', authMiddleware, s3UploadMiddleware, async (req: Request, res:
     const articleId = req.body.articleId;
     const articleType = Number(req.body.articleType ?? 0);
     const uploadRole = req.body.uploadRole as string | undefined;
-    console.log('@文章id',articleId);
+    logger.debug(`S3 upload article id: ${articleId}`)
     
     if (!files || files.length === 0) {
         return res.status(400).json({ status: false, message: '没有文件被上传' });
@@ -342,7 +352,7 @@ router.post('/s3', authMiddleware, s3UploadMiddleware, async (req: Request, res:
         res.json({ status: true, message: `成功上传 ${filePaths.length} 个文件`, paths: filePaths });
 
     } catch (error) {
-        console.error('@S3/R2 上传处理时出错：', error);
+        logger.error('S3/R2 上传处理时出错', error instanceof Error ? error.stack : String(error));
         res.status(500).json({ status: false, message: '文件处理失败' });
     }
 });

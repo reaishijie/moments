@@ -54,6 +54,14 @@ const articleYearGroups = computed(() => {
 
   return Array.from(groups, ([year, group]) => ({ year, ...group }))
 })
+function handleBack() {
+  if (route.query.from === 'post') {
+    router.replace({ name: 'index' })
+    return
+  }
+  router.back()
+}
+
 const fetchArticles = async (userId: number) => {
   if (pagination.isLoading) return
   pagination.isLoading = true
@@ -99,7 +107,7 @@ onMounted(async () => {
         <!-- 左插槽 -->
         <template #left="{ isBlurred }">
           <div class="top-bar-left">
-            <Icon :class="['icon', { blurred: isBlurred }]" @click="router.back()">
+            <Icon :class="['icon', { blurred: isBlurred }]" @click="handleBack">
               <ChevronLeft />
             </Icon>
           </div>

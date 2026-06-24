@@ -175,7 +175,7 @@ async function addArticle() {
     }
     const username = userStore.profile?.username
     if (username) {
-      router.push({ name: 'home', params: { username } })
+      router.replace({ name: 'home', params: { username }, query: { from: 'post' } })
     }
   } catch (error) {
     console.log('发表文章失败', error)
