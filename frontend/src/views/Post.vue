@@ -169,6 +169,14 @@ async function addArticle() {
     videoData.value = ''
     tagInput.value = ''
     messageStore.update(id, { type: 'success', text: '发表成功', duration: 2000 })
+
+    if (!userStore.profile?.username) {
+      await userStore.fetchUserProfile()
+    }
+    const username = userStore.profile?.username
+    if (username) {
+      router.push({ name: 'home', params: { username } })
+    }
   } catch (error) {
     console.log('发表文章失败', error)
     messageStore.update(id, { type: 'error', text: '发表失败', duration: 2000 })
