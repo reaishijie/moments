@@ -69,7 +69,7 @@ import HeaderBar from '@/components/admin/HeaderBar.vue'
   }
 
   .admin-main {
-    padding: 16px 16px 96px;
+    padding: 16px 16px calc(138px + env(safe-area-inset-bottom));
   }
 }
 </style>
