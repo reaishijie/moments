@@ -2,7 +2,7 @@
 import { useSidebarStore } from '@/store/admin/sidebar'
 import { SunRegular, AddressCardRegular, CommentRegular, Buffer, NodeJs, GemRegular, AngleDown } from '@vicons/fa'
 import { Icon } from '@vicons/utils'
-import { computed, onUnmounted, ref, type Component, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, type Component, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
 const sidebarStore = useSidebarStore()
@@ -16,6 +16,8 @@ const iconMap: Record<string, Component> = {
   'admin-user': AddressCardRegular,
 }
 const openParentName = ref<string | null>(null)
+const openParentRect = ref<DOMRect | null>(null)
+const viewportWidth = ref(typeof window === 'undefined' ? 1024 : window.innerWidth)
 const dockOffset = ref({ x: 0, y: 0 })
 const isDraggingDock = ref(false)
 let dragState: {
@@ -26,8 +28,10 @@ let dragState: {
   element: HTMLElement
 } | null = null
 
+const isMobileDock = computed(() => viewportWidth.value <= 768)
+
 const dockStyle = computed(() => ({
-  transform: `translate3d(${dockOffset.value.x}px, ${dockOffset.value.y}px, 0)`,
+  transform: isMobileDock.value ? 'none' : `translate3d(${dockOffset.value.x}px, ${dockOffset.value.y}px, 0)`,
 }))
 
 const dockPlacement = computed(() => {
@@ -48,12 +52,47 @@ const dockClasses = computed(() => ({
   'placement-bottom': dockPlacement.value === 'bottom',
 }))
 
-function isShowChildren(name: string) {
-  openParentName.value = openParentName.value === name ? null : name
+const childDockStyle = computed(() => {
+  const rect = openParentRect.value
+  if (!rect) return {}
+
+  const gap = 16
+  const padding = 12
+  const placement = dockPlacement.value
+
+  if (placement === 'left') {
+    const top = Math.min(Math.max(rect.top + rect.height / 2, 96), window.innerHeight - padding)
+    return { top: `${top}px`, left: `${rect.right + gap}px` }
+  }
+
+  if (placement === 'right') {
+    const top = Math.min(Math.max(rect.top + rect.height / 2, 96), window.innerHeight - padding)
+    return { top: `${top}px`, left: `${rect.left - gap}px` }
+  }
+
+  const popoverHalfWidth = 86
+  const left = Math.min(Math.max(rect.left + rect.width / 2, padding + popoverHalfWidth), window.innerWidth - padding - popoverHalfWidth)
+
+  if (placement === 'top') {
+    return { top: `${rect.bottom + gap}px`, left: `${left}px` }
+  }
+
+  return { top: `${rect.top - gap}px`, left: `${left}px` }
+})
+
+function isShowChildren(name: string, event: MouseEvent) {
+  if (openParentName.value === name) {
+    closeDockMenu()
+    return
+  }
+
+  openParentName.value = name
+  openParentRect.value = (event.currentTarget as HTMLElement).getBoundingClientRect()
 }
 
 function closeDockMenu() {
   openParentName.value = null
+  openParentRect.value = null
 }
 
 function isRouteActive(name?: unknown) {
@@ -97,7 +136,7 @@ function stopDockDrag() {
 }
 
 function startDockDrag(event: PointerEvent) {
-  if (event.button !== 0) return
+  if (isMobileDock.value || event.button !== 0) return
   const target = event.target as HTMLElement | null
   if (target?.closest('button, a, .child-dock')) return
 
@@ -119,7 +158,21 @@ function startDockDrag(event: PointerEvent) {
 
 watch(() => route.fullPath, closeDockMenu)
 
-onUnmounted(stopDockDrag)
+function handleViewportChange() {
+  viewportWidth.value = window.innerWidth
+  closeDockMenu()
+}
+
+onMounted(() => {
+  window.addEventListener('resize', handleViewportChange)
+  window.addEventListener('orientationchange', handleViewportChange)
+})
+
+onUnmounted(() => {
+  stopDockDrag()
+  window.removeEventListener('resize', handleViewportChange)
+  window.removeEventListener('orientationchange', handleViewportChange)
+})
 
 defineExpose({
   closeDockMenu,
@@ -143,7 +196,7 @@ defineExpose({
             class="dock-item dock-button"
             :class="{ active: isRouteActive(item.name), opened: openParentName === item.name }"
             :title="item.meta?.title as string || '其他页面'"
-            @click="isShowChildren(item.name as string)"
+            @click="isShowChildren(item.name as string, $event)"
           >
             <span class="icon-plate">
               <Icon size="19px"><component :is="iconMap[item.name as string] || NodeJs" /></Icon>
@@ -165,21 +218,28 @@ defineExpose({
             <span class="dock-label">{{ item.meta!.title }}</span>
           </router-link>
 
-          <Transition name="dock-popover">
-            <ul v-if="item.children && openParentName === item.name" class="child-dock">
-              <li v-for="child in item.children" :key="child.path">
-                <router-link
-                  :to="{ name: child.name }"
-                  class="child-item"
-                  :class="{ active: isRouteActive(child.name) }"
-                  :title="child.meta?.title as string || '其他页面'"
-                >
-                  <span class="child-mark"></span>
-                  <span>{{ child.meta!.title }}</span>
-                </router-link>
-              </li>
-            </ul>
-          </Transition>
+          <Teleport to="body">
+            <Transition name="dock-popover">
+              <ul
+                v-if="item.children && openParentName === item.name"
+                class="child-dock"
+                :class="`placement-${dockPlacement}`"
+                :style="childDockStyle"
+              >
+                <li v-for="child in item.children" :key="child.path">
+                  <router-link
+                    :to="{ name: child.name }"
+                    class="child-item"
+                    :class="{ active: isRouteActive(child.name) }"
+                    :title="child.meta?.title as string || '其他页面'"
+                  >
+                    <span class="child-mark"></span>
+                    <span>{{ child.meta!.title }}</span>
+                  </router-link>
+                </li>
+              </ul>
+            </Transition>
+          </Teleport>
         </li>
       </ul>
     </nav>
@@ -403,12 +463,14 @@ defineExpose({
 }
 
 .child-dock {
-  position: absolute;
-  bottom: calc(100% + 18px);
-  left: 50%;
+  position: fixed;
+  z-index: 80;
   display: grid;
   gap: 7px;
   min-width: 156px;
+  margin: 0;
+  list-style: none;
+  max-width: calc(100vw - 24px);
   padding: 9px;
   border: 1px solid color-mix(in srgb, var(--color-border) 78%, transparent);
   border-radius: 20px;
@@ -417,27 +479,19 @@ defineExpose({
     color-mix(in srgb, var(--color-bg-app) 94%, transparent);
   box-shadow: 0 22px 62px rgba(39, 57, 84, 0.2);
   backdrop-filter: blur(18px) saturate(150%);
+  transform: translateX(-50%) translateY(-100%);
+}
+
+.child-dock.placement-top {
   transform: translateX(-50%);
 }
 
-.dock-shelf.placement-top .child-dock {
-  top: calc(100% + 18px);
-  bottom: auto;
-}
-
-.dock-shelf.placement-left .child-dock {
-  top: 50%;
-  bottom: auto;
-  left: calc(100% + 18px);
+.child-dock.placement-left {
   transform: translateY(-50%);
 }
 
-.dock-shelf.placement-right .child-dock {
-  top: 50%;
-  right: calc(100% + 18px);
-  bottom: auto;
-  left: auto;
-  transform: translateY(-50%);
+.child-dock.placement-right {
+  transform: translateX(-100%) translateY(-50%);
 }
 
 .child-dock::after {
@@ -453,7 +507,7 @@ defineExpose({
   transform: translateX(-50%) rotate(45deg);
 }
 
-.dock-shelf.placement-top .child-dock::after {
+.child-dock.placement-top::after {
   top: -6px;
   bottom: auto;
   border: 0;
@@ -461,7 +515,7 @@ defineExpose({
   border-left: 1px solid color-mix(in srgb, var(--color-border) 78%, transparent);
 }
 
-.dock-shelf.placement-left .child-dock::after {
+.child-dock.placement-left::after {
   top: 50%;
   right: auto;
   bottom: auto;
@@ -472,7 +526,7 @@ defineExpose({
   transform: translateY(-50%) rotate(45deg);
 }
 
-.dock-shelf.placement-right .child-dock::after {
+.child-dock.placement-right::after {
   top: 50%;
   right: -6px;
   bottom: auto;
@@ -518,22 +572,22 @@ defineExpose({
 .dock-popover-enter-from,
 .dock-popover-leave-to {
   opacity: 0;
-  transform: translateX(-50%) translateY(12px) scale(0.94);
+  transform: translateX(-50%) translateY(-100%) translateY(12px) scale(0.94);
 }
 
-.dock-shelf.placement-top .dock-popover-enter-from,
-.dock-shelf.placement-top .dock-popover-leave-to {
+.child-dock.placement-top.dock-popover-enter-from,
+.child-dock.placement-top.dock-popover-leave-to {
   transform: translateX(-50%) translateY(-12px) scale(0.94);
 }
 
-.dock-shelf.placement-left .dock-popover-enter-from,
-.dock-shelf.placement-left .dock-popover-leave-to {
+.child-dock.placement-left.dock-popover-enter-from,
+.child-dock.placement-left.dock-popover-leave-to {
   transform: translateY(-50%) translateX(-12px) scale(0.94);
 }
 
-.dock-shelf.placement-right .dock-popover-enter-from,
-.dock-shelf.placement-right .dock-popover-leave-to {
-  transform: translateY(-50%) translateX(12px) scale(0.94);
+.child-dock.placement-right.dock-popover-enter-from,
+.child-dock.placement-right.dock-popover-leave-to {
+  transform: translateX(-100%) translateY(-50%) translateX(12px) scale(0.94);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -548,26 +602,23 @@ defineExpose({
 
 @media (max-width: 768px) {
   .admin-dock {
-    bottom: 10px;
-    justify-content: flex-start;
+    bottom: calc(10px + env(safe-area-inset-bottom));
+    justify-content: center;
     padding: 0 10px;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-
-  .admin-dock::-webkit-scrollbar {
-    display: none;
+    overflow: visible;
   }
 
   .dock-shelf {
-    min-width: max-content;
-    max-width: none;
+    max-width: calc(100vw - 20px);
     padding: 7px;
     border-radius: 24px;
+    cursor: default;
+    touch-action: pan-x;
   }
 
   .dock-shelf > ul {
     gap: 7px;
+    overflow: visible;
   }
 
   .dock-item {
@@ -582,7 +633,7 @@ defineExpose({
 
   .dock-item:hover,
   .dock-item.opened {
-    transform: translateY(-7px) scale(1.04);
+    transform: none;
   }
 
   .dock-label {
@@ -590,12 +641,31 @@ defineExpose({
     font-size: 12px;
   }
 
-  .dock-shelf.placement-bottom .child-dock {
-    bottom: calc(100% + 16px);
+}
+
+@media (max-width: 360px) {
+  .dock-shelf > ul {
+    gap: 5px;
   }
 
-  .dock-shelf.placement-top .child-dock {
-    top: calc(100% + 16px);
+  .dock-item {
+    width: 46px;
+    height: 46px;
   }
+
+  .dock-item.active {
+    width: 92px;
+  }
+
+  .icon-plate {
+    width: 32px;
+    height: 32px;
+    flex-basis: 32px;
+  }
+
+  .dock-label {
+    max-width: 38px;
+  }
+
 }
 </style>
