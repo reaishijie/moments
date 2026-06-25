@@ -18,6 +18,7 @@ const initialUserFilter = {
 
 const userFilter = ref({ ...initialUserFilter })
 const users = ref<userData[]>([])
+const togglingStatusIds = ref<Set<string>>(new Set())
 const pagination = ref({
   page: 1,
   pageSize: 10,
@@ -184,6 +185,32 @@ const getRoleText = (role: string | number) => {
   }
 }
 
+const getNextStatus = (status: string | number) => {
+  const current = Number(status)
+  if (current === 0) return 1
+  if (current === 1) return 2
+  return 0
+}
+
+const toggleUserStatus = async (user: userData) => {
+  if (togglingStatusIds.value.has(user.id)) return
+
+  const nextStatus = getNextStatus(user.status)
+  togglingStatusIds.value.add(user.id)
+  const loadingId = messageStore.show(`正在切换用户状态为「${getStatusText(nextStatus)}」...`, 'loading')
+
+  try {
+    await updateUser(user.id, { status: nextStatus })
+    user.status = String(nextStatus)
+    messageStore.update(loadingId, { text: '用户状态切换成功！', type: 'success', duration: 2000 })
+  } catch (error) {
+    console.error('切换用户状态失败:', error)
+    messageStore.update(loadingId, { text: '切换失败，请稍后重试', type: 'error', duration: 3000 })
+  } finally {
+    togglingStatusIds.value.delete(user.id)
+  }
+}
+
 // 编辑用户功能
 const openEditModal = (user: userData) => {
   editingUser.value = { ...user }
@@ -302,9 +329,16 @@ handleSearch()
               </span>
             </td>
             <td>
-              <span class="status-badge" :class="'status-' + item.status">
+              <button
+                type="button"
+                class="status-badge toggle-badge"
+                :class="'status-' + item.status"
+                :disabled="togglingStatusIds.has(item.id)"
+                :title="`点击切换为：${getStatusText(getNextStatus(item.status))}`"
+                @click="toggleUserStatus(item)"
+              >
                 {{ getStatusText(item.status) }}
-              </span>
+              </button>
             </td>
             <td class="time-cell">{{ new Date(item.created_at).toLocaleDateString() }}</td>
             <td>
@@ -721,6 +755,20 @@ td:last-child {
 .status-2 {
   color: #b54d5a;
   background: rgba(236, 111, 125, 0.14);
+}
+
+.toggle-badge {
+  border: 0;
+  cursor: pointer;
+}
+
+.toggle-badge:hover:not(:disabled) {
+  box-shadow: 0 8px 18px rgba(53, 82, 125, 0.12);
+}
+
+.toggle-badge:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
 }
 
 .tag-list {
