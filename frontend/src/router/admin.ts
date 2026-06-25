@@ -78,6 +78,12 @@ const adminRoutes: RouteRecordRaw[] = [
                 component: () => import('@/components/admin/Comment.vue'),
                 meta: { title: '评论管理' }
             },
+            {
+                path: 'link',
+                name: 'admin-link',
+                component: () => import('@/components/admin/Link.vue'),
+                meta: { title: '友链管理' }
+            },
         ]
     }
 ];
