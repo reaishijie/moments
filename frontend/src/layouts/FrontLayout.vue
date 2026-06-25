@@ -20,6 +20,11 @@ onUnmounted(() => {
 
 const normalizeFontConfig = (value?: string) => value?.trim() || ''
 
+type FontConfig =
+  | { type: 'family'; family: string }
+  | { type: 'file'; url: string }
+  | { type: 'css'; url: string; family: string }
+
 const isFontUrl = (value: string) => {
   return /^(https?:)?\/\//i.test(value) || /\.(woff2?|ttf|otf|eot)(\?.*)?$/i.test(value)
 }
@@ -36,24 +41,52 @@ const getFontFormat = (value: string) => {
 
 const escapeCssString = (value: string) => value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
 
-const fontStyle = computed(() => {
-  const fontValue = normalizeFontConfig(defaultStore.configs.site_font)
-  if (!fontValue) return {}
+const quoteFontFamily = (value: string) => {
+  const family = value.trim()
+  if (!family) return 'sans-serif'
+  if (family.includes(',') || /^['"]/.test(family)) return family
+  return `"${escapeCssString(family)}", sans-serif`
+}
+
+const parseFontConfig = (value?: string): FontConfig | null => {
+  const fontValue = normalizeFontConfig(value)
+  if (!fontValue) return null
+
+  const cssConfig = fontValue.match(/^css:(.+?)\|(.+)$/i)
+  if (cssConfig) {
+    return { type: 'css', url: cssConfig[1].trim(), family: quoteFontFamily(cssConfig[2]) }
+  }
+
+  const importConfig = fontValue.match(/^@import\s+url\((?:['"])?(.+?)(?:['"])?\)\s*;?\s*(.+)$/i)
+  if (importConfig) {
+    return { type: 'css', url: importConfig[1].trim(), family: quoteFontFamily(importConfig[2]) }
+  }
 
   if (isFontUrl(fontValue)) {
+    return { type: 'file', url: fontValue }
+  }
+
+  return { type: 'family', family: fontValue }
+}
+
+const fontStyle = computed(() => {
+  const fontConfig = parseFontConfig(defaultStore.configs.site_font)
+  if (!fontConfig) return {}
+
+  if (fontConfig.type === 'file') {
     return { fontFamily: `"${customFontFamily}", sans-serif` }
   }
 
-  return { fontFamily: fontValue }
+  return { fontFamily: fontConfig.family }
 })
 
 watch(
   () => defaultStore.configs.site_font,
   (value) => {
-    const fontValue = normalizeFontConfig(value)
+    const fontConfig = parseFontConfig(value)
     let styleEl = document.getElementById(customFontStyleId) as HTMLStyleElement | null
 
-    if (!fontValue || !isFontUrl(fontValue)) {
+    if (!fontConfig || fontConfig.type === 'family') {
       styleEl?.remove()
       return
     }
@@ -64,10 +97,12 @@ watch(
       document.head.appendChild(styleEl)
     }
 
-    styleEl.textContent = `
+    styleEl.textContent = fontConfig.type === 'css'
+      ? `@import url("${escapeCssString(fontConfig.url)}");`
+      : `
 @font-face {
   font-family: "${customFontFamily}";
-  src: url("${escapeCssString(fontValue)}") format("${getFontFormat(fontValue)}");
+  src: url("${escapeCssString(fontConfig.url)}") format("${getFontFormat(fontConfig.url)}");
   font-display: swap;
 }
 `
