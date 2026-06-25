@@ -208,7 +208,7 @@ handleSearch()
 <template>
   <section class="link-admin">
     <div class="top">
-      <form @submit.prevent="handleSearch">
+      <form class="filter-form" @submit.prevent="handleSearch">
         <label for="link_id" title="友链ID">友链ID：
           <input id="link_id" v-model="linkFilter.linkId" type="number" placeholder="友链ID">
         </label>
@@ -398,7 +398,7 @@ handleSearch()
   pointer-events: none;
 }
 
-form {
+.filter-form {
   position: relative;
   z-index: 1;
   display: grid;
@@ -456,7 +456,7 @@ button {
   transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, opacity 0.18s ease;
 }
 
-form > button {
+.filter-form > button {
   min-height: 42px;
   padding: 0 18px;
   color: #fff;
@@ -464,13 +464,13 @@ form > button {
   box-shadow: 0 16px 34px rgba(23, 32, 51, 0.16);
 }
 
-form > button[type='button'] {
+.filter-form > button[type='button'] {
   color: #2c3b55;
   background: #edf5ff;
   box-shadow: none;
 }
 
-form > .create-btn {
+.filter-form > .create-btn {
   color: #fff;
   background: #172033;
   box-shadow: 0 16px 34px rgba(23, 32, 51, 0.16);
@@ -712,6 +712,7 @@ td:last-child {
 
 .modal-header {
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
@@ -745,46 +746,46 @@ td:last-child {
 
 .edit-form {
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
+  min-height: 0;
   gap: 0;
+  overflow: hidden;
 }
 
 .modal-body {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  display: grid;
+  flex: 1 1 auto;
+  min-height: 0;
+  gap: 14px;
   overflow-y: auto;
-  padding: 18px 28px 8px;
+  padding: 20px 24px 10px;
 }
 
 .form-group {
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
+  display: grid;
+  gap: 8px;
 }
 
 .form-group > label {
-  width: 100px;
-  flex: 0 0 100px;
-  padding: 7px 0;
+  width: auto;
+  padding: 0;
   color: var(--color-text-primary);
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 700;
   line-height: 1.4;
 }
 
 .modal-container input,
 .modal-container select,
 .modal-container textarea {
-  flex: 1;
-  width: auto;
-  max-width: 500px;
-  padding: 7px 4px;
-  border: 0;
-  border-bottom: 1px solid #9ac3ef;
+  width: 100%;
+  max-width: none;
+  padding: 10px 12px;
+  border: 1px solid rgba(96, 114, 142, 0.18);
   border-radius: 0;
   color: var(--color-text-primary);
-  background: transparent;
+  background: rgba(248, 251, 255, 0.72);
   box-shadow: none;
 }
 
@@ -796,16 +797,16 @@ td:last-child {
 .modal-container select:focus,
 .modal-container textarea:focus {
   border-color: #6cadf1;
-  border-bottom-width: 2px;
-  background: transparent;
-  box-shadow: none;
+  background: var(--color-bg-app);
+  box-shadow: 0 0 0 4px rgba(94, 156, 244, 0.13);
 }
 
 .modal-actions {
   display: flex;
+  flex: 0 0 auto;
   justify-content: flex-end;
   gap: 10px;
-  padding: 18px 22px;
+  padding: 14px 22px calc(14px + env(safe-area-inset-bottom));
   border-top: 1px solid rgba(96, 114, 142, 0.12);
 }
 
@@ -829,22 +830,8 @@ td:last-child {
     flex-direction: column;
   }
 
-  .form-group {
-    flex-direction: column;
-    gap: 6px;
-  }
-
-  .form-group > label {
-    width: auto;
-    flex: none;
-    padding: 0;
-  }
-
-  .modal-container input,
-  .modal-container select,
-  .modal-container textarea {
-    width: 100%;
-    max-width: none;
+  .modal-body {
+    padding: 16px 18px 8px;
   }
 }
 </style>
