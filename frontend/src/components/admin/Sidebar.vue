@@ -612,12 +612,20 @@ defineExpose({
   .dock-shelf {
     max-width: calc(100vw - 20px);
     padding: 7px;
+    overflow-x: auto;
+    overflow-y: hidden;
     border-radius: 24px;
     cursor: default;
+    scrollbar-width: none;
     touch-action: pan-x;
   }
 
+  .dock-shelf::-webkit-scrollbar {
+    display: none;
+  }
+
   .dock-shelf > ul {
+    width: max-content;
     gap: 7px;
     overflow: visible;
   }
