@@ -10,7 +10,7 @@ const fields: ConfigFieldSchema[] = [
   { key: 'site_description', type: 'textarea' as const, placeholder: '站点描述' },
   { key: 'site_background', placeholder: '公共页面背景图片地址' },
   { key: 'site_logo', placeholder: '站点 Logo 图片地址' },
-  { key: 'site_font', placeholder: '字体族名或字体文件地址，如 "LXGW WenKai", sans-serif / https://example.com/font.woff2' },
+  { key: 'site_font', placeholder: '字体族名、字体文件地址，或 css:https://fontsapi.zeoseven.com/175/main/result.css|MaoKenWangFengYaSong' },
   { key: 'site_header_background', placeholder: '首页 Header 背景图片地址' },
   { key: 'site_avatar', placeholder: '首页头像图片地址' },
   { key: 'site_brief', type: 'textarea' as const, placeholder: '首页简介文案' },
