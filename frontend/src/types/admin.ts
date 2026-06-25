@@ -15,6 +15,12 @@ export interface updateConfigData {
     site_brief?: string,
     site_background?: string,
     site_avatar?: string,
+    site_footer_html?: string,
+    site_left_corner_html?: string,
+    site_right_corner_html?: string,
+    site_stat_enabled?: string,
+    site_stat_script_url?: string,
+    site_stat_site_id?: string,
     // 邮箱配置
     mail_user?: string,
     mail_secure?: string,

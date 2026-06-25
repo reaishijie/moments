@@ -53,6 +53,12 @@ async function main() {
     cfg('site_header_background', '', '首页头图', '首页 Header 背景图片地址', 'site', 90, 'public'),
     cfg('site_avatar', '/img/avatar.jpg', '首页头像', '首页头像图片地址', 'site', 100, 'public'),
     cfg('site_brief', '', '首页简介', '首页个人简介文案', 'site', 110, 'public'),
+    cfg('site_footer_html', '', 'Footer HTML', '底部版权、备案号、社交链接等 HTML', 'custom', 10, 'public'),
+    cfg('site_left_corner_html', '', '左下角 HTML', '左下角悬浮信息 HTML', 'custom', 20, 'public'),
+    cfg('site_right_corner_html', '', '右下角 HTML', '右下角悬浮信息 HTML', 'custom', 30, 'public'),
+    cfg('site_stat_enabled', '0', '统计脚本开关', '是否启用结构化统计脚本', 'custom', 40, 'public'),
+    cfg('site_stat_script_url', '', '统计脚本地址', '统计脚本 src 地址，例如 //js.llk.hk', 'custom', 50, 'public'),
+    cfg('site_stat_site_id', '', '统计站点 ID', '统计服务的站点 ID，例如 cf7191d1', 'custom', 60, 'public'),
     // 发件邮箱
     cfg('mail_host', 'smtp.qq.com', 'SMTP 主机', '发件邮箱 SMTP 服务地址', 'email', 10, 'admin'),
     cfg('mail_port', '465', 'SMTP 端口', '发件邮箱 SMTP 服务端口', 'email', 20, 'admin'),
