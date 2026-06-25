@@ -1,15 +1,79 @@
 <script setup lang="ts" name="FrontLayout">
 import { RouterView } from 'vue-router';
 import { useDefaultStore } from '@/store/default';
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, onUnmounted, watch } from 'vue';
 import Func from '@/components/utils/Func.vue';
 import { useThemeStore } from '@/store/theme';
 
 const themeStore =useThemeStore()
 const defaultStore = useDefaultStore()
+const customFontFamily = 'MomentsCustomFont'
+const customFontStyleId = 'moments-custom-font-style'
+
 onMounted(() => {
   defaultStore.getPublicConfig()
 })
+
+onUnmounted(() => {
+  document.getElementById(customFontStyleId)?.remove()
+})
+
+const normalizeFontConfig = (value?: string) => value?.trim() || ''
+
+const isFontUrl = (value: string) => {
+  return /^(https?:)?\/\//i.test(value) || /\.(woff2?|ttf|otf|eot)(\?.*)?$/i.test(value)
+}
+
+const getFontFormat = (value: string) => {
+  const url = value.split('?')[0].toLowerCase()
+  if (url.endsWith('.woff2')) return 'woff2'
+  if (url.endsWith('.woff')) return 'woff'
+  if (url.endsWith('.ttf')) return 'truetype'
+  if (url.endsWith('.otf')) return 'opentype'
+  if (url.endsWith('.eot')) return 'embedded-opentype'
+  return 'woff2'
+}
+
+const escapeCssString = (value: string) => value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+
+const fontStyle = computed(() => {
+  const fontValue = normalizeFontConfig(defaultStore.configs.site_font)
+  if (!fontValue) return {}
+
+  if (isFontUrl(fontValue)) {
+    return { fontFamily: `"${customFontFamily}", sans-serif` }
+  }
+
+  return { fontFamily: fontValue }
+})
+
+watch(
+  () => defaultStore.configs.site_font,
+  (value) => {
+    const fontValue = normalizeFontConfig(value)
+    let styleEl = document.getElementById(customFontStyleId) as HTMLStyleElement | null
+
+    if (!fontValue || !isFontUrl(fontValue)) {
+      styleEl?.remove()
+      return
+    }
+
+    if (!styleEl) {
+      styleEl = document.createElement('style')
+      styleEl.id = customFontStyleId
+      document.head.appendChild(styleEl)
+    }
+
+    styleEl.textContent = `
+@font-face {
+  font-family: "${customFontFamily}";
+  src: url("${escapeCssString(fontValue)}") format("${getFontFormat(fontValue)}");
+  font-display: swap;
+}
+`
+  },
+  { immediate: true }
+)
 // 背景样式
 const backgroundStyle = computed(() => {
   const backgroundValue = defaultStore.configs.site_background;
@@ -35,7 +99,7 @@ const backgroundStyle = computed(() => {
 
 <template>
   <Func />
-  <div class="front-container" :style="backgroundStyle">
+  <div class="front-container" :style="[backgroundStyle, fontStyle]">
     <div>
     </div>
     <div class="app-container">

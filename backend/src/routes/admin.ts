@@ -496,6 +496,152 @@ router.patch('/user/:userId', authMiddleware, adminMiddleware, async (req: Reque
     }
 })
 
+function formatLink(link: {
+    id: bigint
+    logo: string | null
+    sitename: string
+    brief: string | null
+    url: string
+    status: number
+    created_at: Date
+    deleted_at: Date | null
+}) {
+    return {
+        ...link,
+        id: link.id.toString(),
+        created_at: link.created_at.toISOString(),
+        deleted_at: link.deleted_at?.toISOString() ?? null,
+    }
+}
 
+// 获取全部友情链接
+router.get('/links', authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
+    try {
+        const { page: pageStr, pageSize: pageSizeStr, ...filters } = req.query
+        const page = parseInt(pageStr as string) || 1
+        const pageSize = parseInt(pageSizeStr as string) || 10
+        const skip = (page - 1) * pageSize
+
+        const where: Prisma.linkWhereInput = { deleted_at: null }
+
+        if (filters.linkId) where.id = BigInt(filters.linkId as string)
+        if (filters.sitename) where.sitename = { contains: filters.sitename as string }
+        if (filters.url) where.url = { contains: filters.url as string }
+        if (filters.brief) where.brief = { contains: filters.brief as string }
+        if (filters.status !== undefined && filters.status !== '') where.status = parseInt(filters.status as string)
+
+        const [links, total] = await Promise.all([
+            prisma.link.findMany({
+                where,
+                orderBy: { created_at: 'desc' },
+                skip,
+                take: pageSize,
+            }),
+            prisma.link.count({ where }),
+        ])
+
+        res.status(200).json({
+            data: links.map(formatLink),
+            page,
+            pageSize,
+            total,
+        })
+    } catch (error) {
+        console.error('查询友情链接失败', error)
+        res.status(500).json({ message: '查询友情链接失败', error })
+    }
+})
+
+// 新增友情链接
+router.post('/links', authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
+    try {
+        const { logo, sitename, brief, url, status } = req.body
+
+        if (!sitename || !url) {
+            return res.status(400).json({ message: '站点名称和链接地址不能为空' })
+        }
+
+        const link = await prisma.link.create({
+            data: {
+                logo: logo || null,
+                sitename: String(sitename).trim(),
+                brief: brief || null,
+                url: String(url).trim(),
+                status: status === undefined ? 1 : parseInt(status),
+            },
+        })
+
+        res.status(200).json({ message: '友情链接新增成功', data: formatLink(link) })
+    } catch (error) {
+        console.error('新增友情链接失败', error)
+        res.status(500).json({ message: '新增友情链接失败', error })
+    }
+})
+
+// 更新友情链接
+router.patch('/link/:linkId', authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
+    try {
+        const linkId = parseInt(req.params.linkId)
+        const { logo, sitename, brief, url, status } = req.body
+
+        if (isNaN(linkId)) {
+            return res.status(400).json({ message: '无效的友情链接ID' })
+        }
+
+        const existingLink = await prisma.link.findFirst({
+            where: { id: linkId, deleted_at: null },
+        })
+
+        if (!existingLink) {
+            return res.status(404).json({ message: '友情链接不存在' })
+        }
+
+        const updateData: Prisma.linkUpdateInput = {}
+        if (logo !== undefined) updateData.logo = logo || null
+        if (sitename !== undefined) updateData.sitename = String(sitename).trim()
+        if (brief !== undefined) updateData.brief = brief || null
+        if (url !== undefined) updateData.url = String(url).trim()
+        if (status !== undefined) updateData.status = parseInt(status)
+
+        const link = await prisma.link.update({
+            where: { id: linkId },
+            data: updateData,
+        })
+
+        res.status(200).json({ message: '友情链接更新成功', data: formatLink(link) })
+    } catch (error) {
+        console.error('更新友情链接失败', error)
+        res.status(500).json({ message: '更新友情链接失败', error })
+    }
+})
+
+// 删除友情链接（软删除）
+router.delete('/link/:linkId', authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
+    try {
+        const linkId = parseInt(req.params.linkId)
+
+        if (isNaN(linkId)) {
+            return res.status(400).json({ message: '无效的友情链接ID' })
+        }
+
+        const existingLink = await prisma.link.findFirst({
+            where: { id: linkId, deleted_at: null },
+        })
+
+        if (!existingLink) {
+            return res.status(404).json({ message: '友情链接不存在' })
+        }
+
+        await prisma.link.update({
+            where: { id: linkId },
+            data: { deleted_at: new Date() },
+        })
+
+        res.status(200).json({ message: '友情链接删除成功' })
+    } catch (error) {
+        console.error('删除友情链接失败', error)
+        res.status(500).json({ message: '删除友情链接失败', error })
+    }
+})
 
 export default router

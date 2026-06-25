@@ -101,3 +101,38 @@ export const updateComment = (commentId: string | number, data: { content: strin
         data,
     })
 }
+
+// 获取全部友情链接
+export const getAllLinks = (params?: Record<string, any>) => {
+    return service({
+        url: '/admin/links',
+        method: 'get',
+        params,
+    })
+}
+
+// 新增友情链接
+export const createLink = (data: any) => {
+    return service({
+        url: '/admin/links',
+        method: 'post',
+        data,
+    })
+}
+
+// 更新友情链接
+export const updateLink = (linkId: string | number, data: any) => {
+    return service({
+        url: `/admin/link/${linkId}`,
+        method: 'patch',
+        data,
+    })
+}
+
+// 删除友情链接
+export const deleteLink = (linkId: string | number) => {
+    return service({
+        url: `/admin/link/${linkId}`,
+        method: 'delete',
+    })
+}

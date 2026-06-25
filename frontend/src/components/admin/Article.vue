@@ -18,6 +18,7 @@ const initialArticleData = {
 
 const article = ref<articleFilter>({ ...initialArticleData })
 const articles = ref<articleData[]>([])
+const togglingArticleKeys = ref<Set<string>>(new Set())
 const pagination = ref({
   page: 1,
   pageSize: 5,
@@ -163,6 +164,29 @@ const handleDelete = async (articleId: string) => {
       }
     }
   )
+}
+
+const toggleArticleFlag = async (item: articleData, field: 'isTop' | 'isAd') => {
+  const dataKey = field === 'isTop' ? 'is_top' : 'is_ad'
+  const label = field === 'isTop' ? '置顶' : '广告'
+  const toggleKey = `${item.id}-${field}`
+
+  if (togglingArticleKeys.value.has(toggleKey)) return
+
+  const nextValue = !item[dataKey]
+  togglingArticleKeys.value.add(toggleKey)
+  const loadingId = messageStore.show(`正在${nextValue ? '开启' : '关闭'}${label}...`, 'loading')
+
+  try {
+    await updateArticle(item.id, { [field]: nextValue })
+    item[dataKey] = nextValue
+    messageStore.update(loadingId, { text: `${label}状态切换成功！`, type: 'success', duration: 2000 })
+  } catch (error) {
+    console.error(`切换文章${label}失败:`, error)
+    messageStore.update(loadingId, { text: '切换失败，请稍后重试', type: 'error', duration: 3000 })
+  } finally {
+    togglingArticleKeys.value.delete(toggleKey)
+  }
 }
 
 // 打开编辑弹窗
@@ -338,14 +362,26 @@ handleSearch()
           </td>
           <td>{{ ['普通', '图文', '视频'][item.type] }}</td>
           <td>
-            <span :class="['badge', item.is_top ? 'badge-true' : 'badge-false']">
+            <button
+              type="button"
+              :class="['badge', 'toggle-badge', item.is_top ? 'badge-true' : 'badge-false']"
+              :disabled="togglingArticleKeys.has(`${item.id}-isTop`)"
+              :title="item.is_top ? '点击取消置顶' : '点击设为置顶'"
+              @click="toggleArticleFlag(item, 'isTop')"
+            >
               {{ item.is_top ? '是' : '否' }}
-            </span>
+            </button>
           </td>
           <td>
-            <span :class="['badge', item.is_ad ? 'badge-true' : 'badge-false']">
+            <button
+              type="button"
+              :class="['badge', 'toggle-badge', item.is_ad ? 'badge-true' : 'badge-false']"
+              :disabled="togglingArticleKeys.has(`${item.id}-isAd`)"
+              :title="item.is_ad ? '点击取消广告' : '点击设为广告'"
+              @click="toggleArticleFlag(item, 'isAd')"
+            >
               {{ item.is_ad ? '是' : '否' }}
-            </span>
+            </button>
           </td>
           <td>{{ item.comment_count }}/{{ item.like_count }}</td>
           <td>{{ item.created_at }}</td>
@@ -782,6 +818,20 @@ td:last-child {
 .status-2 {
   color: #b54d5a;
   background: rgba(236, 111, 125, 0.14);
+}
+
+.toggle-badge {
+  border: 0;
+  cursor: pointer;
+}
+
+.toggle-badge:hover:not(:disabled) {
+  box-shadow: 0 8px 18px rgba(53, 82, 125, 0.12);
+}
+
+.toggle-badge:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
 }
 
 .tag-list {

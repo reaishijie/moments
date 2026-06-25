@@ -1,6 +1,6 @@
 <script setup lang="ts" name="ASidebar">
 import { useSidebarStore } from '@/store/admin/sidebar'
-import { SunRegular, AddressCardRegular, CommentRegular, Buffer, NodeJs, GemRegular, AngleDown } from '@vicons/fa'
+import { SunRegular, AddressCardRegular, CommentRegular, Buffer, NodeJs, GemRegular, AngleDown, Link } from '@vicons/fa'
 import { Icon } from '@vicons/utils'
 import { computed, onMounted, onUnmounted, ref, type Component, watch } from 'vue'
 import { useRoute } from 'vue-router'
@@ -12,6 +12,7 @@ const iconMap: Record<string, Component> = {
   dashboard: GemRegular,
   'admin-article': Buffer,
   'admin-comment': CommentRegular,
+  'admin-link': Link,
   'admin-setting': SunRegular,
   'admin-user': AddressCardRegular,
 }
