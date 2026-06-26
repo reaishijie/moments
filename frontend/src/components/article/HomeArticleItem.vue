@@ -3,6 +3,7 @@ import { type PropType } from 'vue'
 import { type articleData } from '@/types/article';
 import { formatTime } from '@/utils/time';
 import router from '@/router';
+import EmojiText from '@/components/emoji/EmojiText.vue';
 
 const props = defineProps({
   article: {
@@ -30,7 +31,7 @@ const time = formatTime(timestamp)
         </div>
       </div>
       <div class="content-text" @click="router.push(`/article/${props.article.id}`)">
-        <div class="text">{{ article.content }}</div>
+        <div class="text"><EmojiText :text="article.content" /></div>
         <div class="tags" v-if="article.tags?.length">
           <span v-for="tag in article.tags" :key="tag.id">#{{ tag.name }}</span>
         </div>

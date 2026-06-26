@@ -1,5 +1,5 @@
 <script setup lang="ts" name="Post">
-import { ref, reactive, watch } from 'vue'
+import { nextTick, ref, reactive, watch } from 'vue'
 import { ChevronLeft, MapMarkerAlt, Thumbtack, Ad, FileWord, Image, Video, ExchangeAlt, Tags, Times } from '@vicons/fa';
 import { Icon } from '@vicons/utils';
 import router from '@/router';
@@ -9,6 +9,7 @@ import { getLocation } from '@/utils/location';
 import { createArticle } from '@/api/articles';
 import { useUserStore } from '@/store/user';
 import Upload from '@/components/utils/Upload.vue';
+import EmojiPicker from '@/components/emoji/EmojiPicker.vue';
 
 const userStore = useUserStore()
 const messageStore = useMessageStore()
@@ -28,6 +29,7 @@ const articleData = reactive<createArticleData>({
 })
 const imageData = ref('')
 const videoData = ref('')
+const contentTextarea = ref<HTMLTextAreaElement | null>(null)
 const tagInput = ref('')
 const states = reactive({
   location: false,
@@ -189,6 +191,24 @@ const adjustHeight = (event: Event) => {
   textarea.style.height = 'auto'
   textarea.style.height = textarea.scrollHeight + 'px'
 }
+async function insertEmoji(code: string) {
+  const textarea = contentTextarea.value
+  if (!textarea) {
+    articleData.content += code
+    return
+  }
+
+  const start = textarea.selectionStart ?? articleData.content.length
+  const end = textarea.selectionEnd ?? start
+  articleData.content = `${articleData.content.slice(0, start)}${code}${articleData.content.slice(end)}`
+
+  await nextTick()
+  textarea.focus()
+  const cursor = start + code.length
+  textarea.setSelectionRange(cursor, cursor)
+  textarea.style.height = 'auto'
+  textarea.style.height = `${textarea.scrollHeight}px`
+}
 function addTag(name: string) {
   const tagName = name.trim().replace(/^#+/, '').slice(0, 50)
   if (!tagName || articleData.tags?.includes(tagName)) return
@@ -230,7 +250,7 @@ function removeTag(name: string) {
     </div>
 
     <div class="body">
-      <textarea v-model="articleData.content" placeholder="这一刻的想法..." @input="adjustHeight"
+      <textarea ref="contentTextarea" v-model="articleData.content" placeholder="这一刻的想法..." @input="adjustHeight"
         class="contentArea"></textarea>
       <!-- 上传文件 -->
       <Upload v-if="articleData.type === 1 && !displayMethod" ref="uploadRef" :article-type="articleData.type"></Upload>
@@ -266,6 +286,7 @@ function removeTag(name: string) {
         </div>
       </div>
       <div class="func">
+        <EmojiPicker placement="bottom" @select="insertEmoji" />
         <!-- 管理员正常操作 -->
         <span :class="['func-item', { true: articleData.isTop }]"
           @click="Number(userStore.profile?.role) === 1 ? toggleIsTop() : messageStore.show('权限不足', 'info', 2000)"

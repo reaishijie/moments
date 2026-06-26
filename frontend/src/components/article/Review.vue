@@ -1,6 +1,8 @@
 <script setup lang="ts" name="Review">
-import { ref, type PropType } from 'vue';
+import { nextTick, ref, type PropType } from 'vue';
 import AvatarImage from '@/components/utils/AvatarImage.vue';
+import EmojiPicker from '@/components/emoji/EmojiPicker.vue';
+import EmojiText from '@/components/emoji/EmojiText.vue';
 import { HeartRegular, AngleDown } from '@vicons/fa';
 import { Icon } from '@vicons/utils';
 import { useMessageStore } from '@/store/message'
@@ -73,6 +75,7 @@ const adjustHeight = (event: Event) => {
 const emit = defineEmits(['send-reply'])
 const activeReplyId = ref<string | null>(null)
 const replyContent = ref('')
+const activeTextarea = ref<HTMLTextAreaElement | null>(null)
 // 切换评论框的显示
 const toggleReply = (commentId: string) => {
   if(activeReplyId.value === commentId) {
@@ -83,6 +86,29 @@ const toggleReply = (commentId: string) => {
     activeReplyId.value = commentId
     replyContent.value = ''
   }
+}
+
+const setActiveTextarea = (event: FocusEvent) => {
+  activeTextarea.value = event.target as HTMLTextAreaElement
+}
+
+const insertEmoji = async (code: string) => {
+  const textarea = activeTextarea.value
+  if (!textarea) {
+    replyContent.value += code
+    return
+  }
+
+  const start = textarea.selectionStart ?? replyContent.value.length
+  const end = textarea.selectionEnd ?? start
+  replyContent.value = `${replyContent.value.slice(0, start)}${code}${replyContent.value.slice(end)}`
+
+  await nextTick()
+  textarea.focus()
+  const cursor = start + code.length
+  textarea.setSelectionRange(cursor, cursor)
+  textarea.style.height = 'auto'
+  textarea.style.height = `${textarea.scrollHeight}px`
 }
 
 // 发送函数
@@ -137,8 +163,11 @@ const hasReviewContent = computed(() => (
     </div>
 
     <div class="input" v-if="props.isShowInput">
-      <textarea v-model="replyContent" placeholder="写下你的评论..." @input="adjustHeight"></textarea>
-      <button @click="handleSendReply">发送</button>
+      <textarea v-model="replyContent" placeholder="写下你的评论..." @focus="setActiveTextarea" @input="adjustHeight"></textarea>
+      <div class="input-actions">
+        <EmojiPicker @select="insertEmoji" />
+        <button @click="handleSendReply">发送</button>
+      </div>
     </div>
 
     <div class="comments-container" v-if="comments.length > 0 || hasMore">
@@ -149,12 +178,15 @@ const hasReviewContent = computed(() => (
         <span v-if="comment.parent_id"> 回复</span>
         <span v-if="comment.parent_id" class="comment-displayName">{{ comment.parent_displayName }}</span>
         <span>：</span>
-        <span>{{ comment.content }}</span>
+        <EmojiText :text="comment.content" />
         </div>
 
         <div class="input" v-if="activeReplyId === comment.id">
-          <textarea v-model="replyContent" :placeholder="`回复${(comment.user.nickname || comment.user.username)}`" @input="adjustHeight"></textarea>
-          <button @click="handleSendReply">发送</button>
+          <textarea v-model="replyContent" :placeholder="`回复${(comment.user.nickname || comment.user.username)}`" @focus="setActiveTextarea" @input="adjustHeight"></textarea>
+          <div class="input-actions">
+            <EmojiPicker @select="insertEmoji" />
+            <button @click="handleSendReply">发送</button>
+          </div>
         </div>
 
       </div>
@@ -237,7 +269,7 @@ const hasReviewContent = computed(() => (
   margin: 10px auto;
   background: var(--color-bg-review);
   border-radius: 5px;
-  overflow: hidden;
+  overflow: visible;
 }
 
 textarea {
@@ -263,9 +295,16 @@ textarea:focus {
   outline: none;
 }
 
+.input-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px 10px;
+}
+
 button {
   align-self: flex-end;
-  margin: 10px;
+  margin: 0;
   color: white;
   background: #09C362;
   border-radius: 5px;
