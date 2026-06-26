@@ -33,6 +33,7 @@ export interface articleData {
     like_count: number,
     comment_count: number,
     location?: string,
+    status?: number,
     created_at: string,
     user: {
         id: string,
@@ -66,8 +67,11 @@ export interface updateArticleData {
     type?: number,
     isAd?: boolean,
     isTop?: boolean,
+    adTitle?: string,
+    adUrl?: string,
     imageUrls?: string[],
     videoUrls?: string[],
+    thumbnail_url?: string,
     tags?: string[]
 }
 
