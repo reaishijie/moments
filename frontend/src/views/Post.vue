@@ -1,18 +1,23 @@
 <script setup lang="ts" name="Post">
-import { nextTick, ref, reactive, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, reactive, watch } from 'vue'
 import { ChevronLeft, MapMarkerAlt, Thumbtack, Ad, FileWord, Image, Video, ExchangeAlt, Tags, Times } from '@vicons/fa';
 import { Icon } from '@vicons/utils';
 import router from '@/router';
 import { type createArticleData } from '@/types/article';
 import { useMessageStore } from '@/store/message';
 import { getLocation } from '@/utils/location';
-import { createArticle } from '@/api/articles';
+import { createArticle, getArticleDetails, updateArticle } from '@/api/articles';
 import { useUserStore } from '@/store/user';
 import Upload from '@/components/utils/Upload.vue';
 import EmojiPicker from '@/components/emoji/EmojiPicker.vue';
 
 const userStore = useUserStore()
 const messageStore = useMessageStore()
+const route = router.currentRoute
+const editArticleId = computed(() => route.value.name === 'articleEdit' ? Number(route.value.params.articleId) : 0)
+const isEditMode = computed(() => !!editArticleId.value)
+const isAdmin = computed(() => Number(userStore.profile?.role) === 1)
+const ONE_DAY_MS = 24 * 60 * 60 * 1000
 const articleData = reactive<createArticleData>({
   content: '',
   status: 1,
@@ -125,7 +130,7 @@ async function fetchLocation() {
 const uploadRef = ref<InstanceType<typeof Upload> | null>();
 const videoUploadRef = ref<InstanceType<typeof Upload> | null>();
 const coverUploadRef = ref<InstanceType<typeof Upload> | null>();
-async function addArticle() {
+async function submitArticle() {
   const hasUploadFiles = !displayMethod.value && (
     !!uploadRef.value?.hasSelectedFiles() ||
     !!videoUploadRef.value?.hasSelectedFiles() ||
@@ -145,17 +150,28 @@ async function addArticle() {
     messageStore.show('请勿重复点击', 'info', 2000)
     return
   }
-  const id = messageStore.show('正在发表文章', 'loading')
+  const id = messageStore.show(isEditMode.value ? '正在保存文章' : '正在发表文章', 'loading')
   try {
     states.add = true
-    const res = await createArticle(articleData)
+    const submitData = {
+      ...articleData,
+      isTop: isAdmin.value ? articleData.isTop : undefined,
+      isAd: isAdmin.value ? articleData.isAd : undefined,
+      adTitle: isAdmin.value ? articleData.adTitle : undefined,
+      adUrl: isAdmin.value ? articleData.adUrl : undefined,
+      status: isAdmin.value ? articleData.status : undefined,
+    }
+    const res = isEditMode.value
+      ? await updateArticle(editArticleId.value, submitData)
+      : await createArticle(articleData)
+    const articleId = isEditMode.value ? String(editArticleId.value) : res.data.id
     if (articleData.type === 2 && !displayMethod.value) {
-      await videoUploadRef.value?.performUpload(res.data.id)
+      await videoUploadRef.value?.performUpload(articleId)
       if (coverUploadRef.value?.hasSelectedFiles()) {
-        await coverUploadRef.value.performUpload(res.data.id)
+        await coverUploadRef.value.performUpload(articleId)
       }
     } else {
-      await uploadRef.value?.performUpload(res.data.id)
+      await uploadRef.value?.performUpload(articleId)
     }
     
     // 清空内容
@@ -170,7 +186,12 @@ async function addArticle() {
     imageData.value = ''
     videoData.value = ''
     tagInput.value = ''
-    messageStore.update(id, { type: 'success', text: '发表成功', duration: 2000 })
+    messageStore.update(id, { type: 'success', text: isEditMode.value ? '保存成功' : '发表成功', duration: 2000 })
+
+    if (isEditMode.value) {
+      router.replace({ name: 'articleDetail', params: { articleId: editArticleId.value } })
+      return
+    }
 
     if (!userStore.profile?.username) {
       await userStore.fetchUserProfile()
@@ -180,8 +201,8 @@ async function addArticle() {
       router.replace({ name: 'home', params: { username }, query: { from: 'post' } })
     }
   } catch (error) {
-    console.log('发表文章失败', error)
-    messageStore.update(id, { type: 'error', text: '发表失败', duration: 2000 })
+    console.log(isEditMode.value ? '保存文章失败' : '发表文章失败', error)
+    messageStore.update(id, { type: 'error', text: isEditMode.value ? '保存失败' : '发表失败', duration: 2000 })
   } finally {
     states.add = false
   }
@@ -231,6 +252,51 @@ function handleTagInput() {
 function removeTag(name: string) {
   articleData.tags = (articleData.tags || []).filter(tag => tag !== name)
 }
+
+onMounted(async () => {
+  if (userStore.token && !userStore.profile) {
+    await userStore.fetchUserProfile()
+  }
+  if (!isEditMode.value) return
+  const id = messageStore.show('正在加载文章', 'loading')
+  try {
+    const res = await getArticleDetails(editArticleId.value)
+    const article = res.data
+    const isArticleOwner = String(article.user_id) === String(userStore.profile?.id)
+    const createdAt = new Date(article.created_at).getTime()
+    const isExpired = Number.isNaN(createdAt) || Date.now() - createdAt > ONE_DAY_MS
+    if (!isAdmin.value && !isArticleOwner) {
+      messageStore.update(id, { type: 'error', text: '无权编辑此文章', duration: 2000 })
+      router.replace({ name: 'articleDetail', params: { articleId: editArticleId.value } })
+      return
+    }
+    if (!isAdmin.value && isExpired) {
+      messageStore.update(id, { type: 'info', text: '文章发布超过1天后不能编辑', duration: 2000 })
+      router.replace({ name: 'articleDetail', params: { articleId: editArticleId.value } })
+      return
+    }
+    articleData.content = article.content || ''
+    articleData.status = article.status ?? 1
+    articleData.location = article.location || ''
+    articleData.type = article.type ?? 0
+    articleData.isTop = !!article.is_top
+    articleData.isAd = !!article.is_ad
+    articleData.adTitle = article.ad_title || ''
+    articleData.adUrl = article.ad_url || ''
+    articleData.imageUrls = article.article_images?.map((item: any) => item.image_url) || []
+    articleData.videoUrls = article.article_videos?.map((item: any) => item.video_url) || []
+    articleData.thumbnail_url = article.article_videos?.[0]?.thumbnail_url || ''
+    articleData.tags = article.tags?.map((tag: any) => tag.name) || []
+    imageData.value = (articleData.imageUrls || []).join('\n')
+    videoData.value = (articleData.videoUrls || []).join('\n')
+    displayMethod.value = true
+    messageStore.update(id, { type: 'success', text: '加载成功', duration: 1200 })
+  } catch (error) {
+    console.log('加载文章失败', error)
+    messageStore.update(id, { type: 'error', text: '加载失败', duration: 2000 })
+    router.back()
+  }
+})
 </script>
 
 <template>
@@ -242,10 +308,10 @@ function removeTag(name: string) {
             <ChevronLeft />
           </Icon>
         </div>
-        <div>发表文章</div>
+        <div>{{ isEditMode ? '编辑文章' : '发表文章' }}</div>
       </div>
       <div class="header-right">
-        <button @click="addArticle">发表</button>
+        <button @click="submitArticle">{{ isEditMode ? '保存' : '发表' }}</button>
       </div>
     </div>
 
