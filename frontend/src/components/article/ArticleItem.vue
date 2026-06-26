@@ -9,6 +9,7 @@ import { computed, ref } from 'vue';
 import { type articleData } from '@/types/article';
 import { useMessageStore } from '@/store/message';
 import AvatarImage from '@/components/utils/AvatarImage.vue';
+import EmojiText from '@/components/emoji/EmojiText.vue';
 import Media from './Media.vue';
 import { showDetailTime, showTime } from '@/utils/time';
 
@@ -77,7 +78,7 @@ function openAd(url: string) {
             </div>
             <!-- 文章内容 -->
             <div v-if="article.content" class="main-context" @click="router.push(`/article/${props.article.id}`)">
-                <p>{{ props.article.content }}</p>
+                <p><EmojiText :text="props.article.content" /></p>
             </div>
             <!-- 推广内容跳转 -->
             <div class="ad-container" v-if="article.is_ad && article.ad_url" @click="openAd(article.ad_url)">
