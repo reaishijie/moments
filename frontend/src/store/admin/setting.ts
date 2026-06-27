@@ -41,6 +41,7 @@ export const useSettingStore = defineStore('setting', () => {
         user_captcha_article: '',
         user_captcha_comment: '',
         user_captcha_update: '',
+        user_email_verify_register: '',
         verify_hcaptcha_user: '',
         verify_hcaptcha_app: '',
         location_method: '',

@@ -35,6 +35,7 @@ export interface updateConfigData {
     user_captcha_article?: string,
     user_captcha_comment?: string,
     user_captcha_update?: string,
+    user_email_verify_register?: string,
     verify_hcaptcha_user?: string,
     verify_hcaptcha_app?: string,
     location_method?: string,

@@ -1,5 +1,9 @@
 import { customAlphabet } from 'nanoid'
 import nodemailer from "nodemailer"
+import { prisma } from '../lib/prisma.js'
+import { Logger } from '../utils/logger.js'
+
+const logger = new Logger('MailService')
 // 验证码字符表
 const alphabet = '0123456789'
 // 生成4位验证码
@@ -9,20 +13,61 @@ export function generateCode() {
   return {
     code: code(),
     createdAt: Date.now(),
-    // 过期时间 5分钟
-    expiresAt: Date.now() + 5 * 60 * 1000
+    // 过期时间 60 秒
+    expiresAt: Date.now() + 60 * 1000
   }
 }
-// 邮件传输器
-const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST || "smtp.qq.com",
-  port: Number(process.env.EMAIL_PORT) || 465,
-  secure: Boolean(process.env.EMAIL_SECURE) || true,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
+type MailConfig = {
+  host: string
+  port: number
+  secure: boolean
+  user: string
+  pass: string
+}
+
+function parseBoolean(value: string | undefined, fallback: boolean) {
+  if (value === undefined || value === '') return fallback
+  return value === 'true' || value === '1'
+}
+
+async function getMailConfig(): Promise<MailConfig> {
+  const configs = await prisma.config.findMany({
+    where: { k: { in: ['mail_host', 'mail_port', 'mail_secure', 'mail_user', 'mail_pass'] } },
+    select: { k: true, v: true },
+  })
+  const configMap = configs.reduce((acc, current) => {
+    acc[current.k] = current.v
+    return acc
+  }, {} as Record<string, string>)
+
+  const host = configMap.mail_host || process.env.EMAIL_HOST || 'smtp.qq.com'
+  const port = Number(configMap.mail_port || process.env.EMAIL_PORT || 465)
+  const secure = parseBoolean(configMap.mail_secure || process.env.EMAIL_SECURE, true)
+  const user = configMap.mail_user || process.env.EMAIL_USER || ''
+  const pass = configMap.mail_pass || process.env.EMAIL_PASS || ''
+
+  if (!user || !pass) {
+    throw new Error('发件邮箱账号或授权码未配置，请在后台邮箱设置中填写 SMTP 邮箱账号和授权码')
   }
-})
+
+  return { host, port, secure, user, pass }
+}
+
+async function createTransporter() {
+  const config = await getMailConfig()
+  return {
+    transporter: nodemailer.createTransport({
+      host: config.host,
+      port: config.port,
+      secure: config.secure,
+      auth: {
+        user: config.user,
+        pass: config.pass,
+      },
+    }),
+    from: config.user,
+  }
+}
 
 // 通用邮件模板
 function getEmailTemplate({
@@ -101,25 +146,25 @@ const isSending = new Set<string>();
 
 // 发送验证码的函数
 export async function sendVerificationEmail(to: string) {
-  console.log('@函数开始, emailStore', emailStore);
   // 判断时候在发送中
   if (isSending.has(to)) {
-    console.log("已经在发送中，请勿重复操作：", to);
+    logger.warn(`验证码正在发送中，请勿重复操作：${to}`)
     return false
   }
 
   // 判断是否过期
   if (emailStore.has(to) && Date.now() < emailStore.get(to)!.expiresAt) {
-    console.log("发送频繁", to);
+    logger.warn(`验证码发送频繁：${to}`)
     return false
   }
   // 发送邮件
   try {
     isSending.add(to)
     if (emailStore.has(to)) {
-      console.log("验证码已过期，删除旧码并准备发送新码", to);
+      logger.debug(`验证码已过期，删除旧码并准备发送新码：${to}`)
     }
     const codeObj = generateCode()
+    const { transporter, from } = await createTransporter()
 
     // 验证码模板
     const verificationEmail = getEmailTemplate({
@@ -127,7 +172,7 @@ export async function sendVerificationEmail(to: string) {
       title: '验证码',
       // 将验证码作为主要内容传入，并用 HTML 标签进行样式修饰
       mainContent: `
-      您正在进行身份验证，请在 <span style="color:#0077b6;font-weight:bold;">5 分钟</span> 内输入以下验证码完成操作：
+      您正在进行身份验证，请在 <span style="color:#0077b6;font-weight:bold;">60 秒</span> 内输入以下验证码完成操作：
       <div style="font-size:32px;letter-spacing:10px;font-weight:bold;color:#00b4d8;margin:20px 0;">
         ${codeObj.code}
       </div>
@@ -138,10 +183,10 @@ export async function sendVerificationEmail(to: string) {
     });
     // 邮件模板
     const mailOptions = {
-      from: `"验证码服务" <${process.env.EMAIL_USER}>`,
+      from: `"验证码服务" <${from}>`,
       to,                                       // 收件人
       subject: "您的验证码",                     // 邮件标题
-      text: `您的验证码是 ${codeObj.code}，有效期 5 分钟`, // 纯文本
+      text: `您的验证码是 ${codeObj.code}，有效期 60 秒`, // 纯文本
       html: verificationEmail        // HTML 模板
     }
     // 发送邮件
@@ -152,11 +197,10 @@ export async function sendVerificationEmail(to: string) {
       createdAt: codeObj.createdAt,
       expiresAt: codeObj.expiresAt,
     })
-    console.log("✅ 邮件已发送:", info.messageId)
-    // console.log("✅ 邮件已发送")
+    logger.log(`邮件已发送：${info.messageId}`)
     return true
   } catch (error) {
-    console.error("邮件发送失败:", error);
+    logger.error('邮件发送失败', error instanceof Error ? error.stack : String(error))
     return false;
   } finally {
     isSending.delete(to)
@@ -169,7 +213,7 @@ setInterval(() => {
   for (const [email, data] of emailStore.entries()) {
     if (now > data.expiresAt) {
       emailStore.delete(email)
-      console.log(`已清理过期验证码: ${email}`)
+      logger.debug(`已清理过期验证码: ${email}`)
     }
   }
 }, 10 * 60 * 1000)
@@ -181,12 +225,22 @@ interface verifyData {
 // 验证输入的验证码是否正确
 export function verify(data: verifyData) {
   const { email, code } = data
-  // 判断是否存在邮箱
-  if (emailStore.has(data.email)) {
-    if (emailStore.get(data.email)!.code === data.code) {
-      return true
-    }
+  const record = emailStore.get(email)
+  if (!record) return false
+
+  if (Date.now() > record.expiresAt) {
+    emailStore.delete(email)
     return false
   }
-  return false
+
+  return record.code === code
+}
+
+// 验证并消费验证码，避免同一个验证码被重复用于注册、登录或重置密码
+export function verifyAndConsume(data: verifyData) {
+  const isValid = verify(data)
+  if (isValid) {
+    emailStore.delete(data.email)
+  }
+  return isValid
 }

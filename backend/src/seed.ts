@@ -70,6 +70,7 @@ async function main() {
     cfg('user_captcha_article', '0', '发文验证', '用户发表文章是否需要验证', 'verify', 20, 'public'),
     cfg('user_captcha_comment', '0', '评论验证', '用户发表评论是否需要验证', 'verify', 30, 'public'),
     cfg('user_captcha_update', '0', '资料更新验证', '用户更新信息是否需要验证', 'verify', 40, 'public'),
+    cfg('user_email_verify_register', '0', '注册邮箱验证', '用户注册时是否必须通过邮箱验证码验证', 'verify', 45, 'public'),
     cfg('user_status', '1', '用户系统状态', '用户系统是否开放', 'user', 20, 'public'),
     cfg('verify_hcaptcha_user', '', 'hCaptcha Secret', 'hCaptcha 服务端密钥', 'verify', 50, 'admin'),
     cfg('verify_hcaptcha_app', '', 'hCaptcha Site Key', 'hCaptcha 客户端站点 Key', 'verify', 60, 'public'),
