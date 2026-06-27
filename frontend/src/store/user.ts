@@ -1,7 +1,7 @@
 import { ref } from "vue"
 import { defineStore } from "pinia"
-import type { userData} from '@/types/user'
-import { login } from "@/api/auth"
+import type { emailLoginData, userData} from '@/types/user'
+import { login, loginByEmailCode } from "@/api/auth"
 import { getUserInfo } from "@/api/users"
 
 export const useUserStore = defineStore('user', () => {
@@ -14,6 +14,17 @@ export const useUserStore = defineStore('user', () => {
             token.value = response.data.token
             localStorage.setItem('token', response.data.token)
             // 登录成功后立即获取用户信息
+            await fetchUserProfile()
+            return { status: 0, response }
+        } catch (error:any) {
+            return { status: 1, error}
+        }
+    }
+    const handleEmailLogin = async(credentials: emailLoginData) => {
+        try {
+            const response = await loginByEmailCode(credentials)
+            token.value = response.data.token
+            localStorage.setItem('token', response.data.token)
             await fetchUserProfile()
             return { status: 0, response }
         } catch (error:any) {
@@ -41,6 +52,7 @@ export const useUserStore = defineStore('user', () => {
         token,
         profile,
         handleLogin,
+        handleEmailLogin,
         handleLogout,
         fetchUserProfile
     }
