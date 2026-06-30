@@ -165,7 +165,7 @@ const hasReviewContent = computed(() => (
     <div class="input" v-if="props.isShowInput">
       <textarea v-model="replyContent" placeholder="写下你的评论..." @focus="setActiveTextarea" @input="adjustHeight"></textarea>
       <div class="input-actions">
-        <EmojiPicker @select="insertEmoji" />
+        <EmojiPicker placement="bottom" @select="insertEmoji" />
         <button @click="handleSendReply">发送</button>
       </div>
     </div>
@@ -184,7 +184,7 @@ const hasReviewContent = computed(() => (
         <div class="input" v-if="activeReplyId === comment.id">
           <textarea v-model="replyContent" :placeholder="`回复${(comment.user.nickname || comment.user.username)}`" @focus="setActiveTextarea" @input="adjustHeight"></textarea>
           <div class="input-actions">
-            <EmojiPicker @select="insertEmoji" />
+            <EmojiPicker placement="bottom" @select="insertEmoji" />
             <button @click="handleSendReply">发送</button>
           </div>
         </div>
