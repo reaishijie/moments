@@ -4,6 +4,7 @@ import { prisma } from '../lib/prisma.js';
 import { adminMiddleware } from "../middleware/adminMiddleware.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
 import { buildConfigWhere, formatConfigResponse, parseConfigQuery, type ConfigAccessLevel } from "../services/config-query.service.js";
+import { noticeService } from "../services/notice.service.js";
 
 const router = Router()
 
@@ -74,6 +75,41 @@ router.get('/comment', authMiddleware, adminMiddleware, async (req: Request, res
         res.status(500).json({ message: '获取评论数失败', error })
     }
     res.status(200).json({ message: '获取评论数成功', totalCount, activeCount, negativeCount })
+})
+
+router.post('/notices/system', authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
+    try {
+        const { to, title, content, link } = req.body
+        if (!title || !content) {
+            return res.status(400).json({ message: '标题和内容不能为空' })
+        }
+
+        const recipients = to === 'all'
+            ? await prisma.users.findMany({
+                where: { deleted_at: null, status: 1 },
+                select: { id: true }
+            })
+            : Array.isArray(to)
+                ? to.map((id: string | number | bigint) => ({ id: BigInt(id) }))
+                : to
+                    ? [{ id: BigInt(to) }]
+                    : []
+
+        if (recipients.length === 0) {
+            return res.status(400).json({ message: '请选择通知接收人' })
+        }
+
+        await Promise.all(recipients.map(user => noticeService.createSystemNotice({
+            to: user.id,
+            title,
+            content,
+            link,
+        })))
+
+        return res.status(201).json({ message: '系统通知发送成功', count: recipients.length })
+    } catch (error) {
+        return res.status(500).json({ message: '系统通知发送失败', error })
+    }
 })
 
 /**

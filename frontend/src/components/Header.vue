@@ -6,10 +6,14 @@ import { Icon } from '@vicons/utils'
 import { useAuthStore } from '@/store/auth'
 import router from '@/router'
 import { useDefaultStore } from '@/store/default'
+import { useNoticeStore } from '@/store/notice'
+import NoticePopover from '@/components/notice/NoticePopover.vue'
 
 const authStore = useAuthStore()
 const userStore = useUserStore()
 const defaultStore = useDefaultStore()
+const noticeStore = useNoticeStore()
+let noticeTimer: number | undefined
 const props = defineProps({
   headerBackgroundUrl: String
 })
@@ -88,14 +92,37 @@ onMounted(() => {
   }
 
   void tryPlayBackgroundVideo()
+  if (isLogin.value) {
+    void noticeStore.fetchUnreadCount()
+    noticeTimer = window.setInterval(() => {
+      if (isLogin.value) void noticeStore.fetchUnreadCount()
+    }, 60000)
+  }
 })
 onUnmounted(() => {
   observer && observer.disconnect()
+  if (noticeTimer) window.clearInterval(noticeTimer)
 
 })
 
 // 根据token判断用户是否登录
 const isLogin = computed(() => !!userStore.token)
+watch(isLogin, (value) => {
+  if (value) {
+    void noticeStore.fetchUnreadCount()
+    if (!noticeTimer) {
+      noticeTimer = window.setInterval(() => {
+        if (isLogin.value) void noticeStore.fetchUnreadCount()
+      }, 60000)
+    }
+  } else {
+    noticeStore.unreadCount = 0
+    if (noticeTimer) {
+      window.clearInterval(noticeTimer)
+      noticeTimer = undefined
+    }
+  }
+})
 </script>
 
 <template>
@@ -154,6 +181,7 @@ const isLogin = computed(() => !!userStore.token)
                 <Camera />
               </Icon>
             </div>
+            <NoticePopover v-if="isLogin" :is-blurred="isBlurred" />
             <div class="link" @click="router.push({ name: 'links' })">
               <Icon :class="['icon', { blurred: isBlurred }]" title="友情链接">
                 <Hive />
