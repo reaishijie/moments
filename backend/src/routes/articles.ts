@@ -4,6 +4,7 @@ import { prisma } from '../lib/prisma.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 import { optionalAuthMiddleware } from '../middleware/optionalAuthMiddleware.js';
 import { logAction, logger } from "../services/log.service.js"
+import { noticeService } from '../services/notice.service.js'
 
 const router = Router();
 
@@ -706,6 +707,12 @@ router.post('/:articleId/like', optionalAuthMiddleware, async (req: Request, res
                     }
                 })
             ])
+            await noticeService.createLikeNotice({
+                fromUserId: BigInt(userId),
+                articleAuthorId: article.user_id,
+                articleId: BigInt(articleId),
+                actorName: req.user.username,
+            })
             logger.add({
                 userId: null,
                 action: logAction.LIKE_CREATE,

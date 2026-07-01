@@ -202,9 +202,13 @@ model notices {
   type       NoticeType
   title      String     @db.VarChar(255)
   content    String     @db.Text
+  target_type String?    @db.VarChar(50)
+  target_id   BigInt?    @db.UnsignedBigInt
+  link        String?    @db.VarChar(255)
   read       Boolean    @default(false)
   created_at DateTime   @default(now())
   read_at    DateTime?
+  deleted_at DateTime?
 
   // 关系
   sender   users? @relation("NoticeFrom", fields: [from], references: [id])
@@ -214,6 +218,7 @@ model notices {
   @@index([to, read])
   @@index([to, created_at])
   @@index([type])
+  @@index([target_type, target_id])
 }
 
 // 文章标签

@@ -6,6 +6,7 @@ import userRouter from './routes/user.js'
 import articlesRouter from './routes/articles.js'
 import commentsRouter from './routes/comments.js'
 import noticeRouter from './routes/notice.js'
+import noticesRouter from './routes/notices.js'
 import adminRouter from './routes/admin.js'
 import uploadRouter from './routes/upload.js'
 import linkRouter from './routes/link.js'
@@ -44,6 +45,7 @@ app.use('/api/user', userRouter);
 app.use('/api/articles', articlesRouter)
 app.use('/api/comments', commentsRouter)
 app.use('/api/notice', noticeRouter)
+app.use('/api/notices', noticesRouter)
 app.use('/api/admin', adminRouter)
 app.use('/api/upload', uploadRouter)
 app.use('/api/link', linkRouter)
