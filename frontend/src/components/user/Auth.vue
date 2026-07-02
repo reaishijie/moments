@@ -5,7 +5,7 @@ import { useUserStore } from '@/store/user'
 import { useMessageStore } from '@/store/message'
 import { register, resetPassword, sendEmailCode } from '@/api/auth'
 import router from '@/router'
-import { UserRegular, Fingerprint, EnvelopeRegular, Times, ShieldAlt } from '@vicons/fa'
+import { UserRegular, Fingerprint, EnvelopeRegular, Times, ShieldAlt, EyeRegular, EyeSlashRegular } from '@vicons/fa'
 import { Icon } from '@vicons/utils'
 import { useAuthStore } from '@/store/auth'
 import HCaptcha from '../captcha/HCaptcha.vue'
@@ -23,6 +23,9 @@ const userStore = useUserStore()
 // 定义页面展示类型
 const show = ref<'showLogin' | 'showRegister' | 'showForgot'>('showLogin')
 const loginMode = ref<'password' | 'email'>('password')
+const showLoginPassword = ref(false)
+const showRegisterPassword = ref(false)
+const showResetPassword = ref(false)
 
 // 定义输入数据
 const userLoginInput = ref<loginData>({
@@ -252,8 +255,19 @@ const handleResetPassword = async () => {
                         </Icon>
                         密码：
                     </label>
-                    <input type="password" id="password" v-model="userLoginInput.password" placeholder="密码"
+                    <input :type="showLoginPassword ? 'text' : 'password'" id="password" v-model="userLoginInput.password" placeholder="密码"
                         @keyup.enter="handleLogin">
+                    <button
+                        type="button"
+                        class="password-toggle"
+                        :aria-label="showLoginPassword ? '隐藏密码' : '显示密码'"
+                        @click="showLoginPassword = !showLoginPassword"
+                    >
+                        <Icon class="toggle-icon">
+                            <EyeSlashRegular v-if="showLoginPassword" />
+                            <EyeRegular v-else />
+                        </Icon>
+                    </button>
                 </div>
             </div>
             <div class="body" v-else>
@@ -348,8 +362,19 @@ const handleResetPassword = async () => {
                         </Icon>
                         密码：
                     </label>
-                    <input type="password" id="registerPassword" v-model="userRegisterInput.password" placeholder="密码"
+                    <input :type="showRegisterPassword ? 'text' : 'password'" id="registerPassword" v-model="userRegisterInput.password" placeholder="密码"
                         @keyup.enter="handleRegister">
+                    <button
+                        type="button"
+                        class="password-toggle"
+                        :aria-label="showRegisterPassword ? '隐藏密码' : '显示密码'"
+                        @click="showRegisterPassword = !showRegisterPassword"
+                    >
+                        <Icon class="toggle-icon">
+                            <EyeSlashRegular v-if="showRegisterPassword" />
+                            <EyeRegular v-else />
+                        </Icon>
+                    </button>
                 </div>
             </div>
             <div class="captcha-wrap" v-if="defaultStore.configs.user_captcha !== '0'">
@@ -409,8 +434,19 @@ const handleResetPassword = async () => {
                         </Icon>
                         新密码：
                     </label>
-                    <input type="password" id="resetPassword" v-model="resetPasswordInput.password" placeholder="新密码"
+                    <input :type="showResetPassword ? 'text' : 'password'" id="resetPassword" v-model="resetPasswordInput.password" placeholder="新密码"
                         @keyup.enter="handleResetPassword">
+                    <button
+                        type="button"
+                        class="password-toggle"
+                        :aria-label="showResetPassword ? '隐藏密码' : '显示密码'"
+                        @click="showResetPassword = !showResetPassword"
+                    >
+                        <Icon class="toggle-icon">
+                            <EyeSlashRegular v-if="showResetPassword" />
+                            <EyeRegular v-else />
+                        </Icon>
+                    </button>
                 </div>
             </div>
             <div class="button">
@@ -651,6 +687,40 @@ button:active:not(:disabled) {
 
 .code-row input {
     max-width: none;
+}
+
+.password-toggle {
+    flex: 0 0 auto;
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
+    margin-left: 8px;
+    padding: 0;
+    border-radius: 50%;
+    background: var(--color-ad);
+    color: #586C97;
+}
+
+.password-toggle .toggle-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    line-height: 1;
+}
+
+.password-toggle .toggle-icon :deep(svg) {
+    display: block;
+}
+
+.password-toggle:hover:not(:disabled) {
+    color: #fff;
+    background: #6cadf1;
 }
 
 .code-button {

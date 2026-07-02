@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue'
 import AvatarImage from '@/components/utils/AvatarImage.vue';
 import type { userData, updateUserData } from '@/types/user';
-import { getAllUsers, deleteUser, updateUser } from '@/api/admin';
+import { getAllUsers, deleteUser, updateUser, sendSystemNotice } from '@/api/admin';
 import { useMessageStore } from '@/store/message';
 
 const messageStore = useMessageStore()
@@ -69,6 +69,16 @@ const handlePageSizeChange = (pageSize: number) => {
 }
 
 const totalPages = computed(() => Math.ceil(pagination.value.total / pagination.value.pageSize))
+
+const toDatetimeLocal = (value?: string | null) => {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+  return offsetDate.toISOString().slice(0, 16)
+}
+
+const fromDatetimeLocal = (value?: string | null) => value ? new Date(value).toISOString() : null
 
 // 编辑用户相关状态
 const editingUser = ref<userData | null>(null)
@@ -221,7 +231,8 @@ const openEditModal = (user: userData) => {
     status: Number(user.status),
     role: Number(user.role),
     avatar: user.avatar,
-    header_background: user.header_background
+    header_background: user.header_background,
+    banned_until: toDatetimeLocal(user.banned_until)
   }
   showEditModal.value = true
 }
@@ -240,7 +251,10 @@ const saveUserChanges = async () => {
   const loadingId = messageStore.show('正在保存用户信息...', 'loading')
   
   try {
-    await updateUser(editingUser.value.id, editForm.value)
+    await updateUser(editingUser.value.id, {
+      ...editForm.value,
+      banned_until: fromDatetimeLocal(editForm.value.banned_until),
+    })
     messageStore.update(loadingId, { text: '用户信息更新成功！', type: 'success', duration: 2000 })
     closeEditModal()
     handleSearch() // 刷新列表
@@ -249,6 +263,49 @@ const saveUserChanges = async () => {
     messageStore.update(loadingId, { text: '更新失败，请稍后重试', type: 'error', duration: 3000 })
   } finally {
     editStates.value.saving = false
+  }
+}
+
+const showNoticeModal = ref(false)
+const noticeTarget = ref<userData | null>(null)
+const noticeForm = ref({ title: '', content: '', link: '' })
+const noticeSending = ref(false)
+
+const openNoticeModal = (user: userData) => {
+  noticeTarget.value = user
+  noticeForm.value = { title: '', content: '', link: '' }
+  showNoticeModal.value = true
+}
+
+const closeNoticeModal = () => {
+  showNoticeModal.value = false
+  noticeTarget.value = null
+  noticeSending.value = false
+}
+
+const submitNotice = async () => {
+  if (!noticeTarget.value) return
+  if (!noticeForm.value.title.trim() || !noticeForm.value.content.trim()) {
+    messageStore.show('标题和内容不能为空', 'info', 2500)
+    return
+  }
+
+  noticeSending.value = true
+  const loadingId = messageStore.show('正在发送通知...', 'loading')
+  try {
+    await sendSystemNotice({
+      to: noticeTarget.value.id,
+      title: noticeForm.value.title.trim(),
+      content: noticeForm.value.content.trim(),
+      link: noticeForm.value.link.trim() || undefined,
+    })
+    messageStore.update(loadingId, { text: '通知发送成功！', type: 'success', duration: 2000 })
+    closeNoticeModal()
+  } catch (error) {
+    console.error('发送通知失败:', error)
+    messageStore.update(loadingId, { text: '发送失败，请稍后重试', type: 'error', duration: 3000 })
+  } finally {
+    noticeSending.value = false
   }
 }
 
@@ -343,6 +400,7 @@ handleSearch()
             <td class="time-cell">{{ new Date(item.created_at).toLocaleDateString() }}</td>
             <td>
               <button @click="openEditModal(item)" class="edit-btn">编辑</button>
+              <button @click="openNoticeModal(item)" class="notice-btn">通知</button>
               <button @click="handleDelete(item.id)" class="delete-btn">删除</button>
             </td>
           </tr>
@@ -460,6 +518,10 @@ handleSearch()
                 <option :value="1">管理员</option>
               </select>
             </div>
+            <div class="form-group">
+              <label>封禁至</label>
+              <input type="datetime-local" v-model="editForm.banned_until" placeholder="留空表示永久或清除">
+            </div>
           </div>
           
           <div class="form-group full-width">
@@ -483,6 +545,44 @@ handleSearch()
         <button @click="closeEditModal" class="modal-cancel-btn">取消</button>
         <button @click="saveUserChanges" :disabled="editStates.saving" class="modal-save-btn">
           {{ editStates.saving ? '保存中...' : '保存' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 发送通知模态框 -->
+  <div v-if="showNoticeModal" class="modal-overlay" @click="closeNoticeModal">
+    <div class="modal-container" @click.stop>
+      <div class="modal-header">
+        <h3>发送系统通知</h3>
+        <button @click="closeNoticeModal" class="modal-close">×</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="edit-form">
+          <div class="form-group">
+            <label>接收用户</label>
+            <span class="readonly-value">{{ noticeTarget?.nickname || noticeTarget?.username }}（ID: {{ noticeTarget?.id }}）</span>
+          </div>
+          <div class="form-group">
+            <label>标题</label>
+            <input type="text" v-model="noticeForm.title" placeholder="通知标题">
+          </div>
+          <div class="form-group full-width">
+            <label>内容</label>
+            <textarea v-model="noticeForm.content" placeholder="通知内容" rows="4"></textarea>
+          </div>
+          <div class="form-group">
+            <label>跳转链接</label>
+            <input type="text" v-model="noticeForm.link" placeholder="可选，例如 /notifications">
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button @click="closeNoticeModal" class="modal-cancel-btn">取消</button>
+        <button @click="submitNotice" :disabled="noticeSending" class="modal-save-btn">
+          {{ noticeSending ? '发送中...' : '发送' }}
         </button>
       </div>
     </div>
@@ -582,6 +682,7 @@ textarea:focus {
 
 form > button,
 .edit-btn,
+.notice-btn,
 .delete-btn,
 .pagination-btn,
 .modal-actions button,
@@ -715,6 +816,7 @@ td:last-child {
   max-width: 360px;
   overflow: hidden;
   display: -webkit-box;
+  line-clamp: 2;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   line-height: 1.55;
@@ -784,6 +886,7 @@ td:last-child {
 }
 
 .edit-btn,
+.notice-btn,
 .delete-btn {
   min-height: 34px;
   padding: 0 12px;
@@ -793,6 +896,11 @@ td:last-child {
 .edit-btn {
   color: #245fae;
   background: rgba(94, 156, 244, 0.13);
+}
+
+.notice-btn {
+  color: #23704a;
+  background: rgba(88, 198, 135, 0.14);
 }
 
 .delete-btn {

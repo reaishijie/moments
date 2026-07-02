@@ -1,29 +1,52 @@
-import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
-import { JwtPayload } from '../types/express.js'; // 确保这个类型定义已存在
-import { Logger } from '../utils/logger.js';
+import { Request, Response, NextFunction } from 'express'
+import { JwtPayload } from '../types/express.js'
+import { Logger } from '../utils/logger.js'
+import { ensureLoginAllowedUser } from '../services/auth.service.js'
+import { AUTH_TOKEN_SCOPE, tokenService } from '../services/token.service.js'
+import { sessionService } from '../services/session.service.js'
 
 const logger = new Logger('OptionalAuthMiddleware')
 
-export const optionalAuthMiddleware = (req: Request, res: Response, next: NextFunction) => {
-  const authHeader = req.headers.authorization;
+export const optionalAuthMiddleware = async (req: Request, res: Response, next: NextFunction) => {
+  const authHeader = req.headers.authorization
 
   if (authHeader && authHeader.startsWith('Bearer ')) {
-    const token = authHeader.split(' ')[1];
-    const jwtSecret = process.env.JWT_SECRET;
+    const token = authHeader.slice('Bearer '.length).trim()
 
-    if (jwtSecret) {
-      try {
-        // 尝试验证 token
-        const decodedPayload = jwt.verify(token, jwtSecret) as JwtPayload;
-        req.user = decodedPayload; // 如果成功，附加 user
-      } catch (error) {
-        // 如果 token 无效，我们什么都不做，继续执行
-        // req.user 将保持为 undefined
-        logger.warn('捕获到无效的Token，按游客处理');
+    try {
+      const decodedPayload = tokenService.verify(token)
+      if (decodedPayload.tokenType !== 'access' || decodedPayload.scope !== AUTH_TOKEN_SCOPE) {
+        return next()
       }
+      if (!decodedPayload.sub || !decodedPayload.sid || !decodedPayload.jti) {
+        return next()
+      }
+
+      const validSession = await sessionService.validateAccess({
+        sid: decodedPayload.sid,
+        jti: decodedPayload.jti,
+        userId: decodedPayload.sub,
+      })
+      if (!validSession) {
+        return next()
+      }
+
+      const user = await ensureLoginAllowedUser(decodedPayload.sub)
+      if (user) {
+        req.user = {
+          userId: user.id.toString(),
+          username: user.username,
+          role: user.role,
+          sid: decodedPayload.sid,
+          jti: decodedPayload.jti,
+          scope: decodedPayload.scope,
+          tokenType: decodedPayload.tokenType,
+        } satisfies JwtPayload
+      }
+    } catch (error) {
+      logger.warn('捕获到无效的Token，按游客处理')
     }
   }
-  // 无论有没有 token 或 token 是否有效，都放行
-  next();
-};
+
+  next()
+}

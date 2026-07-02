@@ -8,6 +8,7 @@ export interface userData {
     status:string,
     header_background: string,
     avatar: string,
+    banned_until?: string | null,
     created_at:string
 }
 
@@ -57,5 +58,6 @@ export interface updateUserData {
     status?: number,
     role?: number,
     avatar?: string,
-    header_background?: string
+    header_background?: string,
+    banned_until?: string | null
 }

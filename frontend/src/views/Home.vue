@@ -115,7 +115,7 @@ onMounted(async () => {
         <!-- 右插槽 -->
         <template #right="{ isBlurred }" >
           <div class="profile">
-            <Icon :class="['icon', { blurred: isBlurred }]" @click="router.push({ name: 'profile' })" v-if="userStore.token">
+            <Icon :class="['icon', { blurred: isBlurred }]" @click="router.push({ name: 'profile' })" v-if="userStore.accessToken">
               <Cog />
             </Icon>
           </div>

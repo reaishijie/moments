@@ -3,6 +3,8 @@ import { prisma } from "../lib/prisma.js";
 import { logAction, logger } from "../services/log.service.js"
 import { verifyAndConsume } from "../services/mail.service.js";
 import { Logger } from "../utils/logger.js";
+import { authMiddleware } from "../middleware/authMiddleware.js";
+import { authService, buildDeviceFingerprint, ensureLoginAllowedUser } from "../services/auth.service.js";
 
 const router = Router()
 const authLogger = new Logger('AuthRoute')
@@ -18,23 +20,6 @@ async function isRegisterEmailVerificationEnabled() {
 async function hashPassword(rawPassword: string) {
     const { default: bcrypt } = await import('bcrypt')
     return bcrypt.hash(rawPassword, 10)
-}
-
-async function issueToken(user: { id: bigint, username: string, role: number }) {
-    const jwtSecret = process.env.JWT_SECRET;
-    if (!jwtSecret) {
-        throw new Error('.env 文件中未定义 JWT_SECRET');
-    }
-    const { default: jwt } = await import('jsonwebtoken')
-    return jwt.sign(
-        {
-            userId: user.id.toString(),
-            username: user.username,
-            role: user.role
-        },
-        jwtSecret,
-        { expiresIn: '7d' }
-    )
 }
 
 async function writeLoginFailLog(req: Request, userId: bigint | null, error: string) {
@@ -152,13 +137,17 @@ router.post('/login', async (req: Request, res: Response) => {
             await writeLoginFailLog(req, BigInt(user.id), '账号或密码错误')
             return res.status(401).json({ error: '账号或密码错误' });
         }
-        // 检查用户状态是否正常 0未激活， 1正常， 2封禁
-        if (user.status !== 1) {
+        // 检查用户状态是否正常 0未激活，1正常，2封禁；封禁到期后自动恢复
+        const loginAllowedUser = await ensureLoginAllowedUser(user.id)
+        if (!loginAllowedUser) {
             await writeLoginFailLog(req, BigInt(user.id), '用户状态异常，无法登录')
             return res.status(403).json({ error: '用户状态异常，无法登录' });
         }
-        // 生成令牌
-        const token = await issueToken(user)
+        // 生成双令牌
+        const tokens = await authService.issueTokenPair({
+            userId: user.id,
+            deviceFingerprint: buildDeviceFingerprint(req),
+        })
 
         logger.add({
             userId: BigInt(user.id),
@@ -169,7 +158,7 @@ router.post('/login', async (req: Request, res: Response) => {
             ipAddress: req.ip,
             userAgent: req.headers['user-agent'] || '',
         })
-        res.status(200).json({ token })
+        res.status(200).json(tokens)
 
     } catch (error) {
         authLogger.error('登录失败', error instanceof Error ? error.stack : String(error))
@@ -199,12 +188,16 @@ router.post('/login-email', async (req: Request, res: Response) => {
             await writeLoginFailLog(req, null, '邮箱未注册')
             return res.status(404).json({ error: '邮箱未注册' })
         }
-        if (user.status !== 1) {
+        const loginAllowedUser = await ensureLoginAllowedUser(user.id)
+        if (!loginAllowedUser) {
             await writeLoginFailLog(req, BigInt(user.id), '用户状态异常，无法登录')
             return res.status(403).json({ error: '用户状态异常，无法登录' });
         }
 
-        const token = await issueToken(user)
+        const tokens = await authService.issueTokenPair({
+            userId: user.id,
+            deviceFingerprint: buildDeviceFingerprint(req),
+        })
         logger.add({
             userId: BigInt(user.id),
             action: logAction.USER_LOGIN_SUCCESS,
@@ -214,11 +207,62 @@ router.post('/login-email', async (req: Request, res: Response) => {
             ipAddress: req.ip,
             userAgent: req.headers['user-agent'] || '',
         })
-        return res.status(200).json({ token })
+        return res.status(200).json(tokens)
     } catch (error) {
         authLogger.error('邮箱验证码登录失败', error instanceof Error ? error.stack : String(error))
         return res.status(500).json({ error: '服务器内部错误' })
     }
+})
+
+// 刷新令牌：仅接受 refreshToken，并在每次刷新时轮换 refresh jti
+router.post('/refresh', async (req: Request, res: Response) => {
+    try {
+        const refreshToken = String(req.body.refreshToken || '')
+        if (!refreshToken) {
+            return res.status(400).json({ error: 'refreshToken 不能为空' })
+        }
+
+        const tokens = await authService.refresh(refreshToken)
+        return res.status(200).json(tokens)
+    } catch (error) {
+        authLogger.warn('刷新令牌失败')
+        return res.status(401).json({ error: '登录已过期，请重新登录' })
+    }
+})
+
+// 退出当前会话
+router.post('/logout', authMiddleware, async (req: Request, res: Response) => {
+    try {
+        if (!req.user?.userId || !req.user.sid) {
+            return res.status(401).json({ error: '未授权' })
+        }
+
+        await authService.revokeCurrentSession({ userId: req.user.userId, sid: req.user.sid })
+        return res.status(200).json({ message: '已退出登录' })
+    } catch (error) {
+        authLogger.error('退出登录失败', error instanceof Error ? error.stack : String(error))
+        return res.status(500).json({ error: '服务器内部错误' })
+    }
+})
+
+// 退出全部会话
+router.post('/logout-all', authMiddleware, async (req: Request, res: Response) => {
+    try {
+        if (!req.user?.userId) {
+            return res.status(401).json({ error: '未授权' })
+        }
+
+        await authService.revokeAllSessions(req.user.userId)
+        return res.status(200).json({ message: '已退出全部设备' })
+    } catch (error) {
+        authLogger.error('退出全部会话失败', error instanceof Error ? error.stack : String(error))
+        return res.status(500).json({ error: '服务器内部错误' })
+    }
+})
+
+// 调试当前 token 类型，拒绝 refresh token 访问普通接口
+router.get('/me', authMiddleware, async (req: Request, res: Response) => {
+    return res.status(200).json({ user: req.user })
 })
 
 // 邮箱验证码重置密码

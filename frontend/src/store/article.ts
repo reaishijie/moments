@@ -26,7 +26,7 @@ export const useArticleStore = defineStore('article', () => {
     const fetchArticle = async (articleId: number) => {
         states.article = true
         try {
-            const guestId = !userStore.token ? getOrCreateGuestId() : undefined
+            const guestId = !userStore.accessToken ? getOrCreateGuestId() : undefined
             const response = await getArticleDetails(articleId, guestId)
             article.value = response.data
         } catch (error) {
@@ -104,7 +104,7 @@ export const useArticleStore = defineStore('article', () => {
         // 更新数据库
         try {
             // 已登录用户
-            if (userStore.token) {
+            if (userStore.accessToken) {
                 if (article.value.isLiked) {
                     id.value = messageStore.show('正在点赞', 'loading')
                     await likeArticle(articleId)

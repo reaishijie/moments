@@ -35,7 +35,7 @@ export const useFeedStore = defineStore('feed', () => {
         try {
             const article = articles.value.find(a => a.id === articleId)
             if (!article) {
-                const guestId = !userStore.token ? getOrCreateGuestId() : undefined
+                const guestId = !userStore.accessToken ? getOrCreateGuestId() : undefined
                 const response = await getArticleDetails(articleId, guestId)
                 articles.value.push(response.data)
             }
@@ -64,7 +64,7 @@ export const useFeedStore = defineStore('feed', () => {
         // if (articles.value.length > 0) return //防止重复加载文章
         isLoading.value = true
         try {
-            const guestId = !userStore.token ? getOrCreateGuestId() : undefined;
+            const guestId = !userStore.accessToken ? getOrCreateGuestId() : undefined;
 
             const response = await getArticle(buildArticleParams(1), guestId)
             articles.value = response.data.data
@@ -86,7 +86,7 @@ export const useFeedStore = defineStore('feed', () => {
         isLoading.value = true
         try {
             const nextPage = page.value + 1
-            const guestId = !userStore.token ? getOrCreateGuestId() : undefined;
+            const guestId = !userStore.accessToken ? getOrCreateGuestId() : undefined;
             const response = await getArticle(buildArticleParams(nextPage), guestId)
 
             // 将新文章数据放入articles数组中
@@ -154,7 +154,7 @@ export const useFeedStore = defineStore('feed', () => {
         // 修改数据库中
         const id: Ref<number> = ref(1);
         try {
-            if (userStore.token) {
+            if (userStore.accessToken) {
                 // 用户
                 if (article.isLiked) {
                     id.value = messageStore.show('正在点赞', 'loading')

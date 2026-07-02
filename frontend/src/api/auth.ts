@@ -26,6 +26,23 @@ export const loginByEmailCode = (data: emailLoginData) => {
     })
 }
 
+// 刷新令牌
+export const refreshAccessToken = (refreshToken: string) => {
+    return service({
+        url: '/auth/refresh',
+        method: 'post',
+        data: { refreshToken },
+    })
+}
+
+// 退出当前登录会话
+export const logout = () => {
+    return service({
+        url: '/auth/logout',
+        method: 'post',
+    })
+}
+
 // 邮箱验证码重置密码
 export const resetPassword = (data: resetPasswordData) => {
     return service({
