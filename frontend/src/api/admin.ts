@@ -129,6 +129,15 @@ export const updateLink = (linkId: string | number, data: any) => {
     })
 }
 
+// 发送系统通知
+export const sendSystemNotice = (data: { to: string | number | 'all', title: string, content: string, link?: string }) => {
+    return service({
+        url: '/admin/notices/system',
+        method: 'post',
+        data,
+    })
+}
+
 // 删除友情链接
 export const deleteLink = (linkId: string | number) => {
     return service({

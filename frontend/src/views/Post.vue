@@ -254,7 +254,7 @@ function removeTag(name: string) {
 }
 
 onMounted(async () => {
-  if (userStore.token && !userStore.profile) {
+  if (userStore.accessToken && !userStore.profile) {
     await userStore.fetchUserProfile()
   }
   if (!isEditMode.value) return

@@ -46,7 +46,7 @@ export const deleteArticle = (articleId: string | number) => {
 // 文章点赞
 export const likeArticle = (articleId: string | number, guestId?: string) => {
     const userStore = useUserStore()
-    if(!userStore.token) {
+    if(!userStore.accessToken) {
         guestId = getOrCreateGuestId()
     }
     return service({
@@ -59,7 +59,7 @@ export const likeArticle = (articleId: string | number, guestId?: string) => {
 // 取消文章点赞
 export const dislikeArticle = (articleId: string | number , guestId?: string) => {
     const userStore = useUserStore()
-    if(!userStore.token) {
+    if(!userStore.accessToken) {
         guestId = getOrCreateGuestId()
     }
     return service({

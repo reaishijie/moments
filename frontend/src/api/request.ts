@@ -6,6 +6,38 @@ const service = axios.create({
     timeout: 10000,
 })
 
+const refreshClient = axios.create({
+    baseURL: import.meta.env.VITE_API_BASE_URL,
+    timeout: 10000,
+})
+
+let refreshing: Promise<string | null> | null = null
+
+async function refreshAccessToken() {
+    if (!refreshing) {
+        refreshing = (async () => {
+            const { useUserStore } = await import('@/store/user')
+            const userStore = useUserStore()
+            if (!userStore.refreshToken) return null
+
+            try {
+                const response = await refreshClient.post('/auth/refresh', {
+                    refreshToken: userStore.refreshToken,
+                })
+                userStore.setTokenPair(response.data)
+                return response.data.accessToken as string
+            } catch (error) {
+                await userStore.handleLogout(false)
+                return null
+            } finally {
+                refreshing = null
+            }
+        })()
+    }
+
+    return refreshing
+}
+
 // 添加请求拦截器
 service.interceptors.request.use(
     async (config) => {
@@ -13,10 +45,10 @@ service.interceptors.request.use(
         // 获取store实例
         const { useUserStore } = await import('@/store/user')
         const userStore = useUserStore()
-        const token = userStore.token
-        // 如果token存在为每个请求的请求头都带上Authorization
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`
+        const accessToken = userStore.accessToken
+        // 如果 accessToken 存在，为请求头带上 Authorization
+        if (accessToken) {
+            config.headers.Authorization = `Bearer ${accessToken}`
         }
         return config
     },
@@ -32,7 +64,17 @@ service.interceptors.response.use(
         return response
     },
     async (error) => {
+        const originalRequest = error.config
         if (error.response) {
+            if (error.response.status === 401 && originalRequest && !originalRequest._retry && originalRequest.url !== '/auth/refresh') {
+                originalRequest._retry = true
+                const nextToken = await refreshAccessToken()
+                if (nextToken) {
+                    originalRequest.headers.Authorization = `Bearer ${nextToken}`
+                    return service(originalRequest)
+                }
+            }
+
             switch (error.response.status) {
                 case 401:
                     console.error('认证失败')

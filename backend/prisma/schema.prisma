@@ -154,8 +154,34 @@ model users {
   sendNotices    notices[]       @relation("NoticeFrom")
   receivedNotice notices[]       @relation("NoticeTo")
   created_tags   tags[]          @relation("TagCreator")
+  sessions       user_sessions[]
 
   @@index([status], map: "idx_status")
+}
+
+model user_sessions {
+  id                 BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  user_id            BigInt    @db.UnsignedBigInt
+  session_id         String    @unique @db.VarChar(64)
+  device_fingerprint String?   @db.VarChar(64)
+  brand              String?   @db.VarChar(64)
+  model              String?   @db.VarChar(128)
+  platform           String?   @db.VarChar(64)
+  app_version        String?   @db.VarChar(64)
+  access_jti         String    @db.VarChar(64)
+  refresh_jti        String    @db.VarChar(64)
+  status             String    @default("active") @db.VarChar(16)
+  access_expires_at  DateTime  @db.Timestamp(0)
+  refresh_expires_at DateTime  @db.Timestamp(0)
+  last_active_at     DateTime? @db.Timestamp(0)
+  created_at         DateTime  @default(now()) @db.Timestamp(0)
+  updated_at         DateTime  @default(now()) @updatedAt @db.Timestamp(0)
+
+  user users @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id, status], map: "idx_user_status")
+  @@index([refresh_jti], map: "idx_refresh_jti")
+  @@index([session_id, status], map: "idx_session_status")
 }
 
 // 网站信息配置表

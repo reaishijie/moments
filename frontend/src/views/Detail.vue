@@ -70,7 +70,7 @@ async function patchArticle(payload: { isTop?: boolean; isAd?: boolean; status?:
 }
 
 onMounted(async() => {
-    if (userStore.token && !userStore.profile) {
+    if (userStore.accessToken && !userStore.profile) {
         await userStore.fetchUserProfile()
     }
     if (articleId) {

@@ -106,7 +106,7 @@ onUnmounted(() => {
 })
 
 // 根据token判断用户是否登录
-const isLogin = computed(() => !!userStore.token)
+const isLogin = computed(() => !!userStore.accessToken)
 watch(isLogin, (value) => {
   if (value) {
     void noticeStore.fetchUnreadCount()
