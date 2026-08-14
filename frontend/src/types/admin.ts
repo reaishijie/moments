@@ -30,12 +30,13 @@ export interface updateConfigData {
     // 用户配置
     user_status? : string,
     user_auth?: string,
-    // 0为关闭 | 1为hcaptcha验证
+    // 0 为关闭，1 为开启
     user_captcha?: string,
     user_captcha_article?: string,
     user_captcha_comment?: string,
     user_captcha_update?: string,
     user_email_verify_register?: string,
+    captcha_provider?: string,
     // OAuth 登录配置
     oauth2_redirect_uri?: string,
     rainbow_oauth2?: string,
@@ -58,6 +59,8 @@ export interface updateConfigData {
     github_client_secret?: string,
     verify_hcaptcha_user?: string,
     verify_hcaptcha_app?: string,
+    verify_turnstile_site_key?: string,
+    verify_turnstile_secret?: string,
     location_method?: string,
     // 文件上传
     upload_method?: string,

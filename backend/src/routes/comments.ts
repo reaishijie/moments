@@ -4,6 +4,7 @@ import { authMiddleware } from "../middleware/authMiddleware.js";
 import { logAction, logger } from "../services/log.service.js"
 import { noticeService } from "../services/notice.service.js"
 import { Logger } from "../utils/logger.js"
+import { verifyCaptchaProofForAction } from "../services/verify.service.js"
 
 
 const router = Router()
@@ -24,6 +25,10 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
         // 验证输入
         if (!articleId || !content) {
             return res.status(400).json({ error: '文章ID和评论内容不能为空' })
+        }
+        const captchaVerified = await verifyCaptchaProofForAction('user_captcha_comment', req.body.captchaProof, req.ip)
+        if (!captchaVerified) {
+            return res.status(400).json({ error: '请先完成人机验证' })
         }
         let parentComment: {
             id: bigint,

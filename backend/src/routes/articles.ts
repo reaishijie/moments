@@ -5,6 +5,7 @@ import { authMiddleware } from '../middleware/authMiddleware.js';
 import { optionalAuthMiddleware } from '../middleware/optionalAuthMiddleware.js';
 import { logAction, logger } from "../services/log.service.js"
 import { noticeService } from '../services/notice.service.js'
+import { verifyCaptchaProofForAction } from '../services/verify.service.js'
 
 const router = Router();
 
@@ -332,6 +333,10 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
         const { content, status, location, type, isTop, isAd, adTitle, adUrl, imageUrls, videoUrls, thumbnail_url, tags } = req.body;
         if (!content && !imageUrls && !videoUrls) {
             return res.status(400).json({ error: '文章内容不能为空' });
+        }
+        const captchaVerified = await verifyCaptchaProofForAction('user_captcha_article', req.body.captchaProof, req.ip)
+        if (!captchaVerified) {
+            return res.status(400).json({ error: '请先完成人机验证' })
         }
         const isAdmin = req.user?.role === 1
         const tagNames = normalizeTagNames(tags);

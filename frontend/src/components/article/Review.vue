@@ -11,8 +11,17 @@ import type { Comment } from '@/types/comments';
 import { useRoute } from 'vue-router';
 import { computed } from 'vue';
 import router from '@/router';
+import Captcha from '@/components/captcha/Captcha.vue';
+import { useDefaultStore } from '@/store/default';
 
 const messageStore = useMessageStore()
+const defaultStore = useDefaultStore()
+const needCaptcha = computed(() => defaultStore.configs.user_captcha_comment === '1')
+const captchaProof = ref<string>()
+const captchaRef = ref<InstanceType<typeof Captcha> | null>(null)
+const onCaptchaVerified = (data: { status: boolean, message: string, captchaProof?: string }) => {
+  captchaProof.value = data.captchaProof
+}
 
 // 接口
 interface Liker {
@@ -139,19 +148,29 @@ const handleSendReply = (content: string, parentId: string | null = activeReplyI
     messageStore.show('评论内容不能为空', 'info', 2000)
     return
   }
+  if (needCaptcha.value && !captchaProof.value) {
+    messageStore.show('请先完成人机验证', 'info', 2000)
+    return
+  }
 
   emit('send-reply', {
     articleId: props.article.id,
     parentId,
-    content
+    content,
+    captchaProof: captchaProof.value,
+    onComplete: (success: boolean) => {
+      if (success) {
+        if (parentId) {
+          replyContent.value = ''
+          activeReplyId.value = null
+        } else {
+          articleContent.value = ''
+        }
+      }
+      captchaProof.value = undefined
+      captchaRef.value?.reset()
+    },
   })
-
-  if (parentId) {
-    replyContent.value = ''
-    activeReplyId.value = null
-  } else {
-    articleContent.value = ''
-  }
 }
 
 const route = useRoute()
@@ -297,6 +316,10 @@ const hasReviewContent = computed(() => (
         <EmojiPicker placement="bottom" @select="(code) => insertEmoji(code, 'article')" />
         <button @click="handleSendReply(articleContent, null)">发送</button>
       </div>
+    </div>
+
+    <div class="captcha-wrap" v-if="needCaptcha && (props.isShowInput || activeReplyId)">
+      <Captcha ref="captchaRef" @verified="onCaptchaVerified" />
     </div>
 
     <div class="comments-container" v-if="threadedComments.length > 0 || hasMore">
@@ -520,6 +543,11 @@ button {
 button:hover {
   background: #f8bc99;
 }
+.captcha-wrap {
+  width: 90%;
+  margin: 10px auto;
+}
+
 .comments-container {
   display: flex;
   flex-direction: column;

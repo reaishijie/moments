@@ -10,8 +10,11 @@ import { createArticle, getArticleDetails, updateArticle } from '@/api/articles'
 import { useUserStore } from '@/store/user';
 import Upload from '@/components/utils/Upload.vue';
 import EmojiPicker from '@/components/emoji/EmojiPicker.vue';
+import Captcha from '@/components/captcha/Captcha.vue';
+import { useDefaultStore } from '@/store/default';
 
 const userStore = useUserStore()
+const defaultStore = useDefaultStore()
 const messageStore = useMessageStore()
 const route = router.currentRoute
 const editArticleId = computed(() => route.value.name === 'articleEdit' ? Number(route.value.params.articleId) : 0)
@@ -130,6 +133,16 @@ async function fetchLocation() {
 const uploadRef = ref<InstanceType<typeof Upload> | null>();
 const videoUploadRef = ref<InstanceType<typeof Upload> | null>();
 const coverUploadRef = ref<InstanceType<typeof Upload> | null>();
+const captchaRef = ref<InstanceType<typeof Captcha> | null>(null)
+const captchaProof = ref<string>()
+const needCaptcha = computed(() => !isEditMode.value && defaultStore.configs.user_captcha_article === '1')
+const onCaptchaVerified = (data: { status: boolean, message: string, captchaProof?: string }) => {
+  captchaProof.value = data.captchaProof
+}
+const clearCaptcha = () => {
+  captchaProof.value = undefined
+  captchaRef.value?.reset()
+}
 async function submitArticle() {
   const hasUploadFiles = !displayMethod.value && (
     !!uploadRef.value?.hasSelectedFiles() ||
@@ -146,6 +159,10 @@ async function submitArticle() {
     messageStore.show('请选择视频文件或填写视频链接', 'info', 2000)
     return
   }
+  if (needCaptcha.value && !captchaProof.value) {
+    messageStore.show('请先完成人机验证', 'info', 2000)
+    return
+  }
   if (states.add) {
     messageStore.show('请勿重复点击', 'info', 2000)
     return
@@ -155,6 +172,7 @@ async function submitArticle() {
     states.add = true
     const submitData = {
       ...articleData,
+      captchaProof: captchaProof.value,
       isTop: isAdmin.value ? articleData.isTop : undefined,
       isAd: isAdmin.value ? articleData.isAd : undefined,
       adTitle: isAdmin.value ? articleData.adTitle : undefined,
@@ -163,7 +181,7 @@ async function submitArticle() {
     }
     const res = isEditMode.value
       ? await updateArticle(editArticleId.value, submitData)
-      : await createArticle(articleData)
+      : await createArticle({ ...articleData, captchaProof: captchaProof.value })
     const articleId = isEditMode.value ? String(editArticleId.value) : res.data.id
     if (articleData.type === 2 && !displayMethod.value) {
       await videoUploadRef.value?.performUpload(articleId)
@@ -202,6 +220,7 @@ async function submitArticle() {
     }
   } catch (error) {
     console.log(isEditMode.value ? '保存文章失败' : '发表文章失败', error)
+    clearCaptcha()
     messageStore.update(id, { type: 'error', text: isEditMode.value ? '保存失败' : '发表失败', duration: 2000 })
   } finally {
     states.add = false
@@ -254,6 +273,7 @@ function removeTag(name: string) {
 }
 
 onMounted(async () => {
+  await defaultStore.getPublicConfig()
   if (userStore.accessToken && !userStore.profile) {
     await userStore.fetchUserProfile()
   }
@@ -401,6 +421,9 @@ onMounted(async () => {
         <input v-model="articleData.thumbnail_url" placeholder=" 输入视频封面链接" @input="adjustHeight" class="textArea"
           v-if="articleData.type === 2 && displayMethod"></input>
       </div>
+      <div class="captcha-wrap" v-if="needCaptcha">
+        <Captcha ref="captchaRef" @verified="onCaptchaVerified" />
+      </div>
     </div>
   </div>
 </template>
@@ -471,6 +494,20 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   width: 100%;
+}
+
+.captcha-wrap {
+  width: calc(100% - 30px);
+  margin: 14px 15px 18px;
+  padding: 14px;
+  box-sizing: border-box;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-post-bar);
+}
+
+.captcha-wrap :deep(.captcha-widget) {
+  justify-content: flex-start;
 }
 
 .video-upload-section {
@@ -677,5 +714,13 @@ input:focus {
 
 .tag-remove {
   font-size: 10px;
+}
+
+@media (max-width: 480px) {
+  .captcha-wrap {
+    width: calc(100% - 20px);
+    margin: 12px 10px 16px;
+    padding: 12px 8px;
+  }
 }
 </style>

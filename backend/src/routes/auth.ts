@@ -6,9 +6,18 @@ import { Logger } from "../utils/logger.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
 import { authService, buildDeviceFingerprint, ensureLoginAllowedUser } from "../services/auth.service.js";
 import { oauthService } from "../services/oauth.service.js";
+import { verifyCaptchaProofForAction } from "../services/verify.service.js";
 
 const router = Router()
 const authLogger = new Logger('AuthRoute')
+
+async function requireUserCaptcha(req: Request, res: Response) {
+    const verified = await verifyCaptchaProofForAction('user_captcha', req.body.captchaProof, req.ip)
+    if (!verified) {
+        res.status(400).json({ error: '请先完成人机验证' })
+    }
+    return verified
+}
 
 async function isRegisterEmailVerificationEnabled() {
     const config = await prisma.config.findUnique({
@@ -123,10 +132,14 @@ router.post('/register', async (req: Request, res: Response) => {
             return res.status(400).json({ error: '用户名、密码不能为空' })
         }
 
+        if (email && !isEmail(email)) {
+            return res.status(400).json({ error: '邮箱格式不正确' })
+        }
         const needsEmailVerify = await isRegisterEmailVerificationEnabled()
-        if (needsEmailVerify && (!email || !isEmail(email))) {
+        if (needsEmailVerify && !email) {
             return res.status(400).json({ error: '请填写有效邮箱' })
         }
+        if (!await requireUserCaptcha(req, res)) return
 
         // 检查用户是否已存在
         const existingUser = await prisma.users.findFirst({
@@ -186,6 +199,7 @@ router.post('/login', async (req: Request, res: Response) => {
         if (!identifier || !password) {
             return res.status(400).json({ error: '请输入信息' })
         }
+        if (!await requireUserCaptcha(req, res)) return
         // 查找用户信息
         const user = await prisma.users.findFirst({
             where: {
@@ -247,6 +261,7 @@ router.post('/login-email', async (req: Request, res: Response) => {
         if (!isEmail(email)) {
             return res.status(400).json({ error: '邮箱格式不正确' })
         }
+        if (!await requireUserCaptcha(req, res)) return
         if (!verifyAndConsume({ email, code })) {
             await writeLoginFailLog(req, null, '邮箱验证码错误或已过期')
             return res.status(401).json({ error: '邮箱验证码错误或已过期' })
@@ -479,6 +494,7 @@ router.post('/oauth/register-bind', async (req: Request, res: Response) => {
         if (rawPassword.length < 6) {
             return res.status(400).json({ error: '密码不能小于 6 位' })
         }
+        if (!await requireUserCaptcha(req, res)) return
 
         const needsEmailVerify = await isRegisterEmailVerificationEnabled()
         if (needsEmailVerify && (!email || !isEmail(email))) {

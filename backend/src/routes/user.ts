@@ -4,6 +4,7 @@ import { authMiddleware } from "../middleware/authMiddleware.js"
 import { logAction, logger } from "../services/log.service.js"
 // import jwt from 'jsonwebtoken'
 import bcrypt from 'bcrypt'
+import { verifyCaptchaProofForAction } from '../services/verify.service.js'
 
 const router = Router()
 
@@ -78,6 +79,13 @@ router.patch('/', authMiddleware, async (req: Request, res: Response) => {
         // 如果为空直接返回
         if (Object.keys(updateData).length === 0) {
             return res.status(400).json({ error: '没有提供任何需要更新的数据' })
+        }
+        if (email !== undefined && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email).trim())) {
+            return res.status(400).json({ error: '邮箱格式不正确' })
+        }
+        const captchaVerified = await verifyCaptchaProofForAction('user_captcha_update', req.body.captchaProof, req.ip)
+        if (!captchaVerified) {
+            return res.status(400).json({ error: '请先完成人机验证' })
         }
         // 更新数据
         const updateUser = await prisma.users.update({
@@ -206,6 +214,10 @@ router.patch('/password', authMiddleware, async (req: Request, res: Response) =>
     // 判断新旧密码是否相同
     if (oldPassword === newPassword) {
         return res.status(400).json({ status: false, message: '旧密码和新密码不能相同' });
+    }
+    const captchaVerified = await verifyCaptchaProofForAction('user_captcha_update', req.body.captchaProof, req.ip)
+    if (!captchaVerified) {
+        return res.status(400).json({ status: false, message: '请先完成人机验证' })
     }
     // 获取相应用户信息
     const user = await prisma.users.findFirst({

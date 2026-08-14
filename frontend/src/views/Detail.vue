@@ -10,6 +10,7 @@ import { useArticleStore } from '@/store/article';
 import { updateArticle } from '@/api/articles';
 import { useUserStore } from '@/store/user';
 import { useMessageStore } from '@/store/message';
+import type { createCommentData } from '@/types/comments';
 
 const articleStore = useArticleStore()
 const userStore = useUserStore()
@@ -33,6 +34,11 @@ const canEditArticle = computed(() => isAdmin.value || (isOwner.value && isInEdi
 const canManage = computed(() => isAdmin.value || canEditArticle.value)
 function toggleComment() {
     isShowInput.value = !isShowInput.value
+}
+async function handleSendReply(payload: createCommentData & { onComplete?: (success: boolean) => void }) {
+    const { onComplete, ...commentData } = payload
+    const success = await articleStore.createComment(commentData)
+    onComplete?.(success)
 }
 function editArticle() {
     if (!article.value) return
@@ -133,7 +139,7 @@ onMounted(async() => {
                 :is-loading-comments= false
                 @like="() => articleStore.toggleLike(articleId)"
                 @comment="() => toggleComment()"
-                @send-reply="(payload) => articleStore.createComment(payload)"
+                @send-reply="handleSendReply"
                 @load-more-comments="() => console.warn('点击了load-more-comments, 暂时不支持加载更多')"
             />
         </div>

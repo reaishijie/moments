@@ -101,10 +101,10 @@ export const sendEmailCode = (email: string) => {
     })
 }
 
-// 验证hcaptcha
-export const verifyHcaptcha = (data: {captchaToken: string}) => {
+// 验证当前启用的人机验证提供商
+export const verifyCaptcha = (data: { captchaToken: string }) => {
     return service({
-        url: 'notice/hcaptcha',
+        url: '/notice/captcha',
         method: 'post',
         data
     })
