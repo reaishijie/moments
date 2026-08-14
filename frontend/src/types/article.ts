@@ -58,6 +58,7 @@ export interface Liker {
     username: string,
     avatar: string
 }
+
 export interface createArticleData {
     content: string,
     status: number,
@@ -70,7 +71,8 @@ export interface createArticleData {
     imageUrls?: string[],
     videoUrls?: string[],
     thumbnail_url?: string,
-    tags?: string[]
+    tags?: string[],
+    captchaProof?: string
 }
 
 export interface updateArticleData {
@@ -85,7 +87,8 @@ export interface updateArticleData {
     imageUrls?: string[],
     videoUrls?: string[],
     thumbnail_url?: string,
-    tags?: string[]
+    tags?: string[],
+    captchaProof?: string
 }
 
 export interface articleFilter {

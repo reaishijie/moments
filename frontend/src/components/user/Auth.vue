@@ -1,5 +1,5 @@
 <script setup lang="ts" name="Auth">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
 import type { emailLoginData, loginData, registerData, resetPasswordData } from '@/types/user'
 import { useUserStore } from '@/store/user'
 import { useMessageStore } from '@/store/message'
@@ -8,7 +8,7 @@ import router from '@/router'
 import { UserRegular, Fingerprint, EnvelopeRegular, Times, ShieldAlt, EyeRegular, EyeSlashRegular } from '@vicons/fa'
 import { Icon } from '@vicons/utils'
 import { useAuthStore } from '@/store/auth'
-import HCaptcha from '../captcha/HCaptcha.vue'
+import Captcha from '../captcha/Captcha.vue'
 import { useDefaultStore } from '@/store/default'
 const defaultStore = useDefaultStore()
 
@@ -65,13 +65,21 @@ const oauthRegisterInput = ref<registerData>({
 })
 
 // 从captcha组件传递过来的数据
-const verifiedData = ref<{ status: boolean, message: string } | null>(null)
-const onCaptchaVerified = (data: { status: boolean, message: string }) => {
+const verifiedData = ref<{ status: boolean, message: string, captchaProof?: string } | null>(null)
+const captchaRef = ref<InstanceType<typeof Captcha> | null>(null)
+const onCaptchaVerified = (data: { status: boolean, message: string, captchaProof?: string }) => {
     verifiedData.value = data
 }
 
-const needCaptcha = () => defaultStore.configs.user_captcha !== '0'
-const captchaPassed = () => !needCaptcha() || verifiedData.value?.status
+const needCaptcha = () => defaultStore.configs.user_captcha === '1'
+const captchaPassed = () => !needCaptcha() || !!verifiedData.value?.captchaProof
+const clearCaptcha = () => {
+    verifiedData.value = null
+    captchaRef.value?.reset()
+}
+watch([show, () => authStore.isShow], () => {
+    verifiedData.value = null
+})
 const needRegisterEmailVerify = () => defaultStore.configs.user_email_verify_register === '1'
 const isValidEmail = (email?: string) => !!email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 
@@ -270,10 +278,19 @@ const handleOAuthRegisterBind = async () => {
         messageStore.show('请输入邮箱和验证码', 'info', 2000)
         return
     }
+    if (!captchaPassed()) {
+        messageStore.show('请先完成验证', 'info', 2000)
+        return
+    }
 
     const id = messageStore.show('正在创建并绑定', 'loading')
     try {
-        const response = await registerAndBindOAuth({ ...oauthRegisterInput.value, oauthTicket: oauthTicket.value })
+        const response = await registerAndBindOAuth({
+            ...oauthRegisterInput.value,
+            oauthTicket: oauthTicket.value,
+            captchaProof: verifiedData.value?.captchaProof,
+        })
+        clearCaptcha()
         if (response.data?.accessToken && response.data?.refreshToken) {
             userStore.setTokenPair(response.data)
             await userStore.fetchUserProfile()
@@ -285,6 +302,7 @@ const handleOAuthRegisterBind = async () => {
             show.value = 'showLogin'
         }
     } catch (error: any) {
+        clearCaptcha()
         messageStore.update(id, { type: 'error', text: error?.response?.data?.error || '注册绑定失败', duration: 2200 })
     }
 }
@@ -325,7 +343,11 @@ const handleLogin = async () => {
         }
         const id = messageStore.show('正在登录中', 'loading')
         try {
-            const res = await userStore.handleEmailLogin(emailLoginInput.value)
+            const res = await userStore.handleEmailLogin({
+                ...emailLoginInput.value,
+                captchaProof: verifiedData.value?.captchaProof,
+            })
+            clearCaptcha()
             if (res.status === 0) {
                 messageStore.update(id, { type: 'success', text: '登陆成功', duration: 2000 })
                 if (oauthTicket.value) {
@@ -355,7 +377,11 @@ const handleLogin = async () => {
 
     let id = messageStore.show('正在登录中', 'loading')
     try {
-        const res = await userStore.handleLogin(userLoginInput.value)
+        const res = await userStore.handleLogin({
+            ...userLoginInput.value,
+            captchaProof: verifiedData.value?.captchaProof,
+        })
+        clearCaptcha()
         // 如果请求成功
         if (res.status === 0) {
             messageStore.update(id, { type: 'success', text: '登陆成功', duration: 2000 })
@@ -389,6 +415,10 @@ const handleRegister = async () => {
         messageStore.show('信息不能小于 6 位', 'info', 2000)
         return
     }
+    if (userRegisterInput.value.email && !isValidEmail(userRegisterInput.value.email)) {
+        messageStore.show('邮箱格式不正确', 'info', 2000)
+        return
+    }
     if (needRegisterEmailVerify() && (!isValidEmail(userRegisterInput.value.email) || !userRegisterInput.value.code)) {
         messageStore.show('请输入邮箱和验证码', 'info', 2000)
         return
@@ -397,7 +427,11 @@ const handleRegister = async () => {
     let id = messageStore.show('正在注册中', 'loading')
     try {
         // 用注册函数等待结果
-        const response = await register(userRegisterInput.value)
+        const response = await register({
+            ...userRegisterInput.value,
+            captchaProof: verifiedData.value?.captchaProof,
+        })
+        clearCaptcha()
         // 判断是否成功
         if (response) {
             messageStore.update(id, { type: 'success', text: '注册成功', duration: 2000 })
@@ -406,8 +440,9 @@ const handleRegister = async () => {
             messageStore.update(id, { type: 'error', text: '注册失败', duration: 2000 })
         }
     } catch (error: any) {
+        clearCaptcha()
         console.error('注册过程中发生错误:', error);
-        messageStore.update(id, { type: 'error', text: `${error.response.data.error}`, duration: 2000 });
+        messageStore.update(id, { type: 'error', text: `${error?.response?.data?.error || '注册失败'}`, duration: 2000 });
     }
 }
 
@@ -510,8 +545,8 @@ const handleResetPassword = async () => {
                     </button>
                 </div>
             </div>
-            <div class="captcha-wrap" v-if="defaultStore.configs.user_captcha !== '0'">
-                <HCaptcha @verified="onCaptchaVerified" />
+            <div class="captcha-wrap" v-if="defaultStore.configs.user_captcha === '1'">
+                <Captcha ref="captchaRef" @verified="onCaptchaVerified" />
             </div>
             <div class="button">
                 <button @click="handleLogin">登 录</button>
@@ -646,8 +681,8 @@ const handleResetPassword = async () => {
                     </button>
                 </div>
             </div>
-            <div class="captcha-wrap" v-if="defaultStore.configs.user_captcha !== '0'">
-                <HCaptcha @verified="onCaptchaVerified" />
+            <div class="captcha-wrap" v-if="defaultStore.configs.user_captcha === '1'">
+                <Captcha ref="captchaRef" @verified="onCaptchaVerified" />
             </div>
             <div class="button">
                 <button @click="handleRegister">注 册</button>
@@ -757,6 +792,9 @@ const handleResetPassword = async () => {
                             <EyeRegular v-else />
                         </Icon>
                     </button>
+                </div>
+                <div class="captcha-wrap" v-if="defaultStore.configs.user_captcha === '1'">
+                    <Captcha ref="captchaRef" @verified="onCaptchaVerified" />
                 </div>
             </div>
             <div class="button">

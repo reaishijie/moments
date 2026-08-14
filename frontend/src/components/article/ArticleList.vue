@@ -3,6 +3,7 @@ import ArticleItem from './ArticleItem.vue';
 import { onMounted, onUnmounted, ref } from 'vue';
 import { useFeedStore } from '@/store/feed';
 import { useMessageStore } from '@/store/message'
+import type { createCommentData } from '@/types/comments'
 
 const messageStore = useMessageStore()
 const feedStore = useFeedStore()
@@ -63,9 +64,11 @@ function toggleComment(articleId: number) {
     isShowInputMap.value[articleId] = !isShowInputMap.value[articleId]
 }
 // 处理回复评论
-async function handleSendReply(payload: { articleId: number, content: string, parentId?: string }) {
+async function handleSendReply(payload: createCommentData & { onComplete?: (success: boolean) => void }) {
     const id = messageStore.show('正在创建评论', 'loading')
-    const success = await feedStore.createComment(payload)
+    const { onComplete, ...commentData } = payload
+    const success = await feedStore.createComment(commentData)
+    onComplete?.(success)
     if (success) {
         messageStore.update(id, { type: 'success', text: '评论成功', duration: 2000})
     } else {

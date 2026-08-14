@@ -11,7 +11,7 @@ const fields: ConfigFieldSchema[] = [
 <template>
   <ConfigForm
     title="用户与验证"
-    description="用户开放状态与注册审核策略。验证码和 hCaptcha 密钥请在验证设置中维护。"
+    description="用户开放状态与注册审核策略。验证码提供商及密钥请在验证设置中维护。"
     category="user"
     :fields="fields"
   />

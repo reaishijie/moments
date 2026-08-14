@@ -17,17 +17,20 @@ export interface registerData {
     password: string,
     email?: string,
     code?: string,
-    status?: number
+    status?: number,
+    captchaProof?: string
 }
 
 export interface loginData {
     identifier: string  // identifier 是username或email
     password: string
+    captchaProof?: string
 }
 
 export interface emailLoginData {
     email: string,
-    code: string
+    code: string,
+    captchaProof?: string
 }
 
 export interface resetPasswordData {
@@ -42,12 +45,14 @@ export interface updateUserInfoData {
     header_background?: string,
     avatar?: string,
     email?:string,
-    status?: number
+    status?: number,
+    captchaProof?: string
 }
 
 export interface updatePasswordData {
     oldPassword: string,
-    newPassword: string
+    newPassword: string,
+    captchaProof?: string
 }
 
 export interface updateUserData {

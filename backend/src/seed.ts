@@ -26,6 +26,31 @@ async function main() {
     console.log(`✗ 管理员用户 "${adminUsername}" 已存在，跳过创建.`);
   }
 
+  console.log('⚡ 开始创建默认文章...');
+  const hasArticle = await prisma.articles.count() > 0;
+  if (!hasArticle) {
+    const adminUser = await prisma.users.findUnique({ where: { username: adminUsername } });
+    if (adminUser) {
+      await prisma.articles.create({
+        data: {
+          user_id: adminUser.id,
+          content: `    欢迎来到瞬刻(moments)，这是一篇测试文章，你可以进行点赞、评论、修改、删除。
+    后台路径：/admin，默认管理员账号密码admin,123456，请尽快修改默认密码。`,
+          type: 0,
+          is_top: true,
+          is_ad: false,
+          status: 1, // 正常
+          like_count: 0,
+          comment_count: 0,
+          published_at: new Date(),
+          created_at: new Date(),
+          updated_at: new Date(),
+        },
+      });
+      console.log('✔ 默认文章已创建，作者ID: 1');
+    }
+  }
+
   console.log('⚡ 开始创建网站信息...');
   const cfg = (
     k: string,
@@ -72,8 +97,11 @@ async function main() {
     cfg('user_captcha_update', '0', '资料更新验证', '用户更新信息是否需要验证', 'verify', 40, 'public'),
     cfg('user_email_verify_register', '0', '注册邮箱验证', '用户注册时是否必须通过邮箱验证码验证', 'verify', 45, 'public'),
     cfg('user_status', '1', '用户系统状态', '用户系统是否开放', 'user', 20, 'public'),
-    cfg('verify_hcaptcha_user', '', 'hCaptcha Secret', 'hCaptcha 服务端密钥', 'verify', 50, 'admin'),
+    cfg('captcha_provider', 'hcaptcha', '验证码提供商', '选择 hCaptcha 或 Cloudflare Turnstile', 'verify', 50, 'public'),
     cfg('verify_hcaptcha_app', '', 'hCaptcha Site Key', 'hCaptcha 客户端站点 Key', 'verify', 60, 'public'),
+    cfg('verify_hcaptcha_user', '', 'hCaptcha Secret', 'hCaptcha 服务端密钥', 'verify', 70, 'admin'),
+    cfg('verify_turnstile_site_key', '', 'Turnstile Site Key', 'Cloudflare Turnstile 客户端站点 Key', 'verify', 80, 'public'),
+    cfg('verify_turnstile_secret', '', 'Turnstile Secret Key', 'Cloudflare Turnstile 服务端密钥', 'verify', 90, 'admin'),
     cfg('upload_method', '0', '上传方式', '文件上传方式，0 为本地，1 为 S3', 'upload', 10, 'public'),
     cfg('upload_number', '9', '上传数量', '单次最多上传文件数量', 'upload', 20, 'public'),
     cfg('upload_size', '5', '上传大小', '单文件大小限制，单位 M', 'upload', 30, 'public'),

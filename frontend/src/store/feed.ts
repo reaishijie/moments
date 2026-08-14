@@ -2,7 +2,7 @@
 import { defineStore } from "pinia"
 import { ref, type Ref } from "vue"
 import type { articleData } from '@/types/article'
-import type { Comment } from "@/types/comments"
+import type { Comment, createCommentData } from "@/types/comments"
 import { getArticle, likeArticle, dislikeArticle, getArticleDetails } from "@/api/articles"
 import { useUserStore } from "./user"
 import { getOrCreateGuestId } from "@/utils/guest"
@@ -230,7 +230,7 @@ export const useFeedStore = defineStore('feed', () => {
 
     const countRootComments = (comments: Comment[] = []) => comments.filter(comment => !comment.parent_id).length
 
-    const appendComment = (articleId: number, newComment: Comment, parentId?: string | null) => {
+    const appendComment = (articleId: number, newComment: Comment, parentId?: number | string | null) => {
         if (!commentsMap.value[articleId]) {
             commentsMap.value[articleId] = []
         }
@@ -329,7 +329,7 @@ export const useFeedStore = defineStore('feed', () => {
     }
 
     // 创建评论
-    const createComment = async (payload: { articleId: number; content: string; parentId?: string }) => {
+    const createComment = async (payload: createCommentData) => {
         try {
             const res = await apiCreateComment(payload)
 

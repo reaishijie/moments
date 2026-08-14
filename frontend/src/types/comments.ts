@@ -12,6 +12,7 @@ export interface createCommentData {
     articleId: number;
     content: string;
     parentId?: number | string | null;
+    captchaProof?: string;
 }
 export interface CommentUser {
     id: string;

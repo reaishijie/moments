@@ -7,16 +7,27 @@ import router from '@/router';
 import { useUserStore } from '@/store/user';
 import { useMessageStore } from '@/store/message';
 import { updateUserInfo, changePassword, getOAuthAccounts, type OAuthAccount } from '@/api/users';
-import type { updateUserInfoData, updatePasswordData } from '@/types/user';
+import type { updatePasswordData } from '@/types/user';
 import { isAxiosError } from 'axios';
 import { useDefaultStore } from '@/store/default';
 import { getApiBaseUrl } from '@/api/auth';
 import { uploadFiles } from '@/api/upload';
+import Captcha from '@/components/captcha/Captcha.vue';
 
 const userStore = useUserStore()
 const messageStore = useMessageStore()
 const defaultStore = useDefaultStore()
 const oauthAccounts = ref<OAuthAccount[]>([])
+const captchaProof = ref<string>()
+const captchaRef = ref<InstanceType<typeof Captcha> | null>(null)
+const needCaptcha = computed(() => defaultStore.configs.user_captcha_update === '1')
+const onCaptchaVerified = (data: { status: boolean, message: string, captchaProof?: string }) => {
+  captchaProof.value = data.captchaProof
+}
+const clearCaptcha = () => {
+  captchaProof.value = undefined
+  captchaRef.value?.reset()
+}
 const states = reactive({
   avatar: false,
   header_background: false,
@@ -93,7 +104,8 @@ async function handleProfileImageUpload(key: 'avatar' | 'header_background', eve
 }
 
 // 更新信息
-async function haldleUpdate(key: keyof updateUserInfoData, value: string) {
+type EditableProfileKey = 'avatar' | 'header_background' | 'nickname' | 'email' | 'brief'
+async function haldleUpdate(key: EditableProfileKey, value: string) {
   if (updatingStates[key]) {
     return
   }
@@ -102,17 +114,27 @@ async function haldleUpdate(key: keyof updateUserInfoData, value: string) {
     messageStore.show('内容未作修改', 'info', 2000)
     return
   }
-  const dataToUpdate = { [key]: value }
+  if (key === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())) {
+    messageStore.show('邮箱格式不正确', 'info', 2000)
+    return
+  }
+  if (needCaptcha.value && !captchaProof.value) {
+    messageStore.show('请先完成人机验证', 'info', 2000)
+    return
+  }
+  const dataToUpdate = { [key]: value, captchaProof: captchaProof.value }
   const id = messageStore.show(`正在修改中`, 'loading')
   try {
     updatingStates[key] = true
     await updateUserInfo(dataToUpdate)
+    clearCaptcha()
     await userStore.fetchUserProfile()
     messageStore.update(id, { text: '更新成功', type: 'success', duration: 2000 })
     if (key in states) {
       states[key] = false
     }
   } catch (error) {
+    clearCaptcha()
     console.error('更新信息失败，请稍后重试', error);
     messageStore.update(id, { text: '更新信息失败，请稍后重试', type: 'error', duration: 2000 })
   } finally {
@@ -123,15 +145,21 @@ async function haldleUpdate(key: keyof updateUserInfoData, value: string) {
   }
 }
 const haldleUpdatePassword = async (data: updatePasswordData) => {
+  if (needCaptcha.value && !captchaProof.value) {
+    messageStore.show('请先完成人机验证', 'info', 2000)
+    return
+  }
   const id = messageStore.show('正在更新密码', 'loading')
   try {
-    const res = await changePassword(data)
+    const res = await changePassword({ ...data, captchaProof: captchaProof.value })
+    clearCaptcha()
     if (res.data.status) {
       messageStore.update(id, { 'text': '更新密码成功', 'type': 'success', 'duration': 2000 })
     } else {
       messageStore.update(id, { 'text': '更新密码失败', 'type': 'error', 'duration': 2000 })
     }
   } catch (error) {
+    clearCaptcha()
     if (isAxiosError(error) && error.response) {
         messageStore.update(id, { 'text': `${error.response.data.message}`, 'type': 'error', 'duration': 2000 });
     } else {
@@ -222,6 +250,9 @@ onUnmounted(() => {
       <div>用户资料</div>
     </div>
     <div class="body">
+      <div class="captcha-wrap" v-if="needCaptcha">
+        <Captcha ref="captchaRef" @verified="onCaptchaVerified" />
+      </div>
 
       <div class="body-item" @click="editData.avatar = userData.avatar; states.avatar = !states.avatar;">
         <div class="body-item-left">头像</div>
@@ -475,6 +506,11 @@ onUnmounted(() => {
   flex-direction: column;
   /* width: min(100%,520px); */
   width: 100%;
+}
+
+.captcha-wrap {
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .body-item {
