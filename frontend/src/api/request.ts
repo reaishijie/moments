@@ -4,11 +4,13 @@ import axios from "axios"
 const service = axios.create({
     baseURL: import.meta.env.VITE_API_BASE_URL,
     timeout: 10000,
+    withCredentials: true,
 })
 
 const refreshClient = axios.create({
     baseURL: import.meta.env.VITE_API_BASE_URL,
     timeout: 10000,
+    withCredentials: true,
 })
 
 let refreshing: Promise<string | null> | null = null
@@ -18,16 +20,13 @@ async function refreshAccessToken() {
         refreshing = (async () => {
             const { useUserStore } = await import('@/store/user')
             const userStore = useUserStore()
-            if (!userStore.refreshToken) return null
 
             try {
-                const response = await refreshClient.post('/auth/refresh', {
-                    refreshToken: userStore.refreshToken,
-                })
-                userStore.setTokenPair(response.data)
+                const response = await refreshClient.post('/auth/refresh')
+                userStore.setAccessToken(response.data)
                 return response.data.accessToken as string
             } catch (error) {
-                await userStore.handleLogout(false)
+                userStore.clearAuthState()
                 return null
             } finally {
                 refreshing = null
@@ -57,6 +56,19 @@ service.interceptors.request.use(
         return Promise.reject(error)
     }
 )
+const nonRefreshableAuthPaths = [
+    '/auth/login',
+    '/auth/login-email',
+    '/auth/register',
+    '/auth/refresh',
+    '/auth/reset-password',
+    '/auth/oauth/register-bind',
+]
+
+function canRefreshRequest(url?: string) {
+    return Boolean(url) && !nonRefreshableAuthPaths.some(path => url === path || url?.startsWith(`${path}?`))
+}
+
 // 响应拦截器
 service.interceptors.response.use(
     (response) => {
@@ -66,7 +78,7 @@ service.interceptors.response.use(
     async (error) => {
         const originalRequest = error.config
         if (error.response) {
-            if (error.response.status === 401 && originalRequest && !originalRequest._retry && originalRequest.url !== '/auth/refresh') {
+            if (error.response.status === 401 && originalRequest && !originalRequest._retry && canRefreshRequest(originalRequest.url)) {
                 originalRequest._retry = true
                 const nextToken = await refreshAccessToken()
                 if (nextToken) {

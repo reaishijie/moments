@@ -15,6 +15,8 @@ import { fileURLToPath } from "url";
 import { disconnectPrisma } from "./lib/prisma.js";
 import { Logger } from "./utils/logger.js";
 import { customLogger } from "./middleware/httpLogger.middleware.js";
+import cookieParser from 'cookie-parser'
+import { isCorsOriginAllowed } from './utils/requestOrigin.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -27,8 +29,15 @@ const app = express()
 app.set('trust proxy', true)
 //配置请求及路由
 app.use(customLogger())
-app.use(cors())
+app.use(cors({
+    origin(origin, callback) {
+        if (!origin || isCorsOriginAllowed(origin)) return callback(null, true)
+        return callback(null, false)
+    },
+    credentials: true,
+}))
 app.use(express.json())
+app.use(cookieParser() as express.RequestHandler)
 app.use(express.static(path.join(__dirname, '..',  'public'))); // 上级目录下的frontend
 
 // 测试路由

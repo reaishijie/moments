@@ -13,9 +13,7 @@ export type OAuthProfile = {
 }
 
 export type OAuthCallbackPayload = {
-    accessToken?: string
-    refreshToken?: string
-    expiresIn?: number
+    authenticated?: boolean
     needBind?: boolean
     oauthTicket?: string
     profile?: OAuthProfile
@@ -48,12 +46,11 @@ export const loginByEmailCode = (data: emailLoginData) => {
     })
 }
 
-// 刷新令牌
-export const refreshAccessToken = (refreshToken: string) => {
+// 使用 HttpOnly Cookie 刷新令牌
+export const refreshAccessToken = () => {
     return service({
         url: '/auth/refresh',
         method: 'post',
-        data: { refreshToken },
     })
 }
 

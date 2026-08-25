@@ -1,4 +1,4 @@
-import { Router, Request, Response } from "express";
+import { Router, Request, Response, NextFunction } from "express";
 import { prisma } from "../lib/prisma.js";
 import { logAction, logger } from "../services/log.service.js"
 import { verifyAndConsume } from "../services/mail.service.js";
@@ -7,9 +7,38 @@ import { authMiddleware } from "../middleware/authMiddleware.js";
 import { authService, buildDeviceFingerprint, ensureLoginAllowedUser } from "../services/auth.service.js";
 import { oauthService } from "../services/oauth.service.js";
 import { verifyCaptchaProofForAction } from "../services/verify.service.js";
+import {
+    clearRefreshTokenCookie,
+    REFRESH_TOKEN_COOKIE_NAME,
+    setRefreshTokenCookie,
+    toPublicTokenResponse,
+} from '../utils/authCookie.js'
+import { isRequestOriginTrusted } from '../utils/requestOrigin.js'
 
 const router = Router()
 const authLogger = new Logger('AuthRoute')
+
+type TokenPair = Awaited<ReturnType<typeof authService.issueTokenPair>>
+
+router.use((req: Request, res: Response, next: NextFunction) => {
+    if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS' || isRequestOriginTrusted(req)) {
+        return next()
+    }
+    return res.status(403).json({ error: '请求来源不受信任' })
+})
+
+function sendTokenResponse(req: Request, res: Response, status: number, tokens: TokenPair) {
+    setRefreshTokenCookie(req, res, tokens.refreshToken)
+    return res.status(status).json(toPublicTokenResponse(tokens))
+}
+
+function isTokenPair(result: unknown): result is TokenPair {
+    if (!result || typeof result !== 'object') return false
+    const value = result as Partial<TokenPair>
+    return typeof value.accessToken === 'string'
+        && typeof value.refreshToken === 'string'
+        && typeof value.expiresIn === 'number'
+}
 
 async function requireUserCaptcha(req: Request, res: Response) {
     const verified = await verifyCaptchaProofForAction('user_captcha', req.body.captchaProof, req.ip)
@@ -87,18 +116,24 @@ async function generateUniqueUsername(seed: string) {
 }
 
 function sendOAuthResult(req: Request, res: Response, result: unknown) {
-    if (req.query.format === 'json') {
-        return res.status(200).json(result)
+    let payload = result
+    if (isTokenPair(result)) {
+        setRefreshTokenCookie(req, res, result.refreshToken)
+        payload = { authenticated: true }
     }
 
-    const payload = JSON.stringify({ type: 'moments-oauth-result', payload: result }).replace(/</g, '\\u003c')
+    if (req.query.format === 'json') {
+        return res.status(200).json(payload)
+    }
+
+    const serializedPayload = JSON.stringify({ type: 'moments-oauth-result', payload }).replace(/</g, '\\u003c')
     return res.status(200).type('html').send(`<!doctype html>
 <html lang="zh-CN">
 <head><meta charset="utf-8"><title>OAuth 登录完成</title></head>
 <body>
 <script>
 (function () {
-  var message = ${payload};
+  var message = ${serializedPayload};
   try {
     window.sessionStorage.setItem('moments_oauth_result', JSON.stringify(message.payload));
   } catch (error) {}
@@ -241,7 +276,7 @@ router.post('/login', async (req: Request, res: Response) => {
             ipAddress: req.ip,
             userAgent: req.headers['user-agent'] || '',
         })
-        res.status(200).json(tokens)
+        return sendTokenResponse(req, res, 200, tokens)
 
     } catch (error) {
         authLogger.error('登录失败', error instanceof Error ? error.stack : String(error))
@@ -291,7 +326,7 @@ router.post('/login-email', async (req: Request, res: Response) => {
             ipAddress: req.ip,
             userAgent: req.headers['user-agent'] || '',
         })
-        return res.status(200).json(tokens)
+        return sendTokenResponse(req, res, 200, tokens)
     } catch (error) {
         authLogger.error('邮箱验证码登录失败', error instanceof Error ? error.stack : String(error))
         return res.status(500).json({ error: '服务器内部错误' })
@@ -541,23 +576,23 @@ router.post('/oauth/register-bind', async (req: Request, res: Response) => {
             ipAddress: req.ip,
             userAgent: req.headers['user-agent'] || '',
         })
-        return res.status(201).json(tokens)
+        return sendTokenResponse(req, res, 201, tokens)
     } catch (error) {
         authLogger.error('OAuth 注册绑定失败', error instanceof Error ? error.stack : String(error))
         return res.status(400).json({ error: error instanceof Error ? error.message : 'OAuth 注册绑定失败' })
     }
 })
 
-// 刷新令牌：仅接受 refreshToken，并在每次刷新时轮换 refresh jti
+// 刷新令牌：仅接受 HttpOnly Cookie，并在每次刷新时轮换 refresh jti
 router.post('/refresh', async (req: Request, res: Response) => {
     try {
-        const refreshToken = String(req.body.refreshToken || '')
-        if (!refreshToken) {
-            return res.status(400).json({ error: 'refreshToken 不能为空' })
+        const refreshToken = req.cookies?.[REFRESH_TOKEN_COOKIE_NAME]
+        if (typeof refreshToken !== 'string' || !refreshToken) {
+            return res.status(401).json({ error: '登录已过期，请重新登录' })
         }
 
         const tokens = await authService.refresh(refreshToken)
-        return res.status(200).json(tokens)
+        return sendTokenResponse(req, res, 200, tokens)
     } catch (error) {
         authLogger.warn('刷新令牌失败')
         return res.status(401).json({ error: '登录已过期，请重新登录' })
@@ -565,7 +600,10 @@ router.post('/refresh', async (req: Request, res: Response) => {
 })
 
 // 退出当前会话
-router.post('/logout', authMiddleware, async (req: Request, res: Response) => {
+router.post('/logout', (req: Request, res: Response, next: NextFunction) => {
+    clearRefreshTokenCookie(req, res)
+    next()
+}, authMiddleware, async (req: Request, res: Response) => {
     try {
         if (!req.user?.userId || !req.user.sid) {
             return res.status(401).json({ error: '未授权' })
@@ -580,7 +618,10 @@ router.post('/logout', authMiddleware, async (req: Request, res: Response) => {
 })
 
 // 退出全部会话
-router.post('/logout-all', authMiddleware, async (req: Request, res: Response) => {
+router.post('/logout-all', (req: Request, res: Response, next: NextFunction) => {
+    clearRefreshTokenCookie(req, res)
+    next()
+}, authMiddleware, async (req: Request, res: Response) => {
     try {
         if (!req.user?.userId) {
             return res.status(401).json({ error: '未授权' })
