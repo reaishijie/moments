@@ -122,31 +122,13 @@ const rainbowIconMap: Record<string, string> = {
 }
 const rainbowIconSrc = (type: string) => rainbowIconMap[type.toLowerCase()] || ''
 
-const restoreTokenPairFromStorage = () => {
-    if (userStore.accessToken) return
-    try {
-        const raw = localStorage.getItem('user')
-        if (!raw) return
-        const persisted = JSON.parse(raw)
-        const accessToken = persisted?.accessToken
-        const refreshToken = persisted?.refreshToken
-        if (accessToken && refreshToken) {
-            userStore.setTokenPair({ accessToken, refreshToken })
-        }
-    } catch (error) {
-        console.error('恢复登录状态失败:', error)
-    }
-}
-
 const handleOAuthPayload = async (payload: OAuthCallbackPayload) => {
-    restoreTokenPairFromStorage()
-    if (payload.accessToken && payload.refreshToken) {
-        userStore.setTokenPair({
-            accessToken: payload.accessToken,
-            refreshToken: payload.refreshToken,
-            expiresIn: payload.expiresIn,
-        })
-        await userStore.fetchUserProfile()
+    if (payload.authenticated) {
+        await userStore.restoreSession(true)
+        if (!userStore.accessToken) {
+            messageStore.show('三方登录状态恢复失败，请重试', 'error', 2400)
+            return
+        }
         messageStore.show('三方登录成功', 'success', 2000)
         authStore.closeAuth()
         router.push('/')
@@ -291,8 +273,8 @@ const handleOAuthRegisterBind = async () => {
             captchaProof: verifiedData.value?.captchaProof,
         })
         clearCaptcha()
-        if (response.data?.accessToken && response.data?.refreshToken) {
-            userStore.setTokenPair(response.data)
+        if (response.data?.accessToken) {
+            userStore.setAccessToken(response.data)
             await userStore.fetchUserProfile()
             messageStore.update(id, { type: 'success', text: '注册并登录成功', duration: 2000 })
             authStore.closeAuth()
