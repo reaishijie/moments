@@ -19,6 +19,7 @@ function removeLegacyTokenStorage() {
 export const useUserStore = defineStore('user', () => {
     const accessToken = ref<string | null>(null)
     const profile = ref<userData | null>(null)
+    let refreshingSession: Promise<string | null> | null = null
 
     removeLegacyTokenStorage()
 
@@ -43,15 +44,30 @@ export const useUserStore = defineStore('user', () => {
         }
     }
 
-    const restoreSession = async (force = false) => {
-        if (accessToken.value && !force) return
-        try {
-            const response = await refreshAccessToken()
-            setAccessToken(response.data)
-            await fetchUserProfile()
-        } catch {
-            clearAuthState()
+    const refreshSession = async (force = false) => {
+        if (accessToken.value && !force) return accessToken.value
+
+        if (!refreshingSession) {
+            refreshingSession = (async () => {
+                try {
+                    const response = await refreshAccessToken()
+                    setAccessToken(response.data)
+                    return response.data.accessToken
+                } catch {
+                    clearAuthState()
+                    return null
+                } finally {
+                    refreshingSession = null
+                }
+            })()
         }
+
+        return refreshingSession
+    }
+
+    const restoreSession = async (force = false) => {
+        const token = await refreshSession(force)
+        if (token) await fetchUserProfile()
     }
 
     // 登录
@@ -94,6 +110,7 @@ export const useUserStore = defineStore('user', () => {
         profile,
         setAccessToken,
         clearAuthState,
+        refreshSession,
         restoreSession,
         handleLogin,
         handleEmailLogin,
