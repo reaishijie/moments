@@ -7,36 +7,6 @@ const service = axios.create({
     withCredentials: true,
 })
 
-const refreshClient = axios.create({
-    baseURL: import.meta.env.VITE_API_BASE_URL,
-    timeout: 10000,
-    withCredentials: true,
-})
-
-let refreshing: Promise<string | null> | null = null
-
-async function refreshAccessToken() {
-    if (!refreshing) {
-        refreshing = (async () => {
-            const { useUserStore } = await import('@/store/user')
-            const userStore = useUserStore()
-
-            try {
-                const response = await refreshClient.post('/auth/refresh')
-                userStore.setAccessToken(response.data)
-                return response.data.accessToken as string
-            } catch (error) {
-                userStore.clearAuthState()
-                return null
-            } finally {
-                refreshing = null
-            }
-        })()
-    }
-
-    return refreshing
-}
-
 // 添加请求拦截器
 service.interceptors.request.use(
     async (config) => {
@@ -48,6 +18,7 @@ service.interceptors.request.use(
         // 如果 accessToken 存在，为请求头带上 Authorization
         if (accessToken) {
             config.headers.Authorization = `Bearer ${accessToken}`
+            Object.assign(config, { _accessToken: accessToken })
         }
         return config
     },
@@ -80,7 +51,12 @@ service.interceptors.response.use(
         if (error.response) {
             if (error.response.status === 401 && originalRequest && !originalRequest._retry && canRefreshRequest(originalRequest.url)) {
                 originalRequest._retry = true
-                const nextToken = await refreshAccessToken()
+                const { useUserStore } = await import('@/store/user')
+                const userStore = useUserStore()
+                const requestToken = (originalRequest as { _accessToken?: string })._accessToken
+                const nextToken = userStore.accessToken && userStore.accessToken !== requestToken
+                    ? userStore.accessToken
+                    : await userStore.refreshSession(true)
                 if (nextToken) {
                     originalRequest.headers.Authorization = `Bearer ${nextToken}`
                     return service(originalRequest)
