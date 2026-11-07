@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
+import { Logger } from '../utils/logger.js';
+const routeLogger = new Logger('LinkRoute');
 const router = Router();
 // 添加友情链接
 router.post('', authMiddleware, async (req, res) => {
@@ -21,7 +23,7 @@ router.post('', authMiddleware, async (req, res) => {
         res.status(200).json({ status: true, message: 'success', link_status: status });
     }
     catch (error) {
-        console.log(error);
+        routeLogger.error('友情链接操作失败', error instanceof Error ? error.stack : String(error));
         res.status(500).json({ status: false, error: error });
     }
 });
@@ -44,7 +46,7 @@ router.get('', async (req, res) => {
         res.status(200).json(responseData);
     }
     catch (error) {
-        console.log(error);
+        routeLogger.error('友情链接操作失败', error instanceof Error ? error.stack : String(error));
         res.status(500).json({ status: false, error: error });
     }
 });

@@ -10,7 +10,7 @@
 
 ### 1. 环境要求
 
-- Node.js 20+（推荐 22+）
+- Node.js 24+
 - pnpm 11+
 - MySQL 5.7+/8.0+
 
@@ -34,8 +34,9 @@ cp .env.example .env
 HOST=0.0.0.0
 PORT=9889
 
-# 密钥（越复杂越好）
-JWT_SECRET=请改成你自己的强密钥
+# 密钥：可以不填，容器启动脚本会自动生成随机密钥并持久化到 app_data 卷；
+# 如需显式指定，请使用 openssl rand -hex 32 生成的值
+# JWT_SECRET=
 JWT_ACCESS_EXPIRES_SECONDS=7200
 JWT_REFRESH_EXPIRES_SECONDS=2592000
 

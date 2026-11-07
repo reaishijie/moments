@@ -4,7 +4,12 @@
   "main": "src/bootstrap.ts",
   "type": "module",
   "packageManager": "pnpm@11.8.0",
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
+    "prebuild": "pnpm run clean",
     "build": "prisma generate && tsc",
     "dev": "tsx watch src/bootstrap.ts",
     "start": "node dist/bootstrap.js",

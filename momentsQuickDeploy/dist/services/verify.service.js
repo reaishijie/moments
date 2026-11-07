@@ -1,30 +1,112 @@
-import axios from "axios";
-import { prisma } from "../lib/prisma.js";
-import { Logger } from "../utils/logger.js";
+import { randomBytes } from 'node:crypto';
+import axios from 'axios';
+import { prisma } from '../lib/prisma.js';
+import { Logger } from '../utils/logger.js';
 const logger = new Logger('VerifyService');
-export const verifyHcaptcha = async (captchaToke) => {
+const CAPTCHA_PROOF_TTL_MS = 5 * 60 * 1000;
+const captchaProofs = new Map();
+/** 上限保护：未验证的 proof 无法主动清理，需要防止被批量刷写导致内存无限增长 */
+const MAX_CAPTCHA_PROOFS = 10_000;
+const PROVIDER_CONFIG = {
+    hcaptcha: {
+        name: 'hCaptcha',
+        secretKey: 'verify_hcaptcha_user',
+        verifyUrl: 'https://hcaptcha.com/siteverify',
+    },
+    turnstile: {
+        name: 'Cloudflare Turnstile',
+        secretKey: 'verify_turnstile_secret',
+        verifyUrl: 'https://challenges.cloudflare.com/turnstile/v0/siteverify',
+    },
+};
+async function getConfigValues(keys) {
+    const configs = await prisma.config.findMany({
+        where: { k: { in: keys } },
+        select: { k: true, v: true },
+    });
+    return configs.reduce((values, config) => {
+        values[config.k] = config.v;
+        return values;
+    }, {});
+}
+async function verifyWithProvider(token, provider, remoteIp) {
+    const providerConfig = PROVIDER_CONFIG[provider];
     try {
-        // 获取hcaptcha的用户密钥
-        const userKey = await prisma.config.findFirst({
-            where: {
-                k: 'verify_hcaptcha_user'
-            },
-            select: {
-                v: true
-            }
+        const configs = await getConfigValues([providerConfig.secretKey]);
+        const secret = configs[providerConfig.secretKey]?.trim();
+        if (!secret) {
+            logger.warn(`${providerConfig.name} 服务端密钥未配置`);
+            return false;
+        }
+        const body = new URLSearchParams({ secret, response: token });
+        if (remoteIp)
+            body.set('remoteip', remoteIp);
+        const result = await axios.post(providerConfig.verifyUrl, body.toString(), {
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         });
-        // 进行验证请求
-        const HCAPTCHA_SECRET_KEY = userKey?.v;
-        const result = await axios.post('https://hcaptcha.com/siteverify', `secret=${HCAPTCHA_SECRET_KEY}&response=${captchaToke}`, {
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
-            }
-        });
-        logger.debug(`hCaptcha 验证结果：${result.data.success}`);
-        return result.data.success;
+        const success = result.data.success === true;
+        logger.debug(`${providerConfig.name} 验证结果：${success}`);
+        return success;
     }
     catch (error) {
-        logger.error('hCaptcha 验证失败', error instanceof Error ? error.stack : String(error));
+        logger.error(`${providerConfig.name} 验证失败`, error instanceof Error ? error.stack : String(error));
         return false;
     }
-};
+}
+function cleanupExpiredProofs() {
+    const now = Date.now();
+    for (const [proof, record] of captchaProofs.entries()) {
+        if (record.expiresAt <= now)
+            captchaProofs.delete(proof);
+    }
+}
+function enforceProofCapacity() {
+    if (captchaProofs.size <= MAX_CAPTCHA_PROOFS)
+        return;
+    // Map 按插入顺序迭代，超限时丢弃最早写入的记录
+    const overflow = captchaProofs.size - MAX_CAPTCHA_PROOFS;
+    let removed = 0;
+    for (const proof of captchaProofs.keys()) {
+        captchaProofs.delete(proof);
+        removed += 1;
+        if (removed >= overflow)
+            break;
+    }
+}
+export function issueCaptchaProof(remoteIp) {
+    cleanupExpiredProofs();
+    enforceProofCapacity();
+    const proof = randomBytes(32).toString('base64url');
+    captchaProofs.set(proof, {
+        expiresAt: Date.now() + CAPTCHA_PROOF_TTL_MS,
+        remoteIp,
+    });
+    return proof;
+}
+function consumeCaptchaProof(proof, remoteIp) {
+    if (typeof proof !== 'string' || !proof)
+        return false;
+    cleanupExpiredProofs();
+    const record = captchaProofs.get(proof);
+    if (!record)
+        return false;
+    captchaProofs.delete(proof);
+    return !record.remoteIp || !remoteIp || record.remoteIp === remoteIp;
+}
+export async function verifyCaptchaProofForAction(configKey, proof, remoteIp) {
+    const configs = await getConfigValues([configKey]);
+    if (configs[configKey] !== '1')
+        return true;
+    return consumeCaptchaProof(proof, remoteIp);
+}
+export async function getCaptchaProvider() {
+    const configs = await getConfigValues(['captcha_provider']);
+    return configs.captcha_provider === 'turnstile' ? 'turnstile' : 'hcaptcha';
+}
+export async function verifyCaptcha(token, remoteIp) {
+    const provider = await getCaptchaProvider();
+    return verifyWithProvider(token, provider, remoteIp);
+}
+export function verifyHcaptcha(token, remoteIp) {
+    return verifyWithProvider(token, 'hcaptcha', remoteIp);
+}

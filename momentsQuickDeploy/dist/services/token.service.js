@@ -1,5 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { randomUUID } from 'node:crypto';
+import { assertSecureSecret } from '../utils/secret.js';
+const JWT_ALGORITHM = 'HS256';
 function readPositiveIntEnv(name, fallback) {
     const value = Number(process.env[name]);
     return Number.isFinite(value) && value > 0 ? value : fallback;
@@ -16,10 +18,8 @@ export class TokenService {
         this.scope = scope;
         this.accessTtlSeconds = accessTtlSeconds;
         this.refreshTtlSeconds = refreshTtlSeconds;
-        if (!secret) {
-            throw new Error('.env 文件中未定义 JWT_SECRET');
-        }
-        this.secret = secret;
+        assertSecureSecret('JWT_SECRET', secret);
+        this.secret = secret.trim();
     }
     signToken(input) {
         const now = Math.floor(Date.now() / 1000);
@@ -33,10 +33,11 @@ export class TokenService {
             deviceId: input.deviceId,
             iat: now,
             exp: now + ttl,
-        }, this.secret, { algorithm: 'HS256' });
+        }, this.secret, { algorithm: JWT_ALGORITHM });
     }
     verify(token) {
-        return jwt.verify(token, this.secret);
+        // 显式固定算法，避免算法混淆类攻击
+        return jwt.verify(token, this.secret, { algorithms: [JWT_ALGORITHM] });
     }
     createJti() {
         return randomUUID();

@@ -6,7 +6,7 @@
 
 ## 技术栈
 
-- 运行时：Node.js 20+（推荐 22+）
+- 运行时：Node.js 24+
 - 框架：Express 5
 - 语言：TypeScript（ES Modules）
 - 数据库：MySQL 5.7+ / 8.0+
@@ -160,7 +160,7 @@ backend/
 
 ### 环境要求
 
-- Node.js 20+
+- Node.js 24+
 - pnpm 11+
 - MySQL 5.7+/8.0+
 
@@ -179,7 +179,8 @@ cp .env.example .env
 HOST=0.0.0.0
 PORT=9889
 
-# 密钥（越复杂越好）
+# 密钥：必须改成随机值，生产环境使用占位值或长度不足 32 位会拒绝启动
+# 生成方式：openssl rand -hex 32
 JWT_SECRET=demo_jwt_secret
 JWT_ACCESS_EXPIRES_SECONDS=7200
 JWT_REFRESH_EXPIRES_SECONDS=2592000

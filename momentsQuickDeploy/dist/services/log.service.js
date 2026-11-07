@@ -1,4 +1,6 @@
 import { prisma } from "../lib/prisma.js";
+import { Logger } from '../utils/logger.js';
+const serviceLogger = new Logger('LogService');
 export const logAction = {
     USER_REGISTER_SUCCESS: 'USER_REGISTER_SUCCESS',
     USER_REGISTER_FAILD: 'USER_REGISTER_FAILD',
@@ -32,7 +34,7 @@ export const logger = {
             });
         }
         catch (error) {
-            console.error('日志写入失败', error);
+            serviceLogger.error('日志写入失败', error instanceof Error ? error.stack : String(error));
         }
     }
 };

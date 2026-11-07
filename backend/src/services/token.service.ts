@@ -1,5 +1,8 @@
 import jwt from 'jsonwebtoken'
 import { randomUUID } from 'node:crypto'
+import { assertSecureSecret } from '../utils/secret.js'
+
+const JWT_ALGORITHM = 'HS256' as const
 
 export type TokenType = 'access' | 'refresh'
 
@@ -32,10 +35,8 @@ export class TokenService {
     private readonly accessTtlSeconds = ACCESS_TOKEN_TTL_SECONDS,
     private readonly refreshTtlSeconds = REFRESH_TOKEN_TTL_SECONDS,
   ) {
-    if (!secret) {
-      throw new Error('.env 文件中未定义 JWT_SECRET')
-    }
-    this.secret = secret
+    assertSecureSecret('JWT_SECRET', secret)
+    this.secret = (secret as string).trim()
   }
 
   signToken(input: {
@@ -60,12 +61,13 @@ export class TokenService {
         exp: now + ttl,
       },
       this.secret,
-      { algorithm: 'HS256' },
+      { algorithm: JWT_ALGORITHM },
     )
   }
 
   verify(token: string) {
-    return jwt.verify(token, this.secret) as AuthTokenPayload
+    // 显式固定算法，避免算法混淆类攻击
+    return jwt.verify(token, this.secret, { algorithms: [JWT_ALGORITHM] }) as AuthTokenPayload
   }
 
   createJti() {

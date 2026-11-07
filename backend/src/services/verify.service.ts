@@ -15,6 +15,9 @@ type CaptchaProofRecord = {
 
 const captchaProofs = new Map<string, CaptchaProofRecord>()
 
+/** 上限保护：未验证的 proof 无法主动清理，需要防止被批量刷写导致内存无限增长 */
+const MAX_CAPTCHA_PROOFS = 10_000
+
 const PROVIDER_CONFIG = {
   hcaptcha: {
     name: 'hCaptcha',
@@ -73,8 +76,22 @@ function cleanupExpiredProofs() {
   }
 }
 
+function enforceProofCapacity() {
+  if (captchaProofs.size <= MAX_CAPTCHA_PROOFS) return
+
+  // Map 按插入顺序迭代，超限时丢弃最早写入的记录
+  const overflow = captchaProofs.size - MAX_CAPTCHA_PROOFS
+  let removed = 0
+  for (const proof of captchaProofs.keys()) {
+    captchaProofs.delete(proof)
+    removed += 1
+    if (removed >= overflow) break
+  }
+}
+
 export function issueCaptchaProof(remoteIp?: string) {
   cleanupExpiredProofs()
+  enforceProofCapacity()
   const proof = randomBytes(32).toString('base64url')
   captchaProofs.set(proof, {
     expiresAt: Date.now() + CAPTCHA_PROOF_TTL_MS,

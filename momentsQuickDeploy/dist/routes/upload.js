@@ -7,6 +7,7 @@ import { authMiddleware } from "../middleware/authMiddleware.js";
 import { prisma } from "../lib/prisma.js";
 import { getConfigCache } from "../services/config.service.js";
 import { Logger } from "../utils/logger.js";
+import { toBigInt } from '../utils/parseId.js';
 const router = Router();
 const logger = new Logger('UploadRoute');
 /**
@@ -127,8 +128,10 @@ router.post('/profile', authMiddleware, localUploadMiddleware, async (req, res) 
 // 普通文件上传
 router.post('/', authMiddleware, localUploadMiddleware, async (req, res) => {
     // 上传文件信息
-    // console.log(req.files);
-    const articleId = req.body.articleId;
+    const articleId = toBigInt(req.body.articleId);
+    if (articleId === null) {
+        return res.status(400).json({ status: false, message: '文章ID不合法' });
+    }
     const articleType = Number(req.body.articleType ?? 0);
     const uploadRole = req.body.uploadRole;
     const files = req.files;
@@ -172,7 +175,7 @@ router.post('/', authMiddleware, localUploadMiddleware, async (req, res) => {
                     }
                 }
                 catch (error) {
-                    console.error(`数据库写入视频封面 ${urlPath} 失败:`, error);
+                    logger.error(`数据库写入视频封面 ${urlPath} 失败`, error instanceof Error ? error.stack : String(error));
                 }
             }
             else if (allowedImageTypes.includes(file.mimetype) && articleType !== 2) {
@@ -187,7 +190,7 @@ router.post('/', authMiddleware, localUploadMiddleware, async (req, res) => {
                 }
                 catch (error) {
                     // 记录错误但允许其他文件继续上传
-                    console.error(`数据库写入图片 ${urlPath} 失败:`, error);
+                    logger.error(`数据库写入图片 ${urlPath} 失败`, error instanceof Error ? error.stack : String(error));
                 }
             }
             if (allowedVideoTypes.includes(file.mimetype)) {
@@ -203,7 +206,7 @@ router.post('/', authMiddleware, localUploadMiddleware, async (req, res) => {
                 }
                 catch (error) {
                     // 记录错误但允许其他文件继续上传
-                    console.error(`数据库写入视频 ${urlPath} 失败:`, error);
+                    logger.error(`数据库写入视频 ${urlPath} 失败`, error instanceof Error ? error.stack : String(error));
                 }
             }
             // 总是返回文件路径，无论数据库写入是否成功
@@ -213,7 +216,7 @@ router.post('/', authMiddleware, localUploadMiddleware, async (req, res) => {
         res.json({ status: true, message: `${filePaths.length}个文件上传成功`, paths: filePaths });
     }
     catch (error) {
-        console.log('@上传多个文件时出错：', error);
+        logger.error('上传多个文件时出错', error instanceof Error ? error.stack : String(error));
         res.status(500).json({ status: false, message: '上传失败' });
     }
 });
@@ -317,7 +320,10 @@ router.post('/profile/s3', authMiddleware, s3UploadMiddleware, async (req, res) 
 });
 router.post('/s3', authMiddleware, s3UploadMiddleware, async (req, res) => {
     const files = req.files;
-    const articleId = req.body.articleId;
+    const articleId = toBigInt(req.body.articleId);
+    if (articleId === null) {
+        return res.status(400).json({ status: false, message: '文章ID不合法' });
+    }
     const articleType = Number(req.body.articleType ?? 0);
     const uploadRole = req.body.uploadRole;
     logger.debug(`S3 upload article id: ${articleId}`);

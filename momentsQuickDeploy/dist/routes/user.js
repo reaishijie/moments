@@ -4,6 +4,9 @@ import { authMiddleware } from "../middleware/authMiddleware.js";
 import { logAction, logger } from "../services/log.service.js";
 // import jwt from 'jsonwebtoken'
 import bcrypt from 'bcrypt';
+import { verifyCaptchaProofForAction } from '../services/verify.service.js';
+import { Logger } from '../utils/logger.js';
+const routeLogger = new Logger('UserRoute');
 const router = Router();
 // 获取用户信息
 router.get('/', authMiddleware, async (req, res) => {
@@ -42,7 +45,7 @@ router.get('/', authMiddleware, async (req, res) => {
         return res.status(200).json(responseUser);
     }
     catch (error) {
-        console.error('获取个人信息失败:', error);
+        routeLogger.error('获取个人信息失败:', error instanceof Error ? error.stack : String(error));
         res.status(500).json({ error: '服务器内部错误' });
     }
 });
@@ -73,6 +76,13 @@ router.patch('/', authMiddleware, async (req, res) => {
         if (Object.keys(updateData).length === 0) {
             return res.status(400).json({ error: '没有提供任何需要更新的数据' });
         }
+        if (email !== undefined && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email).trim())) {
+            return res.status(400).json({ error: '邮箱格式不正确' });
+        }
+        const captchaVerified = await verifyCaptchaProofForAction('user_captcha_update', req.body.captchaProof, req.ip);
+        if (!captchaVerified) {
+            return res.status(400).json({ error: '请先完成人机验证' });
+        }
         // 更新数据
         const updateUser = await prisma.users.update({
             where: {
@@ -100,7 +110,7 @@ router.patch('/', authMiddleware, async (req, res) => {
         return res.status(200).json({ data: data });
     }
     catch (error) {
-        console.error('更新个人信息失败:', error);
+        routeLogger.error('更新个人信息失败:', error instanceof Error ? error.stack : String(error));
         // 好像没必要记录
         // logger.add({
         //     userId: userId ? BigInt(userId): null,
@@ -174,7 +184,7 @@ router.get('/:username', async (req, res) => {
         return res.status(200).json(responseData);
     }
     catch (error) {
-        console.log('error:', error);
+        routeLogger.error('error:', error instanceof Error ? error.stack : String(error));
         return res.status(500).json({ error: '服务器错误' });
     }
 });
@@ -196,6 +206,10 @@ router.patch('/password', authMiddleware, async (req, res) => {
     // 判断新旧密码是否相同
     if (oldPassword === newPassword) {
         return res.status(400).json({ status: false, message: '旧密码和新密码不能相同' });
+    }
+    const captchaVerified = await verifyCaptchaProofForAction('user_captcha_update', req.body.captchaProof, req.ip);
+    if (!captchaVerified) {
+        return res.status(400).json({ status: false, message: '请先完成人机验证' });
     }
     // 获取相应用户信息
     const user = await prisma.users.findFirst({

@@ -5,7 +5,11 @@ import { adminMiddleware } from "../middleware/adminMiddleware.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
 import { buildConfigWhere, formatConfigResponse, parseConfigQuery, type ConfigAccessLevel } from "../services/config-query.service.js";
 import { noticeService } from "../services/notice.service.js";
+import { Logger } from '../utils/logger.js'
+import { parsePagination } from '../utils/pagination.js'
+import { toBigInt } from '../utils/parseId.js'
 
+const routeLogger = new Logger('AdminRoute')
 const router = Router()
 
 // 获取（未删除）用户数：用户总数、已激活用户数、未激活用户数
@@ -25,7 +29,7 @@ router.get('/user', authMiddleware, adminMiddleware, async (req: Request, res: R
         })
         negativeCount = totalCount - activeCount
     } catch (error) {
-        console.log('获取用户数失败', error);
+        routeLogger.error('获取用户数失败', error instanceof Error ? error.stack : String(error));
         res.status(500).json({ message: '获取用户数失败', error })
     }
     res.status(200).json({ message: '获取用户数成功', totalCount, activeCount, negativeCount })
@@ -48,7 +52,7 @@ router.get('/article', authMiddleware, adminMiddleware, async (req: Request, res
         })
         negativeCount = totalCount - activeCount
     } catch (error) {
-        console.log('获取文章数失败', error);
+        routeLogger.error('获取文章数失败', error instanceof Error ? error.stack : String(error));
         res.status(500).json({ message: '获取文章数失败', error })
     }
     res.status(200).json({ message: '获取文章数成功', totalCount, activeCount, negativeCount })
@@ -71,7 +75,7 @@ router.get('/comment', authMiddleware, adminMiddleware, async (req: Request, res
         })
         negativeCount = totalCount - activeCount
     } catch (error) {
-        console.log('获取评论数失败', error);
+        routeLogger.error('获取评论数失败', error instanceof Error ? error.stack : String(error));
         res.status(500).json({ message: '获取评论数失败', error })
     }
     res.status(200).json({ message: '获取评论数成功', totalCount, activeCount, negativeCount })
@@ -140,7 +144,7 @@ async function sendConfigResponse(req: Request, res: Response, allowedAccessLeve
         })
         return res.status(200).json(formatConfigResponse(configs, parsedQuery.detail))
     } catch (error) {
-        console.log('获取网站配置失败：', error);
+        routeLogger.error('获取网站配置失败：', error instanceof Error ? error.stack : String(error));
         return res.status(500).json({ message: '获取网站配置失败', error })
     }
 }
@@ -183,11 +187,11 @@ router.patch('/config', authMiddleware, adminMiddleware, async (req: Request, re
             });
         });
         await prisma.$transaction(operations);
-        console.log(updateKeys);
+        routeLogger.log(`更新配置项：${updateKeys.join(', ')}`);
         
         return res.status(200).json({message: '更新成功', updateKeys })
     } catch (error) {
-        console.log(error);
+        routeLogger.error('更新网站配置失败', error instanceof Error ? error.stack : String(error));
         return res.status(500).json({ message: '更新失败', error})
     }
 })
@@ -198,9 +202,7 @@ router.get('/allComment', authMiddleware, adminMiddleware, async (req: Request, 
     try {
         const { page: pageStr, pageSize: pageSizeStr, ...filters } = req.query
 
-        const page = parseInt(pageStr as string) || 1
-        const pageSize = parseInt(pageSizeStr as string) || 5
-        const skip = (page - 1) * pageSize
+        const { page, pageSize, skip } = parsePagination({ page: pageStr, pageSize: pageSizeStr })
 
         const filterMappings: Record<string, { field: keyof Prisma.commentsWhereInput; type: 'exact' | 'fuzzy' | 'boolean' }> = {
             commentId: { field: 'id', type: 'exact' },
@@ -278,7 +280,7 @@ router.get('/allComment', authMiddleware, adminMiddleware, async (req: Request, 
             total: totalComments
         })
     } catch (error) {
-        console.error('查询文章评论失败', error);
+        routeLogger.error('查询文章评论失败', error instanceof Error ? error.stack : String(error));
         res.status(500).json({ error: error })
     }
 })
@@ -349,7 +351,7 @@ router.patch('/comment/:commentId', authMiddleware, adminMiddleware, async (req:
             data: responseData
         })
     } catch (error) {
-        console.error('更新评论失败', error);
+        routeLogger.error('更新评论失败', error instanceof Error ? error.stack : String(error));
         res.status(500).json({ message: '更新评论失败', error })
     }
 })
@@ -359,9 +361,7 @@ router.get('/allUsers', authMiddleware, adminMiddleware, async (req: Request, re
     try {
         const { page: pageStr, pageSize: pageSizeStr, ...filters } = req.query
 
-        const page = parseInt(pageStr as string) || 1
-        const pageSize = parseInt(pageSizeStr as string) || 5
-        const skip = (page - 1) * pageSize
+        const { page, pageSize, skip } = parsePagination({ page: pageStr, pageSize: pageSizeStr })
 
         const filterMappings: Record<string, { field: keyof Prisma.usersWhereInput; type: 'exact' | 'fuzzy' | 'boolean' }> = {
             userId: { field: 'id', type: 'exact' },
@@ -434,7 +434,7 @@ router.get('/allUsers', authMiddleware, adminMiddleware, async (req: Request, re
             total: totalUsers
         })
     } catch (error) {
-        console.error('查询用户失败', error);
+        routeLogger.error('查询用户失败', error instanceof Error ? error.stack : String(error));
         res.status(500).json({ error: error })
     }
 })
@@ -471,7 +471,7 @@ router.delete('/user/:userId', authMiddleware, adminMiddleware, async (req: Requ
         
         res.status(200).json({ message: '用户删除成功' })
     } catch (error) {
-        console.error('删除用户失败', error);
+        routeLogger.error('删除用户失败', error instanceof Error ? error.stack : String(error));
         res.status(500).json({ message: '删除用户失败', error })
     }
 })
@@ -551,7 +551,7 @@ router.patch('/user/:userId', authMiddleware, adminMiddleware, async (req: Reque
             }
         })
     } catch (error) {
-        console.error('更新用户信息失败', error);
+        routeLogger.error('更新用户信息失败', error instanceof Error ? error.stack : String(error));
         res.status(500).json({ message: '更新用户信息失败', error })
     }
 })
@@ -578,13 +578,20 @@ function formatLink(link: {
 router.get('/links', authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
     try {
         const { page: pageStr, pageSize: pageSizeStr, ...filters } = req.query
-        const page = parseInt(pageStr as string) || 1
-        const pageSize = parseInt(pageSizeStr as string) || 10
-        const skip = (page - 1) * pageSize
+        const { page, pageSize, skip } = parsePagination(
+            { page: pageStr, pageSize: pageSizeStr },
+            { defaultPageSize: 10 },
+        )
 
         const where: Prisma.linkWhereInput = { deleted_at: null }
 
-        if (filters.linkId) where.id = BigInt(filters.linkId as string)
+        if (filters.linkId) {
+            const linkId = toBigInt(filters.linkId)
+            if (linkId === null) {
+                return res.status(400).json({ message: '友情链接ID不合法' })
+            }
+            where.id = linkId
+        }
         if (filters.sitename) where.sitename = { contains: filters.sitename as string }
         if (filters.url) where.url = { contains: filters.url as string }
         if (filters.brief) where.brief = { contains: filters.brief as string }
@@ -607,7 +614,7 @@ router.get('/links', authMiddleware, adminMiddleware, async (req: Request, res: 
             total,
         })
     } catch (error) {
-        console.error('查询友情链接失败', error)
+        routeLogger.error('查询友情链接失败', error instanceof Error ? error.stack : String(error));
         res.status(500).json({ message: '查询友情链接失败', error })
     }
 })
@@ -633,7 +640,7 @@ router.post('/links', authMiddleware, adminMiddleware, async (req: Request, res:
 
         res.status(200).json({ message: '友情链接新增成功', data: formatLink(link) })
     } catch (error) {
-        console.error('新增友情链接失败', error)
+        routeLogger.error('新增友情链接失败', error instanceof Error ? error.stack : String(error));
         res.status(500).json({ message: '新增友情链接失败', error })
     }
 })
@@ -670,7 +677,7 @@ router.patch('/link/:linkId', authMiddleware, adminMiddleware, async (req: Reque
 
         res.status(200).json({ message: '友情链接更新成功', data: formatLink(link) })
     } catch (error) {
-        console.error('更新友情链接失败', error)
+        routeLogger.error('更新友情链接失败', error instanceof Error ? error.stack : String(error));
         res.status(500).json({ message: '更新友情链接失败', error })
     }
 })
@@ -699,7 +706,7 @@ router.delete('/link/:linkId', authMiddleware, adminMiddleware, async (req: Requ
 
         res.status(200).json({ message: '友情链接删除成功' })
     } catch (error) {
-        console.error('删除友情链接失败', error)
+        routeLogger.error('删除友情链接失败', error instanceof Error ? error.stack : String(error));
         res.status(500).json({ message: '删除友情链接失败', error })
     }
 })

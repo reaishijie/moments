@@ -7,6 +7,7 @@ import { authMiddleware } from "../middleware/authMiddleware.js";
 import { authService, buildDeviceFingerprint, ensureLoginAllowedUser } from "../services/auth.service.js";
 import { oauthService } from "../services/oauth.service.js";
 import { verifyCaptchaProofForAction } from "../services/verify.service.js";
+import { rateLimit } from '../middleware/rateLimit.middleware.js'
 import {
     clearRefreshTokenCookie,
     REFRESH_TOKEN_COOKIE_NAME,
@@ -17,6 +18,62 @@ import { isRequestOriginTrusted } from '../utils/requestOrigin.js'
 
 const router = Router()
 const authLogger = new Logger('AuthRoute')
+
+// 账号安全相关接口的限流策略：
+// - IP 维度闸门防止单点刷接口，阈值放宽，避免多人共用出口 IP 时被误伤；
+// - 账号维度单独计数，即使攻击者更换 IP 也无法对同一账号持续撞库；
+// - 登录类只统计失败请求。
+const registerLimit = rateLimit({
+    bucket: 'auth-register-ip',
+    windowMs: 60 * 60 * 1000,
+    max: 10,
+    message: '注册过于频繁，请稍后再试',
+})
+const loginIpLimit = rateLimit({
+    bucket: 'auth-login-ip',
+    windowMs: 15 * 60 * 1000,
+    max: 60,
+    message: '登录尝试过于频繁，请稍后再试',
+    skipSuccessfulRequests: true,
+})
+const loginAccountLimit = rateLimit({
+    bucket: 'auth-login-account',
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    message: '该账号登录失败次数过多，请稍后再试',
+    skipSuccessfulRequests: true,
+    keyGenerator: (req: Request) => {
+        const identifier = typeof req.body?.identifier === 'string' ? req.body.identifier.trim().toLowerCase() : ''
+        return identifier || null
+    },
+})
+const loginEmailLimit = rateLimit({
+    bucket: 'auth-login-email',
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    message: '该邮箱登录失败次数过多，请稍后再试',
+    skipSuccessfulRequests: true,
+    keyGenerator: (req: Request) => normalizeEmail(req.body?.email) || null,
+})
+const refreshLimit = rateLimit({
+    bucket: 'auth-refresh-ip',
+    windowMs: 15 * 60 * 1000,
+    max: 300,
+    message: '刷新登录状态过于频繁，请稍后再试',
+})
+const resetPasswordLimit = rateLimit({
+    bucket: 'auth-reset-password-ip',
+    windowMs: 60 * 60 * 1000,
+    max: 10,
+    message: '重置密码请求过于频繁，请稍后再试',
+    skipSuccessfulRequests: true,
+})
+const bindLimit = rateLimit({
+    bucket: 'auth-bind-ip',
+    windowMs: 60 * 60 * 1000,
+    max: 20,
+    message: '操作过于频繁，请稍后再试',
+})
 
 type TokenPair = Awaited<ReturnType<typeof authService.issueTokenPair>>
 
@@ -157,7 +214,7 @@ function sendOAuthResult(req: Request, res: Response, result: unknown) {
 }
 
 // 注册
-router.post('/register', async (req: Request, res: Response) => {
+router.post('/register', registerLimit, async (req: Request, res: Response) => {
     try {
         const { username, password: rawPassword, status, code } = req.body
         const email = normalizeEmail(req.body.email)
@@ -227,7 +284,7 @@ router.post('/register', async (req: Request, res: Response) => {
 })
 
 // 密码登录
-router.post('/login', async (req: Request, res: Response) => {
+router.post('/login', loginIpLimit, loginAccountLimit, async (req: Request, res: Response) => {
     try {
         const { identifier, password } = req.body
         // 验证输入
@@ -285,7 +342,7 @@ router.post('/login', async (req: Request, res: Response) => {
 })
 
 // 邮箱验证码登录
-router.post('/login-email', async (req: Request, res: Response) => {
+router.post('/login-email', loginIpLimit, loginEmailLimit, async (req: Request, res: Response) => {
     try {
         const email = normalizeEmail(req.body.email)
         const code = String(req.body.code || '')
@@ -492,7 +549,7 @@ router.get('/callback', async (req: Request, res: Response) => {
     }
 })
 
-router.post('/oauth/bind', authMiddleware, async (req: Request, res: Response) => {
+router.post('/oauth/bind', authMiddleware, bindLimit, async (req: Request, res: Response) => {
     try {
         if (!req.user?.userId) return res.status(401).json({ error: '未授权' })
         const oauthTicket = String(req.body.oauthTicket || req.body.ticket || '')
@@ -506,7 +563,7 @@ router.post('/oauth/bind', authMiddleware, async (req: Request, res: Response) =
     }
 })
 
-router.post('/oauth/register-bind', async (req: Request, res: Response) => {
+router.post('/oauth/register-bind', registerLimit, async (req: Request, res: Response) => {
     try {
         const oauthTicket = String(req.body.oauthTicket || req.body.ticket || '')
         let username = normalizeUsername(req.body.username)
@@ -584,7 +641,7 @@ router.post('/oauth/register-bind', async (req: Request, res: Response) => {
 })
 
 // 刷新令牌：仅接受 HttpOnly Cookie，并在每次刷新时轮换 refresh jti
-router.post('/refresh', async (req: Request, res: Response) => {
+router.post('/refresh', refreshLimit, async (req: Request, res: Response) => {
     try {
         const refreshToken = req.cookies?.[REFRESH_TOKEN_COOKIE_NAME]
         if (typeof refreshToken !== 'string' || !refreshToken) {
@@ -641,7 +698,7 @@ router.get('/me', authMiddleware, async (req: Request, res: Response) => {
 })
 
 // 邮箱验证码重置密码
-router.post('/reset-password', async (req: Request, res: Response) => {
+router.post('/reset-password', resetPasswordLimit, async (req: Request, res: Response) => {
     try {
         const email = normalizeEmail(req.body.email)
         const code = String(req.body.code || '')

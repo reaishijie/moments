@@ -1,5 +1,6 @@
 services:
   app:
+    image: ${APP_IMAGE:-moments-app:latest}
     build:
       context: .
       dockerfile: Dockerfile
@@ -9,10 +10,21 @@ services:
       - "${APP_PORT}:9889"
     env_file:
       - app.env
+    environment:
+      NODE_ENV: production
+      # 部署在 1Panel 等反向代理之后时，按真实代理跳数填写，让 req.ip / req.secure 正确；
+      # 直接对外暴露端口时请改为 false，避免客户端伪造 X-Forwarded-For。
+      TRUST_PROXY: ${TRUST_PROXY:-1}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:
       - 1panel-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:9889/api >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      start_period: 40s
+      retries: 3
 
 networks:
   1panel-network:

@@ -23,7 +23,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v5
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
           cache-dependency-path: |
             frontend/pnpm-lock.yaml
@@ -38,7 +38,7 @@ jobs:
         run: |
           export VITE_APP_TITLE="${{ vars.VITE_APP_TITLE }}"
           export VITE_APP_KEYWORD="${{ vars.VITE_APP_KEYWORD }}"
-          export VITE_APP_DESPRICTION="${{ vars.VITE_APP_DESPRICTION }}"
+          export VITE_APP_DESCRIPTION="${{ vars.VITE_APP_DESCRIPTION }}"
           export VITE_API_BASE_URL="${{ vars.VITE_API_BASE_URL }}"
           pnpm build
 
@@ -120,10 +120,49 @@ jobs:
             APP_CONTAINER_NAME="$(grep '^APP_CONTAINER_NAME=' compose.env | cut -d= -f2- | tr -d '\r' | xargs)"
             test -n "$APP_CONTAINER_NAME"
 
-            docker compose -f docker-compose.yml --env-file compose.env build --pull app
-            docker compose -f docker-compose.yml --env-file compose.env down --remove-orphans || true
-            if docker ps -a --format '{{.Names}}' | grep -Fx "$APP_CONTAINER_NAME" >/dev/null; then
-              docker rm -f "$APP_CONTAINER_NAME"
+            APP_IMAGE="moments-app:latest"
+            ROLLBACK_IMAGE="moments-app:rollback"
+            export APP_IMAGE
+            COMPOSE="docker compose -f docker-compose.yml --env-file compose.env"
+
+            # 备份当前正在运行的镜像，便于部署后健康检查失败时回滚
+            OLD_IMAGE_ID="$(docker inspect --format '{{.Image}}' "$APP_CONTAINER_NAME" 2>/dev/null || true)"
+            if [ -n "$OLD_IMAGE_ID" ]; then
+              docker tag "$OLD_IMAGE_ID" "$ROLLBACK_IMAGE"
+              echo "已备份上一版本镜像：$ROLLBACK_IMAGE ($OLD_IMAGE_ID)"
             fi
-            docker compose -f docker-compose.yml --env-file compose.env up -d app
+
+            $COMPOSE build --pull app
+            # 正常情况下直接重建容器（尽量缩短停机时间）；
+            # 仅当同名容器由其他 compose 项目占用时才需要先清理再重试。
+            if ! $COMPOSE up -d --remove-orphans app; then
+              echo "启动失败，清理同名容器后重试"
+              docker rm -f "$APP_CONTAINER_NAME" || true
+              $COMPOSE up -d --remove-orphans app
+            fi
+
+            # 等待容器健康检查通过（镜像内配置了 HEALTHCHECK）
+            health_status="unknown"
+            for _ in $(seq 1 40); do
+              health_status="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$APP_CONTAINER_NAME" 2>/dev/null || echo unknown)"
+              case "$health_status" in
+                healthy|running) break ;;
+                unhealthy|exited|dead) break ;;
+                *) sleep 3 ;;
+              esac
+            done
+
+            if [ "$health_status" != "healthy" ] && [ "$health_status" != "running" ]; then
+              echo "部署后健康检查失败：$health_status"
+              docker logs --tail 120 "$APP_CONTAINER_NAME" || true
+              if docker image inspect "$ROLLBACK_IMAGE" >/dev/null 2>&1; then
+                echo "尝试回滚到上一版本镜像"
+                APP_IMAGE="$ROLLBACK_IMAGE" $COMPOSE up -d --force-recreate app || true
+              else
+                echo "没有可用的回滚镜像"
+              fi
+              exit 1
+            fi
+
+            echo "部署成功，容器状态：$health_status"
             docker image prune -f

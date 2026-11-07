@@ -23,6 +23,9 @@ services:
       - "9889:9889"
     env_file:
       - .env.docker
+    volumes:
+      # 持久化自动生成的 JWT_SECRET，避免容器重建后所有登录态失效
+      - app_data:/app/data
     depends_on:
       - db
     networks:
@@ -30,6 +33,7 @@ services:
 
 volumes:
   db_data:
+  app_data:
 
 networks:
   moments-net:

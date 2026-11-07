@@ -64,10 +64,10 @@ export class OAuthService {
             avatar: profile.avatar ?? null,
             email: profile.email ?? null,
         };
-        return jwt.sign(payload, getJwtSecret(), { expiresIn: OAUTH_TICKET_EXPIRES_SECONDS });
+        return jwt.sign(payload, getJwtSecret(), { expiresIn: OAUTH_TICKET_EXPIRES_SECONDS, algorithm: 'HS256' });
     }
     verifyTicket(ticket) {
-        const decoded = jwt.verify(ticket, getJwtSecret());
+        const decoded = jwt.verify(ticket, getJwtSecret(), { algorithms: ['HS256'] });
         if (decoded.scope !== 'oauth_bind' || !decoded.provider || !decoded.providerUserId) {
             throw new Error('Invalid oauth ticket');
         }
@@ -82,7 +82,7 @@ export class OAuthService {
             throw new Error('Linux.Do OAuth Client ID 未配置');
         const configuredRedirectUri = await getConfigValue('oauth2_redirect_uri');
         const redirectUri = configuredRedirectUri || buildCallbackUrl(req, '/api/auth/callback');
-        const state = jwt.sign({ scope: 'oauth_state', provider: 'linux_do' }, getJwtSecret(), { expiresIn: 10 * 60 });
+        const state = jwt.sign({ scope: 'oauth_state', provider: 'linux_do' }, getJwtSecret(), { expiresIn: 10 * 60, algorithm: 'HS256' });
         const url = new URL(LINUX_DO_AUTHORIZE_URL);
         url.searchParams.set('client_id', clientId);
         url.searchParams.set('redirect_uri', redirectUri);
@@ -93,7 +93,7 @@ export class OAuthService {
     }
     async fetchLinuxDoProfile(input) {
         if (input.state) {
-            const state = jwt.verify(input.state, getJwtSecret());
+            const state = jwt.verify(input.state, getJwtSecret(), { algorithms: ['HS256'] });
             if (state.scope !== 'oauth_state' || state.provider !== 'linux_do') {
                 throw new Error('Invalid oauth state');
             }
@@ -147,7 +147,7 @@ export class OAuthService {
         const baseUrl = await getNodelocBaseUrl();
         const configuredRedirectUri = await getConfigValue('oauth2_redirect_uri');
         const redirectUri = configuredRedirectUri || buildCallbackUrl(req, '/api/auth/callback');
-        const state = jwt.sign({ scope: 'oauth_state', provider: 'nodeloc' }, getJwtSecret(), { expiresIn: 10 * 60 });
+        const state = jwt.sign({ scope: 'oauth_state', provider: 'nodeloc' }, getJwtSecret(), { expiresIn: 10 * 60, algorithm: 'HS256' });
         const url = new URL(`${baseUrl}/oauth-provider/authorize`);
         url.searchParams.set('client_id', clientId);
         url.searchParams.set('redirect_uri', redirectUri);
@@ -159,7 +159,7 @@ export class OAuthService {
     }
     async fetchNodelocProfile(input) {
         if (input.state) {
-            const state = jwt.verify(input.state, getJwtSecret());
+            const state = jwt.verify(input.state, getJwtSecret(), { algorithms: ['HS256'] });
             if (state.scope !== 'oauth_state' || state.provider !== 'nodeloc') {
                 throw new Error('Invalid oauth state');
             }
@@ -213,7 +213,7 @@ export class OAuthService {
             throw new Error('Google OAuth Client ID 未配置');
         const configuredRedirectUri = await getConfigValue('oauth2_redirect_uri');
         const redirectUri = configuredRedirectUri || buildCallbackUrl(req, '/api/auth/callback');
-        const state = jwt.sign({ scope: 'oauth_state', provider: 'google' }, getJwtSecret(), { expiresIn: 10 * 60 });
+        const state = jwt.sign({ scope: 'oauth_state', provider: 'google' }, getJwtSecret(), { expiresIn: 10 * 60, algorithm: 'HS256' });
         const url = new URL(GOOGLE_AUTHORIZE_URL);
         url.searchParams.set('client_id', clientId);
         url.searchParams.set('redirect_uri', redirectUri);
@@ -226,7 +226,7 @@ export class OAuthService {
     }
     async fetchGoogleProfile(input) {
         if (input.state) {
-            const state = jwt.verify(input.state, getJwtSecret());
+            const state = jwt.verify(input.state, getJwtSecret(), { algorithms: ['HS256'] });
             if (state.scope !== 'oauth_state' || state.provider !== 'google') {
                 throw new Error('Invalid oauth state');
             }
@@ -279,7 +279,7 @@ export class OAuthService {
             throw new Error('GitHub OAuth Client ID 未配置');
         const configuredRedirectUri = await getConfigValue('oauth2_redirect_uri');
         const redirectUri = configuredRedirectUri || buildCallbackUrl(req, '/api/auth/callback');
-        const state = jwt.sign({ scope: 'oauth_state', provider: 'github' }, getJwtSecret(), { expiresIn: 10 * 60 });
+        const state = jwt.sign({ scope: 'oauth_state', provider: 'github' }, getJwtSecret(), { expiresIn: 10 * 60, algorithm: 'HS256' });
         const url = new URL(GITHUB_AUTHORIZE_URL);
         url.searchParams.set('client_id', clientId);
         url.searchParams.set('redirect_uri', redirectUri);
@@ -290,7 +290,7 @@ export class OAuthService {
     }
     async fetchGithubProfile(input) {
         if (input.state) {
-            const state = jwt.verify(input.state, getJwtSecret());
+            const state = jwt.verify(input.state, getJwtSecret(), { algorithms: ['HS256'] });
             if (state.scope !== 'oauth_state' || state.provider !== 'github') {
                 throw new Error('Invalid oauth state');
             }
@@ -373,7 +373,7 @@ export class OAuthService {
             // 兼容旧版仅 Linux.Do 的无 state 回调
             return this.fetchLinuxDoProfile({ code: input.code, req: input.req });
         }
-        const state = jwt.verify(input.state, getJwtSecret());
+        const state = jwt.verify(input.state, getJwtSecret(), { algorithms: ['HS256'] });
         if (state.scope !== 'oauth_state' || !state.provider || !isOAuthStateProvider(state.provider)) {
             throw new Error('Invalid oauth state');
         }

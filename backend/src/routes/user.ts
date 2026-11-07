@@ -5,7 +5,9 @@ import { logAction, logger } from "../services/log.service.js"
 // import jwt from 'jsonwebtoken'
 import bcrypt from 'bcrypt'
 import { verifyCaptchaProofForAction } from '../services/verify.service.js'
+import { Logger } from '../utils/logger.js'
 
+const routeLogger = new Logger('UserRoute')
 const router = Router()
 
 // 获取用户信息
@@ -46,7 +48,7 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
         return res.status(200).json(responseUser);
 
     } catch (error) {
-        console.error('获取个人信息失败:', error);
+        routeLogger.error('获取个人信息失败:', error instanceof Error ? error.stack : String(error));
         res.status(500).json({ error: '服务器内部错误' });
     }
 })
@@ -115,7 +117,7 @@ router.patch('/', authMiddleware, async (req: Request, res: Response) => {
         })
         return res.status(200).json({ data: data })
     } catch (error) {
-        console.error('更新个人信息失败:', error);
+        routeLogger.error('更新个人信息失败:', error instanceof Error ? error.stack : String(error));
         // 好像没必要记录
         // logger.add({
         //     userId: userId ? BigInt(userId): null,
@@ -190,7 +192,7 @@ router.get('/:username', async (req: Request, res: Response) => {
         }
         return res.status(200).json(responseData)
     } catch (error) {
-        console.log('error:', error);
+        routeLogger.error('error:', error instanceof Error ? error.stack : String(error));
         return res.status(500).json({ error: '服务器错误' })
     }
 
