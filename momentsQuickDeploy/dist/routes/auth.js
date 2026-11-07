@@ -6,8 +6,92 @@ import { Logger } from "../utils/logger.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
 import { authService, buildDeviceFingerprint, ensureLoginAllowedUser } from "../services/auth.service.js";
 import { oauthService } from "../services/oauth.service.js";
+import { verifyCaptchaProofForAction } from "../services/verify.service.js";
+import { rateLimit } from '../middleware/rateLimit.middleware.js';
+import { clearRefreshTokenCookie, REFRESH_TOKEN_COOKIE_NAME, setRefreshTokenCookie, toPublicTokenResponse, } from '../utils/authCookie.js';
+import { isRequestOriginTrusted } from '../utils/requestOrigin.js';
 const router = Router();
 const authLogger = new Logger('AuthRoute');
+// 账号安全相关接口的限流策略：
+// - IP 维度闸门防止单点刷接口，阈值放宽，避免多人共用出口 IP 时被误伤；
+// - 账号维度单独计数，即使攻击者更换 IP 也无法对同一账号持续撞库；
+// - 登录类只统计失败请求。
+const registerLimit = rateLimit({
+    bucket: 'auth-register-ip',
+    windowMs: 60 * 60 * 1000,
+    max: 10,
+    message: '注册过于频繁，请稍后再试',
+});
+const loginIpLimit = rateLimit({
+    bucket: 'auth-login-ip',
+    windowMs: 15 * 60 * 1000,
+    max: 60,
+    message: '登录尝试过于频繁，请稍后再试',
+    skipSuccessfulRequests: true,
+});
+const loginAccountLimit = rateLimit({
+    bucket: 'auth-login-account',
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    message: '该账号登录失败次数过多，请稍后再试',
+    skipSuccessfulRequests: true,
+    keyGenerator: (req) => {
+        const identifier = typeof req.body?.identifier === 'string' ? req.body.identifier.trim().toLowerCase() : '';
+        return identifier || null;
+    },
+});
+const loginEmailLimit = rateLimit({
+    bucket: 'auth-login-email',
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    message: '该邮箱登录失败次数过多，请稍后再试',
+    skipSuccessfulRequests: true,
+    keyGenerator: (req) => normalizeEmail(req.body?.email) || null,
+});
+const refreshLimit = rateLimit({
+    bucket: 'auth-refresh-ip',
+    windowMs: 15 * 60 * 1000,
+    max: 300,
+    message: '刷新登录状态过于频繁，请稍后再试',
+});
+const resetPasswordLimit = rateLimit({
+    bucket: 'auth-reset-password-ip',
+    windowMs: 60 * 60 * 1000,
+    max: 10,
+    message: '重置密码请求过于频繁，请稍后再试',
+    skipSuccessfulRequests: true,
+});
+const bindLimit = rateLimit({
+    bucket: 'auth-bind-ip',
+    windowMs: 60 * 60 * 1000,
+    max: 20,
+    message: '操作过于频繁，请稍后再试',
+});
+router.use((req, res, next) => {
+    if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS' || isRequestOriginTrusted(req)) {
+        return next();
+    }
+    return res.status(403).json({ error: '请求来源不受信任' });
+});
+function sendTokenResponse(req, res, status, tokens) {
+    setRefreshTokenCookie(req, res, tokens.refreshToken);
+    return res.status(status).json(toPublicTokenResponse(tokens));
+}
+function isTokenPair(result) {
+    if (!result || typeof result !== 'object')
+        return false;
+    const value = result;
+    return typeof value.accessToken === 'string'
+        && typeof value.refreshToken === 'string'
+        && typeof value.expiresIn === 'number';
+}
+async function requireUserCaptcha(req, res) {
+    const verified = await verifyCaptchaProofForAction('user_captcha', req.body.captchaProof, req.ip);
+    if (!verified) {
+        res.status(400).json({ error: '请先完成人机验证' });
+    }
+    return verified;
+}
 async function isRegisterEmailVerificationEnabled() {
     const config = await prisma.config.findUnique({
         where: { k: 'user_email_verify_register' },
@@ -68,17 +152,22 @@ async function generateUniqueUsername(seed) {
     return `user-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`.slice(0, 30);
 }
 function sendOAuthResult(req, res, result) {
-    if (req.query.format === 'json') {
-        return res.status(200).json(result);
+    let payload = result;
+    if (isTokenPair(result)) {
+        setRefreshTokenCookie(req, res, result.refreshToken);
+        payload = { authenticated: true };
     }
-    const payload = JSON.stringify({ type: 'moments-oauth-result', payload: result }).replace(/</g, '\\u003c');
+    if (req.query.format === 'json') {
+        return res.status(200).json(payload);
+    }
+    const serializedPayload = JSON.stringify({ type: 'moments-oauth-result', payload }).replace(/</g, '\\u003c');
     return res.status(200).type('html').send(`<!doctype html>
 <html lang="zh-CN">
 <head><meta charset="utf-8"><title>OAuth 登录完成</title></head>
 <body>
 <script>
 (function () {
-  var message = ${payload};
+  var message = ${serializedPayload};
   try {
     window.sessionStorage.setItem('moments_oauth_result', JSON.stringify(message.payload));
   } catch (error) {}
@@ -101,7 +190,7 @@ function sendOAuthResult(req, res, result) {
 </html>`);
 }
 // 注册
-router.post('/register', async (req, res) => {
+router.post('/register', registerLimit, async (req, res) => {
     try {
         const { username, password: rawPassword, status, code } = req.body;
         const email = normalizeEmail(req.body.email);
@@ -109,10 +198,15 @@ router.post('/register', async (req, res) => {
         if (!username || !rawPassword) {
             return res.status(400).json({ error: '用户名、密码不能为空' });
         }
+        if (email && !isEmail(email)) {
+            return res.status(400).json({ error: '邮箱格式不正确' });
+        }
         const needsEmailVerify = await isRegisterEmailVerificationEnabled();
-        if (needsEmailVerify && (!email || !isEmail(email))) {
+        if (needsEmailVerify && !email) {
             return res.status(400).json({ error: '请填写有效邮箱' });
         }
+        if (!await requireUserCaptcha(req, res))
+            return;
         // 检查用户是否已存在
         const existingUser = await prisma.users.findFirst({
             where: {
@@ -162,13 +256,15 @@ router.post('/register', async (req, res) => {
     }
 });
 // 密码登录
-router.post('/login', async (req, res) => {
+router.post('/login', loginIpLimit, loginAccountLimit, async (req, res) => {
     try {
         const { identifier, password } = req.body;
         // 验证输入
         if (!identifier || !password) {
             return res.status(400).json({ error: '请输入信息' });
         }
+        if (!await requireUserCaptcha(req, res))
+            return;
         // 查找用户信息
         const user = await prisma.users.findFirst({
             where: {
@@ -209,7 +305,7 @@ router.post('/login', async (req, res) => {
             ipAddress: req.ip,
             userAgent: req.headers['user-agent'] || '',
         });
-        res.status(200).json(tokens);
+        return sendTokenResponse(req, res, 200, tokens);
     }
     catch (error) {
         authLogger.error('登录失败', error instanceof Error ? error.stack : String(error));
@@ -217,7 +313,7 @@ router.post('/login', async (req, res) => {
     }
 });
 // 邮箱验证码登录
-router.post('/login-email', async (req, res) => {
+router.post('/login-email', loginIpLimit, loginEmailLimit, async (req, res) => {
     try {
         const email = normalizeEmail(req.body.email);
         const code = String(req.body.code || '');
@@ -227,6 +323,8 @@ router.post('/login-email', async (req, res) => {
         if (!isEmail(email)) {
             return res.status(400).json({ error: '邮箱格式不正确' });
         }
+        if (!await requireUserCaptcha(req, res))
+            return;
         if (!verifyAndConsume({ email, code })) {
             await writeLoginFailLog(req, null, '邮箱验证码错误或已过期');
             return res.status(401).json({ error: '邮箱验证码错误或已过期' });
@@ -254,7 +352,7 @@ router.post('/login-email', async (req, res) => {
             ipAddress: req.ip,
             userAgent: req.headers['user-agent'] || '',
         });
-        return res.status(200).json(tokens);
+        return sendTokenResponse(req, res, 200, tokens);
     }
     catch (error) {
         authLogger.error('邮箱验证码登录失败', error instanceof Error ? error.stack : String(error));
@@ -420,7 +518,7 @@ router.get('/callback', async (req, res) => {
         return res.status(400).json({ error: error instanceof Error ? error.message : 'OAuth 回调失败' });
     }
 });
-router.post('/oauth/bind', authMiddleware, async (req, res) => {
+router.post('/oauth/bind', authMiddleware, bindLimit, async (req, res) => {
     try {
         if (!req.user?.userId)
             return res.status(401).json({ error: '未授权' });
@@ -435,7 +533,7 @@ router.post('/oauth/bind', authMiddleware, async (req, res) => {
         return res.status(400).json({ error: error instanceof Error ? error.message : '第三方账号绑定失败' });
     }
 });
-router.post('/oauth/register-bind', async (req, res) => {
+router.post('/oauth/register-bind', registerLimit, async (req, res) => {
     try {
         const oauthTicket = String(req.body.oauthTicket || req.body.ticket || '');
         let username = normalizeUsername(req.body.username);
@@ -457,6 +555,8 @@ router.post('/oauth/register-bind', async (req, res) => {
         if (rawPassword.length < 6) {
             return res.status(400).json({ error: '密码不能小于 6 位' });
         }
+        if (!await requireUserCaptcha(req, res))
+            return;
         const needsEmailVerify = await isRegisterEmailVerificationEnabled();
         if (needsEmailVerify && (!email || !isEmail(email))) {
             return res.status(400).json({ error: '请填写有效邮箱' });
@@ -498,22 +598,22 @@ router.post('/oauth/register-bind', async (req, res) => {
             ipAddress: req.ip,
             userAgent: req.headers['user-agent'] || '',
         });
-        return res.status(201).json(tokens);
+        return sendTokenResponse(req, res, 201, tokens);
     }
     catch (error) {
         authLogger.error('OAuth 注册绑定失败', error instanceof Error ? error.stack : String(error));
         return res.status(400).json({ error: error instanceof Error ? error.message : 'OAuth 注册绑定失败' });
     }
 });
-// 刷新令牌：仅接受 refreshToken，并在每次刷新时轮换 refresh jti
-router.post('/refresh', async (req, res) => {
+// 刷新令牌：仅接受 HttpOnly Cookie，并在每次刷新时轮换 refresh jti
+router.post('/refresh', refreshLimit, async (req, res) => {
     try {
-        const refreshToken = String(req.body.refreshToken || '');
-        if (!refreshToken) {
-            return res.status(400).json({ error: 'refreshToken 不能为空' });
+        const refreshToken = req.cookies?.[REFRESH_TOKEN_COOKIE_NAME];
+        if (typeof refreshToken !== 'string' || !refreshToken) {
+            return res.status(401).json({ error: '登录已过期，请重新登录' });
         }
         const tokens = await authService.refresh(refreshToken);
-        return res.status(200).json(tokens);
+        return sendTokenResponse(req, res, 200, tokens);
     }
     catch (error) {
         authLogger.warn('刷新令牌失败');
@@ -521,7 +621,10 @@ router.post('/refresh', async (req, res) => {
     }
 });
 // 退出当前会话
-router.post('/logout', authMiddleware, async (req, res) => {
+router.post('/logout', (req, res, next) => {
+    clearRefreshTokenCookie(req, res);
+    next();
+}, authMiddleware, async (req, res) => {
     try {
         if (!req.user?.userId || !req.user.sid) {
             return res.status(401).json({ error: '未授权' });
@@ -535,7 +638,10 @@ router.post('/logout', authMiddleware, async (req, res) => {
     }
 });
 // 退出全部会话
-router.post('/logout-all', authMiddleware, async (req, res) => {
+router.post('/logout-all', (req, res, next) => {
+    clearRefreshTokenCookie(req, res);
+    next();
+}, authMiddleware, async (req, res) => {
     try {
         if (!req.user?.userId) {
             return res.status(401).json({ error: '未授权' });
@@ -553,7 +659,7 @@ router.get('/me', authMiddleware, async (req, res) => {
     return res.status(200).json({ user: req.user });
 });
 // 邮箱验证码重置密码
-router.post('/reset-password', async (req, res) => {
+router.post('/reset-password', resetPasswordLimit, async (req, res) => {
     try {
         const email = normalizeEmail(req.body.email);
         const code = String(req.body.code || '');

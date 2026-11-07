@@ -19,6 +19,7 @@ find "$OUTPUT_DIR" -mindepth 1 \
   ! -name '.env.docker' \
   ! -name 'docker-compose.yml' \
   ! -name 'Dockerfile' \
+  ! -name 'docker-entrypoint.sh' \
   -exec rm -rf {} +
 
 ############################

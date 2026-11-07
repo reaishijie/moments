@@ -18,9 +18,12 @@ function readSameSite(): CookieOptions['sameSite'] {
 
 function refreshCookieOptions(req: Request): CookieOptions {
   const sameSite = readSameSite()
+  // 仅根据请求是否真正走 HTTPS 决定 Secure，避免在纯 HTTP 部署（如 quickDeploy）下
+  // 因为设置 NODE_ENV=production 导致 refresh Cookie 完全无法回传。
+  // 反向代理部署需要正确设置 TRUST_PROXY，req.secure 才能反映真实协议。
   const secure = sameSite === 'none'
     ? true
-    : readBooleanEnv('AUTH_COOKIE_SECURE', req.secure || process.env.NODE_ENV === 'production')
+    : readBooleanEnv('AUTH_COOKIE_SECURE', req.secure)
 
   return {
     httpOnly: true,

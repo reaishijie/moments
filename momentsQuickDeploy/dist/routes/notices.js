@@ -2,6 +2,7 @@ import { NoticeType } from '@prisma/client';
 import { Router } from 'express';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 import { noticeService } from '../services/notice.service.js';
+import { parsePagination } from '../utils/pagination.js';
 const router = Router();
 function parseNoticeType(value) {
     if (typeof value !== 'string')
@@ -10,8 +11,7 @@ function parseNoticeType(value) {
 }
 router.get('/', authMiddleware, async (req, res) => {
     try {
-        const page = parseInt(req.query.page) || 1;
-        const pageSize = parseInt(req.query.pageSize) || 10;
+        const { page, pageSize } = parsePagination(req.query, { defaultPageSize: 10 });
         const read = req.query.read === undefined ? undefined : req.query.read === 'true';
         const type = parseNoticeType(req.query.type);
         if (req.query.type && !type) {

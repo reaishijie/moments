@@ -6,7 +6,11 @@ import { optionalAuthMiddleware } from '../middleware/optionalAuthMiddleware.js'
 import { logAction, logger } from "../services/log.service.js"
 import { noticeService } from '../services/notice.service.js'
 import { verifyCaptchaProofForAction } from '../services/verify.service.js'
+import { Logger } from '../utils/logger.js'
+import { parsePagination } from '../utils/pagination.js'
+import { toBigInt } from '../utils/parseId.js'
 
+const routeLogger = new Logger('ArticlesRoute')
 const router = Router();
 
 const MAX_ARTICLE_TAGS = 5;
@@ -395,7 +399,7 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
         })
         res.status(201).json(serializeArticle(newArticle));
     } catch (error) {
-        console.error('创建文章失败:', error);
+        routeLogger.error('创建文章失败:', error instanceof Error ? error.stack : String(error));
         res.status(500).json({ error: '服务器内部错误' });
     }
 })
@@ -405,9 +409,8 @@ router.get('/', optionalAuthMiddleware, async (req: Request, res: Response) => {
     try {
         const { page: pageStr, pageSize: pageSizeStr, ...filters } = req.query
 
-        const page = parseInt(pageStr as string) || 1
-        const pageSize = parseInt(pageSizeStr as string) || 5
-        const skip = (page - 1) * pageSize
+        // 统一收敛分页参数，避免超大 pageSize 触发全表扫描
+        const { page, pageSize, skip } = parsePagination({ page: pageStr, pageSize: pageSizeStr })
 
         const filterMappings: Record<string, { field: keyof Prisma.articlesWhereInput; type: 'exact' | 'fuzzy' | 'boolean' }> = {
             articleId: { field: 'id', type: 'exact' },
@@ -568,7 +571,7 @@ router.get('/', optionalAuthMiddleware, async (req: Request, res: Response) => {
             pageSize
         });
     } catch (error) {
-        console.error('获取文章列表失败:', error);
+        routeLogger.error('获取文章列表失败:', error instanceof Error ? error.stack : String(error));
         res.status(500).json({ error: '服务器内部错误' });
     }
 })
@@ -576,7 +579,10 @@ router.get('/', optionalAuthMiddleware, async (req: Request, res: Response) => {
 // 查询单篇文章详情
 router.get('/:articleId', optionalAuthMiddleware, async (req: Request, res: Response) => {
     try {
-        const { articleId } = req.params
+        const articleId = toBigInt(req.params.articleId)
+        if (articleId === null) {
+            return res.status(400).json({ error: '文章ID不合法' })
+        }
         const article = await prisma.articles.findFirst({
             where: {
                 id: BigInt(articleId),
@@ -620,7 +626,7 @@ router.get('/:articleId', optionalAuthMiddleware, async (req: Request, res: Resp
         const responseData = serializeArticle({ ...article, isLiked })
         res.status(200).json(responseData)
     } catch (error) {
-        console.error('获取单篇文章失败:', error);
+        routeLogger.error('获取单篇文章失败:', error instanceof Error ? error.stack : String(error));
         res.status(500).json({ error: '服务器内部错误' });
     }
 })
@@ -635,7 +641,10 @@ router.patch('/:articleId', authMiddleware, async (req: Request, res: Response) 
             return res.status(400).json({ status: false, message: '请求数据格式错误' })
         }
         const userId = req.user?.userId
-        const { articleId } = req.params
+        const articleId = toBigInt(req.params.articleId)
+        if (articleId === null) {
+            return res.status(400).json({ error: '文章ID不合法' })
+        }
         const { content, status, location, type, isAd, isTop, adTitle, adUrl, imageUrls, videoUrls, thumbnail_url, tags } = req.body
         // 验证文章是否存在
         const article = await prisma.articles.findUnique({
@@ -737,7 +746,7 @@ router.patch('/:articleId', authMiddleware, async (req: Request, res: Response) 
         })
         res.status(200).json({ status: true, message: '更新成功', data: responseData})
     } catch (error) {
-        console.error('更新文章失败:', error);
+        routeLogger.error('更新文章失败:', error instanceof Error ? error.stack : String(error));
         res.status(500).json({ error: '服务器内部错误' });
     }
 })
@@ -749,7 +758,10 @@ router.delete('/:articleId', authMiddleware, async (req: Request, res: Response)
             return res.status(401).json({ status: false, message: '请重新登录' })
         }
         const userId = req.user.userId;
-        const { articleId } = req.params;
+        const articleId = toBigInt(req.params.articleId)
+        if (articleId === null) {
+            return res.status(400).json({ error: '文章ID不合法' })
+        }
 
         const article = await prisma.articles.findUnique({
             where: { id: BigInt(articleId) }
@@ -790,7 +802,7 @@ router.delete('/:articleId', authMiddleware, async (req: Request, res: Response)
         })
         res.status(204).send();
     } catch (error) {
-        console.error('删除文章失败:', error);
+        routeLogger.error('删除文章失败:', error instanceof Error ? error.stack : String(error));
         res.status(500).json({ error: '服务器内部错误' });
     }
 })
@@ -798,11 +810,12 @@ router.delete('/:articleId', authMiddleware, async (req: Request, res: Response)
 // 获取一篇文章的评论
 router.get('/:articleId/comments', async (req: Request, res: Response) => {
     try {
-        const { articleId } = req.params
+        const articleId = toBigInt(req.params.articleId)
+        if (articleId === null) {
+            return res.status(400).json({ error: '文章ID不合法' })
+        }
         // 分页查询
-        const page = parseInt(req.query.page as string) || 1
-        const pageSize = parseInt(req.query.pageSize as string) || 5
-        const skip = (page - 1) * pageSize
+        const { page, pageSize, skip } = parsePagination(req.query)
 
         // 查询文章的一级评论
         const comments = await prisma.comments.findMany({
@@ -884,7 +897,7 @@ router.get('/:articleId/comments', async (req: Request, res: Response) => {
             pageSize
         })
     } catch (error) {
-        console.error('获取文章的评论列表失败:', error);
+        routeLogger.error('获取文章的评论列表失败:', error instanceof Error ? error.stack : String(error));
         res.status(500).json({ error: '服务器内部错误' });
     }
 })
@@ -892,7 +905,10 @@ router.get('/:articleId/comments', async (req: Request, res: Response) => {
 // 文章点赞
 router.post('/:articleId/like', optionalAuthMiddleware, async (req: Request, res: Response) => {
     try {
-        const { articleId } = req.params
+        const articleId = toBigInt(req.params.articleId)
+        if (articleId === null) {
+            return res.status(400).json({ error: '文章ID不合法' })
+        }
 
         // 检查文章是否存在
         const article = await prisma.articles.findFirst({
@@ -1013,7 +1029,7 @@ router.post('/:articleId/like', optionalAuthMiddleware, async (req: Request, res
         if (error.code === 'P2002') {
             return res.status(409).json({ error: '已经点过赞了' })
         }
-        console.error('点赞失败', error)
+        routeLogger.error('点赞失败', error instanceof Error ? error.stack : String(error));
         res.status(500).json({ error: '服务器内部错误' })
     }
 })
@@ -1021,7 +1037,10 @@ router.post('/:articleId/like', optionalAuthMiddleware, async (req: Request, res
 // 取消文章喜欢
 router.delete('/:articleId/like', optionalAuthMiddleware, async (req: Request, res: Response) => {
     try {
-        const { articleId } = req.params;
+        const articleId = toBigInt(req.params.articleId)
+        if (articleId === null) {
+            return res.status(400).json({ error: '文章ID不合法' })
+        }
 
         if (req.user) {
             // 已登录用户的逻辑
@@ -1077,7 +1096,7 @@ router.delete('/:articleId/like', optionalAuthMiddleware, async (req: Request, r
         if (error.code === 'P2025') {
             return res.status(404).json({ error: '您尚未点赞，无法取消' });
         }
-        console.error('取消点赞失败:', error);
+        routeLogger.error('取消点赞失败:', error instanceof Error ? error.stack : String(error));
         res.status(500).json({ error: '服务器内部错误' });
     }
 });
@@ -1085,7 +1104,10 @@ router.delete('/:articleId/like', optionalAuthMiddleware, async (req: Request, r
 // 获取文章的点赞用户信息
 router.get('/:articleId/like', optionalAuthMiddleware, async (req: Request, res: Response) => {
     try {
-        const { articleId } = req.params
+        const articleId = toBigInt(req.params.articleId)
+        if (articleId === null) {
+            return res.status(400).json({ error: '文章ID不合法' })
+        }
         const likes = await prisma.article_likes.findMany({
             where: { article_id: BigInt(articleId) },
             include: {
@@ -1121,7 +1143,7 @@ router.get('/:articleId/like', optionalAuthMiddleware, async (req: Request, res:
         }))
         res.status(200).json(responseData)
     } catch (error) {
-        console.error('获取文章的点赞用户信息失败：', error);
+        routeLogger.error('获取文章的点赞用户信息失败：', error instanceof Error ? error.stack : String(error));
         res.status(500).json({ error: '获取文章的点赞用户信息失败' });
     }
 })

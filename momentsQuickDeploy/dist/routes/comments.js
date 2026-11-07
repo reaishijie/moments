@@ -3,15 +3,34 @@ import { prisma } from "../lib/prisma.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
 import { logAction, logger } from "../services/log.service.js";
 import { noticeService } from "../services/notice.service.js";
+import { Logger } from "../utils/logger.js";
+import { verifyCaptchaProofForAction } from "../services/verify.service.js";
+import { parsePagination } from '../utils/pagination.js';
+import { toBigInt, toOptionalBigInt } from '../utils/parseId.js';
 const router = Router();
+const routeLogger = new Logger('CommentRoute');
 // 创建一条评论 需要登录
 router.post('/', authMiddleware, async (req, res) => {
     try {
         const userId = req.user?.userId;
-        const { articleId, content, parentId } = req.body;
+        const { content } = req.body;
+        const articleId = toBigInt(req.body.articleId);
+        const parentId = toOptionalBigInt(req.body.parentId);
+        const hasParentInput = req.body.parentId !== undefined && req.body.parentId !== null && req.body.parentId !== '';
+        // 验证登录态
+        if (!userId) {
+            return res.status(401).json({ error: '未登录' });
+        }
         // 验证输入
         if (!articleId || !content) {
             return res.status(400).json({ error: '文章ID和评论内容不能为空' });
+        }
+        if (hasParentInput && !parentId) {
+            return res.status(400).json({ error: '父评论ID不合法' });
+        }
+        const captchaVerified = await verifyCaptchaProofForAction('user_captcha_comment', req.body.captchaProof, req.ip);
+        if (!captchaVerified) {
+            return res.status(400).json({ error: '请先完成人机验证' });
         }
         let parentComment = null;
         // 子评论
@@ -121,7 +140,7 @@ router.post('/', authMiddleware, async (req, res) => {
         res.status(201).json(responseData);
     }
     catch (error) {
-        console.error('创建评论失败:', error);
+        routeLogger.error('创建评论失败', error instanceof Error ? error.stack : String(error));
         res.status(500).json({ error: '服务器内部错误' });
     }
 });
@@ -129,7 +148,14 @@ router.post('/', authMiddleware, async (req, res) => {
 router.delete('/:commentId', authMiddleware, async (req, res) => {
     try {
         const userId = req.user?.userId;
-        const { commentId } = req.params;
+        const commentId = toBigInt(req.params.commentId);
+        if (commentId === null) {
+            return res.status(400).json({ error: '评论ID不合法' });
+        }
+        // 验证登录态
+        if (!userId) {
+            return res.status(401).json({ error: '未登录' });
+        }
         // 查找需要删除的评论是否存在
         const comment = await prisma.comments.findUnique({
             where: { id: BigInt(commentId) }
@@ -140,7 +166,7 @@ router.delete('/:commentId', authMiddleware, async (req, res) => {
         }
         // 检验是否是本人
         if (comment?.user_id.toString() !== userId?.toString()) {
-            res.status(403).json({ error: '权限不足，禁止操作' });
+            return res.status(403).json({ error: '权限不足，禁止操作' });
         }
         // 查找所有评论id
         const list = [];
@@ -153,6 +179,7 @@ router.delete('/:commentId', authMiddleware, async (req, res) => {
             const replies = await prisma.comments.findMany({
                 where: {
                     parent_id: { in: item },
+                    article_id: comment.article_id,
                     deleted_at: null
                 },
                 select: {
@@ -195,17 +222,19 @@ router.delete('/:commentId', authMiddleware, async (req, res) => {
         res.status(204).send();
     }
     catch (error) {
-        console.error('删除评论失败:', error);
+        routeLogger.error('删除评论失败', error instanceof Error ? error.stack : String(error));
         res.status(500).json({ error: '服务器内部错误' });
     }
 });
 // 获取文章评论：按父评论分页，回复固定收拢到对应父评论下（最多展示两层）
 router.get('/:articleId', async (req, res) => {
     try {
-        const { articleId } = req.params;
-        const page = parseInt(req.query.page) || 1;
-        const pageSize = parseInt(req.query.pageSize) || 5;
-        const skip = (page - 1) * pageSize;
+        const articleId = toBigInt(req.params.articleId);
+        if (articleId === null) {
+            return res.status(400).json({ error: '文章ID不合法' });
+        }
+        // 文章详情页需要一次性拉取全部评论，沿用原有的 100 条上限
+        const { page, pageSize, skip } = parsePagination(req.query, { maxPageSize: 100 });
         const rootComments = await prisma.comments.findMany({
             where: {
                 article_id: BigInt(articleId),
@@ -300,8 +329,8 @@ router.get('/:articleId', async (req, res) => {
         });
     }
     catch (error) {
-        console.error('查询文章评论失败', error);
-        res.status(500).json({ error: error });
+        routeLogger.error('查询文章评论失败', error instanceof Error ? error.stack : String(error));
+        res.status(500).json({ error: '服务器内部错误' });
     }
 });
 export default router;

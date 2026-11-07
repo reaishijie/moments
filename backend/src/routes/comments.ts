@@ -5,18 +5,22 @@ import { logAction, logger } from "../services/log.service.js"
 import { noticeService } from "../services/notice.service.js"
 import { Logger } from "../utils/logger.js"
 import { verifyCaptchaProofForAction } from "../services/verify.service.js"
+import { parsePagination } from '../utils/pagination.js'
+import { toBigInt, toOptionalBigInt } from '../utils/parseId.js'
 
 
 const router = Router()
 const routeLogger = new Logger('CommentRoute')
 
-const MAX_PAGE_SIZE = 100
 
 // 创建一条评论 需要登录
 router.post('/', authMiddleware, async (req: Request, res: Response) => {
     try {
         const userId = req.user?.userId
-        const { articleId, content, parentId } = req.body
+        const { content } = req.body
+        const articleId = toBigInt(req.body.articleId)
+        const parentId = toOptionalBigInt(req.body.parentId)
+        const hasParentInput = req.body.parentId !== undefined && req.body.parentId !== null && req.body.parentId !== ''
 
         // 验证登录态
         if (!userId) {
@@ -25,6 +29,9 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
         // 验证输入
         if (!articleId || !content) {
             return res.status(400).json({ error: '文章ID和评论内容不能为空' })
+        }
+        if (hasParentInput && !parentId) {
+            return res.status(400).json({ error: '父评论ID不合法' })
         }
         const captchaVerified = await verifyCaptchaProofForAction('user_captcha_comment', req.body.captchaProof, req.ip)
         if (!captchaVerified) {
@@ -154,7 +161,10 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
 router.delete('/:commentId', authMiddleware, async (req: Request, res: Response) => {
     try {
         const userId = req.user?.userId
-        const { commentId } = req.params
+        const commentId = toBigInt(req.params.commentId)
+        if (commentId === null) {
+            return res.status(400).json({ error: '评论ID不合法' })
+        }
         // 验证登录态
         if (!userId) {
             return res.status(401).json({ error: '未登录' })
@@ -232,11 +242,12 @@ router.delete('/:commentId', authMiddleware, async (req: Request, res: Response)
 // 获取文章评论：按父评论分页，回复固定收拢到对应父评论下（最多展示两层）
 router.get('/:articleId', async (req: Request, res: Response) => {
     try {
-        const { articleId } = req.params
-        const page = Math.max(1, parseInt(req.query.page as string) || 1)
-        const rawPageSize = parseInt(req.query.pageSize as string) || 5
-        const pageSize = Math.min(Math.max(1, rawPageSize), MAX_PAGE_SIZE)
-        const skip = (page - 1) * pageSize
+        const articleId = toBigInt(req.params.articleId)
+        if (articleId === null) {
+            return res.status(400).json({ error: '文章ID不合法' })
+        }
+        // 文章详情页需要一次性拉取全部评论，沿用原有的 100 条上限
+        const { page, pageSize, skip } = parsePagination(req.query, { maxPageSize: 100 })
 
         const rootComments = await prisma.comments.findMany({
             where: {

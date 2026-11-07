@@ -209,7 +209,7 @@ frontend/
 
 ### 环境要求
 
-- Node.js 20+
+- Node.js 24+
 - pnpm 11+
 
 ### 安装与配置
@@ -225,7 +225,7 @@ cp .env.example .env
 ```env
 VITE_APP_TITLE=瞬刻
 VITE_APP_KEYWORD=瞬刻,微信朋友圈,记录瞬间,博客程序,内容发布,博客
-VITE_APP_DESPRICTION=一个可以发布笔记、图片、视频的内容平台
+VITE_APP_DESCRIPTION=一个可以发布笔记、图片、视频的内容平台
 # 前后端同域部署时用相对路径
 VITE_API_BASE_URL=/api
 # 前后端分离部署时用后端地址

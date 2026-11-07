@@ -124,7 +124,7 @@ moments/
 
 ## 环境要求
 
-- Node.js 20+（推荐 22+）
+- Node.js 24+
 - pnpm 11+（仓库 packageManager 使用 pnpm）
 - MySQL 5.7+/8.0+
 - 可选：PM2、Nginx/OpenResty、Docker
@@ -153,7 +153,8 @@ cp .env.example .env
 HOST=0.0.0.0
 PORT=9889
 
-# 密钥（越复杂越好）
+# 密钥：必须改成随机值，生产环境使用占位值或长度不足 32 位会拒绝启动
+# 生成方式：openssl rand -hex 32
 JWT_SECRET=demo_jwt_secret
 JWT_ACCESS_EXPIRES_SECONDS=7200
 JWT_REFRESH_EXPIRES_SECONDS=2592000
